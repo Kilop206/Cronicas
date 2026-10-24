@@ -1,0 +1,30 @@
+name: CI
+on:
+  push:
+  pull_request:
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+      - uses: actions/setup-dotnet@v4
+        with:
+          dotnet-version: '10.0.x'
+      - run: npm ci --no-audit --no-fund
+        working-directory: web
+      - run: npm run lint
+        working-directory: web
+      - run: npm run build
+        working-directory: web
+      - run: dotnet build api/Chronicles.Api/Chronicles.Api.csproj -c Release
+      - name: Integration smoke test
+        run: |
+          cp .env.example .env
+          docker compose up -d --build
+          for i in $(seq 1 30); do curl -fsS http://localhost:8081/health && break || sleep 3; done
+          SMOKE_MAILPIT_URL=http://localhost:8025 node scripts/smoke.mjs
+      - if: always()
+        run: docker compose down
