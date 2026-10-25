@@ -8,6 +8,9 @@ export interface User { id: string; email: string; displayName: string; bio: str
 export interface Campaign { id: string; name: string; description: string; status: string; accentColor: string; role: string; updatedAt: string; }
 export interface Dashboard { totalCampaigns: number; activeCampaigns: number; recentCampaigns: Campaign[]; }
 export interface Page<T> { items: T[]; total: number; page: number; }
+export interface Character { id: string; campaignId: string; ownerId: string; canEdit: boolean; name: string; portraitUrl: string | null; backgroundUrl: string | null; health: number; maxHealth: number; sanity: number; maxSanity: number; mana: number; maxMana: number; updatedAt: string; }
+export type CharacterInput = Pick<Character, 'name' | 'portraitUrl' | 'backgroundUrl' | 'health' | 'maxHealth' | 'sanity' | 'maxSanity' | 'mana' | 'maxMana'>;
+export interface InvitePreview { campaignId: string; campaignName: string; role: string; expiresAt: string; }
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -37,6 +40,16 @@ export class ApiService {
   createCampaign(data: { name: string; description: string; accentColor: string }) { return this.http.post<Campaign>('/api/campaigns', data, { withCredentials: true }); }
   updateCampaign(id: string, data: { name: string; description: string; accentColor: string }) { return this.http.patch<Campaign>(`/api/campaigns/${id}`, data, { withCredentials: true }); }
   setCampaignStatus(id: string, status: string) { return this.http.patch<void>(`/api/campaigns/${id}/status`, { status }, { withCredentials: true }); }
+  characters(campaignId: string) { return this.http.get<Character[]>(`/api/campaigns/${campaignId}/characters`, { withCredentials: true }); }
+  character(id: string) { return this.http.get<Character>(`/api/characters/${id}`, { withCredentials: true }); }
+  createCharacter(campaignId: string, data: CharacterInput) { return this.http.post<Character>(`/api/campaigns/${campaignId}/characters`, data, { withCredentials: true }); }
+  updateCharacter(id: string, data: CharacterInput) { return this.http.put<Character>(`/api/characters/${id}`, data, { withCredentials: true }); }
+  rotateOverlayKey(id: string) { return this.http.post<{ key: string }>(`/api/characters/${id}/overlay-key`, {}, { withCredentials: true }); }
+  overlay(key: string) { return this.http.get<Character>(`/api/overlay/${key}`); }
+  joinRoom(campaignId: string) { return this.http.post<{ authToken: string }>(`/api/campaigns/${campaignId}/room/join`, {}, { withCredentials: true }); }
+  createInvite(campaignId: string, role: string) { return this.http.post<{ token: string; role: string; expiresAt: string }>(`/api/campaigns/${campaignId}/invites`, { role }, { withCredentials: true }); }
+  invite(token: string) { return this.http.get<InvitePreview>(`/api/invites/${token}`, { withCredentials: true }); }
+  acceptInvite(token: string) { return this.http.post<{ campaignId: string }>(`/api/invites/${token}/accept`, {}, { withCredentials: true }); }
   private setUser(user: User | null) {
     this.user.set(user);
     this.document.documentElement.dataset['accent'] = user?.accent || 'gold';
