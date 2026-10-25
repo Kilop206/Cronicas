@@ -16,14 +16,16 @@ public static class CharacterEndpoints
             if (!await Member(db, campaignId, userId)) return Results.NotFound();
             var characters = await db.Characters.AsNoTracking().Where(x => x.CampaignId == campaignId)
                 .OrderBy(x => x.Name).ToListAsync();
-            var items = characters.Select(View).ToList();
+            var items = characters.Select(x => View(x)).ToList();
             return Results.Ok(items);
         });
 
         api.MapPost("/campaigns/{campaignId:guid}/characters", async Task<IResult> (Guid campaignId, CharacterInput input, HttpContext http, AppDbContext db) =>
         {
             if (UserId(http) is not { } userId) return Results.Unauthorized();
-            if (!await Member(db, campaignId, userId)) return Results.NotFound();
+            var role = await db.CampaignMemberships.AsNoTracking().Where(x => x.CampaignId == campaignId && x.UserId == userId).Select(x => x.Role).SingleOrDefaultAsync();
+            if (role is null) return Results.NotFound();
+            if (role is "spectator") return Results.Problem("Espectadores não podem criar personagens.", statusCode: 403);
             var error = Validate(input);
             if (error is not null) return Results.ValidationProblem(error);
             var character = new Character { CampaignId = campaignId, OwnerId = userId, Name = input.Name.Trim() };
@@ -36,8 +38,11 @@ public static class CharacterEndpoints
         api.MapGet("/characters/{id:guid}", async Task<IResult> (Guid id, HttpContext http, AppDbContext db) =>
         {
             if (UserId(http) is not { } userId) return Results.Unauthorized();
-            var character = await db.Characters.AsNoTracking().Where(x => x.Id == id && x.Campaign.Memberships.Any(m => m.UserId == userId)).SingleOrDefaultAsync();
-            return character is null ? Results.NotFound() : Results.Ok(View(character));
+            var character = await db.Characters.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id);
+            if (character is null) return Results.NotFound();
+            var role = await db.CampaignMemberships.AsNoTracking().Where(x => x.CampaignId == character.CampaignId && x.UserId == userId).Select(x => x.Role).SingleOrDefaultAsync();
+            if (role is null) return Results.NotFound();
+            return Results.Ok(View(character, character.OwnerId == userId || role is "owner" or "gm" or "co-gm"));
         });
 
         api.MapPut("/characters/{id:guid}", async Task<IResult> (Guid id, CharacterInput input, HttpContext http, AppDbContext db) =>
@@ -45,12 +50,12 @@ public static class CharacterEndpoints
             if (UserId(http) is not { } userId) return Results.Unauthorized();
             var character = await db.Characters.Include(x => x.Campaign).ThenInclude(x => x.Memberships).SingleOrDefaultAsync(x => x.Id == id);
             if (character is null || !character.Campaign.Memberships.Any(x => x.UserId == userId)) return Results.NotFound();
-            if (character.OwnerId != userId && !character.Campaign.Memberships.Any(x => x.UserId == userId && x.Role is "owner" or "gm" or "co-gm")) return Results.Forbid();
+            if (character.OwnerId != userId && !character.Campaign.Memberships.Any(x => x.UserId == userId && x.Role is "owner" or "gm" or "co-gm")) return Results.Problem("Você não pode editar este personagem.", statusCode: 403);
             var error = Validate(input);
             if (error is not null) return Results.ValidationProblem(error);
             Apply(character, input);
             await db.SaveChangesAsync();
-            return Results.Ok(View(character));
+            return Results.Ok(View(character, true));
         });
 
         api.MapPost("/characters/{id:guid}/overlay-key", async Task<IResult> (Guid id, HttpContext http, AppDbContext db) =>
@@ -81,7 +86,7 @@ public static class CharacterEndpoints
 
     private static Guid? UserId(HttpContext http) => Guid.TryParse(http.User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : null;
     private static Task<bool> Member(AppDbContext db, Guid campaignId, Guid userId) => db.CampaignMemberships.AnyAsync(x => x.CampaignId == campaignId && x.UserId == userId);
-    private static object View(Character x) => new { x.Id, x.CampaignId, x.OwnerId, x.Name, x.PortraitUrl, x.BackgroundUrl, x.Health, x.MaxHealth, x.Sanity, x.MaxSanity, x.Mana, x.MaxMana, x.UpdatedAt };
+    private static object View(Character x, bool canEdit = false) => new { x.Id, x.CampaignId, x.OwnerId, x.Name, x.PortraitUrl, x.BackgroundUrl, x.Health, x.MaxHealth, x.Sanity, x.MaxSanity, x.Mana, x.MaxMana, x.UpdatedAt, canEdit };
     private static string Hash(string key) => Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(key))).ToLowerInvariant();
     private static Dictionary<string, string[]>? Validate(CharacterInput input)
     {

@@ -11,6 +11,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<Campaign> Campaigns => Set<Campaign>();
     public DbSet<CampaignMembership> CampaignMemberships => Set<CampaignMembership>();
     public DbSet<Character> Characters => Set<Character>();
+    public DbSet<RoomParticipant> RoomParticipants => Set<RoomParticipant>();
+    public DbSet<CampaignInvite> CampaignInvites => Set<CampaignInvite>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
@@ -75,6 +77,27 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(x => x.OverlayKeyHash).HasMaxLength(64);
             entity.HasOne(x => x.Campaign).WithMany().HasForeignKey(x => x.CampaignId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(x => x.Owner).WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
+        });
+        model.Entity<RoomParticipant>(entity =>
+        {
+            entity.ToTable("room_participants");
+            entity.HasKey(x => new { x.CampaignId, x.UserId });
+            entity.HasIndex(x => x.RealtimeParticipantId).IsUnique();
+            entity.HasIndex(x => x.UserId);
+            entity.HasOne(x => x.Campaign).WithMany().HasForeignKey(x => x.CampaignId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+        });
+        model.Entity<CampaignInvite>(entity =>
+        {
+            entity.ToTable("campaign_invites");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => x.TokenHash).IsUnique();
+            entity.HasIndex(x => new { x.CampaignId, x.ExpiresAt });
+            entity.Property(x => x.TokenHash).HasMaxLength(64);
+            entity.Property(x => x.Role).HasMaxLength(20);
+            entity.HasOne(x => x.Campaign).WithMany().HasForeignKey(x => x.CampaignId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.CreatedBy).WithMany().HasForeignKey(x => x.CreatedById).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne<User>().WithMany().HasForeignKey(x => x.UsedById).OnDelete(DeleteBehavior.SetNull);
         });
     }
 }

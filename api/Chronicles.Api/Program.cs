@@ -64,13 +64,16 @@ app.Use(async (context, next) =>
 app.MapHealthChecks("/health");
 var api = app.MapGroup("/api");
 api.MapCharacterEndpoints();
+api.MapInviteEndpoints();
 api.MapPost("/campaigns/{id:guid}/room/join", async Task<IResult> (Guid id, HttpContext http, AppDbContext db, RealtimeKitService realtime) =>
 {
     if (CurrentUserId(http) is not { } userId) return Results.Unauthorized();
-    if (!realtime.IsConfigured) return Results.Problem("A sala de mídia ainda não foi configurada.", statusCode: 503);
     var member = await db.CampaignMemberships.AsNoTracking().Where(x => x.CampaignId == id && x.UserId == userId)
-        .Select(x => new { x.Campaign.Name, x.Campaign.RealtimeMeetingId, x.User.DisplayName }).SingleOrDefaultAsync();
+        .Select(x => new { x.Campaign.Name, x.Campaign.RealtimeMeetingId, x.User.DisplayName, x.Role }).SingleOrDefaultAsync();
     if (member is null) return Results.NotFound();
+    if (!realtime.IsConfigured) return Results.Problem("A sala de mídia ainda não foi configurada.", statusCode: 503);
+    var preset = realtime.PresetFor(member.Role);
+    if (string.IsNullOrWhiteSpace(preset)) return Results.Problem("O papel deste participante ainda não possui um preset de mídia configurado.", statusCode: 503);
     Guid meetingId;
     try
     {
@@ -83,8 +86,17 @@ api.MapPost("/campaigns/{id:guid}/room/join", async Task<IResult> (Guid id, Http
             campaign.RealtimeMeetingId = meetingId;
             await db.SaveChangesAsync(http.RequestAborted);
         }
+        var participant = await db.RoomParticipants.SingleOrDefaultAsync(x => x.CampaignId == id && x.UserId == userId, http.RequestAborted);
+        string token;
+        if (participant is null)
+        {
+            var created = await realtime.AddParticipantAsync(meetingId, userId, member.DisplayName, preset, http.RequestAborted);
+            db.RoomParticipants.Add(new RoomParticipant { CampaignId = id, UserId = userId, RealtimeParticipantId = created.Id });
+            await db.SaveChangesAsync(http.RequestAborted);
+            token = created.Token;
+        }
+        else token = await realtime.RefreshParticipantAsync(meetingId, participant.RealtimeParticipantId, http.RequestAborted);
         await transaction.CommitAsync(http.RequestAborted);
-        var token = await realtime.AddParticipantAsync(meetingId, userId, member.DisplayName, http.RequestAborted);
         http.Response.Headers.CacheControl = "no-store";
         return Results.Ok(new { authToken = token });
     }
@@ -92,7 +104,7 @@ api.MapPost("/campaigns/{id:guid}/room/join", async Task<IResult> (Guid id, Http
     {
         return Results.Problem("A sala de mídia está indisponível no momento.", statusCode: 502);
     }
-});
+}).RequireRateLimiting("auth");
 var auth = api.MapGroup("/auth");
 
 auth.MapPost("/register", async Task<IResult> (RegisterRequest input, AppDbContext db, IPasswordHasher<User> hasher, SessionService sessions, HttpContext http) =>

@@ -10,6 +10,12 @@ public sealed class RealtimeKitService(IHttpClientFactory clients, IConfiguratio
     private string? App => config["CF_RTK_APP_ID"];
     private string? Token => config["CF_RTK_API_TOKEN"];
     public string? Preset => config["CF_RTK_PRESET"];
+    public string? PresetFor(string role) => role switch
+    {
+        "spectator" => config["CF_RTK_PRESET_SPECTATOR"],
+        "owner" or "gm" or "co-gm" => string.IsNullOrWhiteSpace(config["CF_RTK_PRESET_GM"]) ? Preset : config["CF_RTK_PRESET_GM"],
+        _ => Preset
+    };
     public bool IsConfigured => !string.IsNullOrWhiteSpace(Account) && !string.IsNullOrWhiteSpace(App)
         && !string.IsNullOrWhiteSpace(Token) && !string.IsNullOrWhiteSpace(Preset);
 
@@ -20,19 +26,26 @@ public sealed class RealtimeKitService(IHttpClientFactory clients, IConfiguratio
         return data.GetProperty("id").GetGuid();
     }
 
-    public async Task<string> AddParticipantAsync(Guid meetingId, Guid userId, string name, CancellationToken cancellationToken)
+    public async Task<(Guid Id, string Token)> AddParticipantAsync(Guid meetingId, Guid userId, string name, string preset, CancellationToken cancellationToken)
     {
         using var response = await SendAsync(HttpMethod.Post, $"meetings/{meetingId}/participants",
-            new { custom_participant_id = userId.ToString(), preset_name = Preset, name }, cancellationToken);
+            new { custom_participant_id = userId.ToString(), preset_name = preset, name }, cancellationToken);
+        var data = await ReadDataAsync(response, cancellationToken);
+        return (data.GetProperty("id").GetGuid(), data.GetProperty("token").GetString() ?? throw new InvalidOperationException("RealtimeKit não retornou um token."));
+    }
+
+    public async Task<string> RefreshParticipantAsync(Guid meetingId, Guid participantId, CancellationToken cancellationToken)
+    {
+        using var response = await SendAsync(HttpMethod.Post, $"meetings/{meetingId}/participants/{participantId}/token", null, cancellationToken);
         var data = await ReadDataAsync(response, cancellationToken);
         return data.GetProperty("token").GetString() ?? throw new InvalidOperationException("RealtimeKit não retornou um token.");
     }
 
-    private async Task<HttpResponseMessage> SendAsync(HttpMethod method, string path, object body, CancellationToken cancellationToken)
+    private async Task<HttpResponseMessage> SendAsync(HttpMethod method, string path, object? body, CancellationToken cancellationToken)
     {
         using var request = new HttpRequestMessage(method, $"https://api.cloudflare.com/client/v4/accounts/{Account}/realtime/kit/{App}/{path}");
         request.Headers.Authorization = new AuthenticationHeaderValue("Bearer", Token);
-        request.Content = JsonContent.Create(body);
+        if (body is not null) request.Content = JsonContent.Create(body);
         return await clients.CreateClient(nameof(RealtimeKitService)).SendAsync(request, cancellationToken);
     }
 

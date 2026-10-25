@@ -69,6 +69,54 @@ namespace Chronicles.Api.Migrations
                     b.ToTable("campaigns", (string)null);
                 });
 
+            modelBuilder.Entity("Chronicles.Api.Models.CampaignInvite", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CampaignId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("CreatedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Role")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("TokenHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime?>("UsedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid?>("UsedById")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedById");
+
+                    b.HasIndex("TokenHash")
+                        .IsUnique();
+
+                    b.HasIndex("UsedById");
+
+                    b.HasIndex("CampaignId", "ExpiresAt");
+
+                    b.ToTable("campaign_invites", (string)null);
+                });
+
             modelBuilder.Entity("Chronicles.Api.Models.CampaignMembership", b =>
                 {
                     b.Property<Guid>("CampaignId")
@@ -187,6 +235,30 @@ namespace Chronicles.Api.Migrations
                     b.ToTable("password_reset_codes", (string)null);
                 });
 
+            modelBuilder.Entity("Chronicles.Api.Models.RoomParticipant", b =>
+                {
+                    b.Property<Guid>("CampaignId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("RealtimeParticipantId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("CampaignId", "UserId");
+
+                    b.HasIndex("RealtimeParticipantId")
+                        .IsUnique();
+
+                    b.HasIndex("UserId");
+
+                    b.ToTable("room_participants", (string)null);
+                });
+
             modelBuilder.Entity("Chronicles.Api.Models.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -274,6 +346,30 @@ namespace Chronicles.Api.Migrations
                     b.Navigation("Owner");
                 });
 
+            modelBuilder.Entity("Chronicles.Api.Models.CampaignInvite", b =>
+                {
+                    b.HasOne("Chronicles.Api.Models.Campaign", "Campaign")
+                        .WithMany()
+                        .HasForeignKey("CampaignId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Chronicles.Api.Models.User", "CreatedBy")
+                        .WithMany()
+                        .HasForeignKey("CreatedById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Chronicles.Api.Models.User", null)
+                        .WithMany()
+                        .HasForeignKey("UsedById")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Campaign");
+
+                    b.Navigation("CreatedBy");
+                });
+
             modelBuilder.Entity("Chronicles.Api.Models.CampaignMembership", b =>
                 {
                     b.HasOne("Chronicles.Api.Models.Campaign", "Campaign")
@@ -319,6 +415,25 @@ namespace Chronicles.Api.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
+
+                    b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Chronicles.Api.Models.RoomParticipant", b =>
+                {
+                    b.HasOne("Chronicles.Api.Models.Campaign", "Campaign")
+                        .WithMany()
+                        .HasForeignKey("CampaignId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Chronicles.Api.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Campaign");
 
                     b.Navigation("User");
                 });
