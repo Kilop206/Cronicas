@@ -13,7 +13,7 @@ public static class ProfileExportEndpoints
         {
             if (!Guid.TryParse(http.User.FindFirstValue(ClaimTypes.NameIdentifier), out var userId)) return Results.Unauthorized();
             var profile = await db.Users.AsNoTracking().Where(x => x.Id == userId)
-                .Select(x => new { x.Id, x.Email, x.DisplayName, x.Bio, x.Accent, x.CreatedAt }).SingleOrDefaultAsync();
+                .Select(x => new { x.Id, x.Email, x.DisplayName, x.Bio, x.AvatarUrl, x.Accent, x.CreatedAt }).SingleOrDefaultAsync();
             if (profile is null) return Results.Unauthorized();
 
             var memberships = await db.CampaignMemberships.AsNoTracking().Where(x => x.UserId == userId)

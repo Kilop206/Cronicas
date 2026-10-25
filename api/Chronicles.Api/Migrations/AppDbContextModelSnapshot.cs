@@ -724,6 +724,10 @@ namespace Chronicles.Api.Migrations
                         .HasColumnType("character varying(20)")
                         .HasDefaultValue("gold");
 
+                    b.Property<string>("AvatarUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
                     b.Property<string>("Bio")
                         .HasMaxLength(1000)
                         .HasColumnType("character varying(1000)");

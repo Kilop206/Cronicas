@@ -178,12 +178,14 @@ api.MapPatch("/profile", async Task<IResult> (ProfileRequest input, HttpContext 
 {
     if (CurrentUserId(http) is not { } id) return Results.Unauthorized();
     var name = input.DisplayName?.Trim() ?? "";
-    if (name.Length is < 2 or > 80 || input.Bio?.Length > 1000)
+    if (name.Length is < 2 or > 80 || input.Bio?.Length > 1000 ||
+        input.AvatarUrl is { Length: > 0 } avatar && (avatar.Length > 2048 || !Uri.TryCreate(avatar, UriKind.Absolute, out var url) || url.Scheme != Uri.UriSchemeHttps))
         return Results.ValidationProblem(new Dictionary<string, string[]> { ["profile"] = ["Nome ou biografia fora do limite."] });
     var user = await db.Users.FindAsync(id);
     if (user is null) return Results.Unauthorized();
     user.DisplayName = name;
     user.Bio = input.Bio?.Trim();
+    user.AvatarUrl = string.IsNullOrWhiteSpace(input.AvatarUrl) ? null : input.AvatarUrl.Trim();
     await db.SaveChangesAsync();
     return Results.Ok(ToUser(user));
 });
@@ -300,13 +302,13 @@ using (var scope = app.Services.CreateScope())
 app.Run();
 
 static Guid? CurrentUserId(HttpContext http) => Guid.TryParse(http.User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : null;
-static object ToUser(User user) => new { user.Id, user.Email, user.DisplayName, user.Bio, user.Accent, user.CreatedAt };
+static object ToUser(User user) => new { user.Id, user.Email, user.DisplayName, user.Bio, user.AvatarUrl, user.Accent, user.CreatedAt };
 
 record RegisterRequest(string Email, string DisplayName, string Password);
 record LoginRequest(string Email, string Password);
 record ResetRequest(string Email);
 record ResetCompleteRequest(string Email, string Code, string Password);
-record ProfileRequest(string DisplayName, string? Bio);
+record ProfileRequest(string DisplayName, string? Bio, string? AvatarUrl);
 record PreferencesRequest(string Accent);
 record CampaignRequest(string Name, string Description, string AccentColor);
 record StatusRequest(string Status);

@@ -38,6 +38,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(x => x.DisplayName).HasMaxLength(80);
             entity.Property(x => x.PasswordHash).HasMaxLength(500);
             entity.Property(x => x.Bio).HasMaxLength(1000);
+            entity.Property(x => x.AvatarUrl).HasMaxLength(2048);
             entity.Property(x => x.Accent).HasMaxLength(20).HasDefaultValue("gold");
         });
         model.Entity<UserSession>(entity =>
