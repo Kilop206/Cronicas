@@ -252,6 +252,28 @@ namespace Chronicles.Api.Migrations
                     b.ToTable("character_revisions", (string)null);
                 });
 
+            modelBuilder.Entity("Chronicles.Api.Models.CharacterSecret", b =>
+                {
+                    b.Property<Guid>("CharacterId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasMaxLength(10000)
+                        .HasColumnType("character varying(10000)");
+
+                    b.Property<int>("Revision")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("CharacterId");
+
+                    b.ToTable("character_secrets", (string)null);
+                });
+
             modelBuilder.Entity("Chronicles.Api.Models.ChatMessage", b =>
                 {
                     b.Property<Guid>("Id")
@@ -875,6 +897,17 @@ namespace Chronicles.Api.Migrations
                     b.Navigation("Character");
 
                     b.Navigation("EditedBy");
+                });
+
+            modelBuilder.Entity("Chronicles.Api.Models.CharacterSecret", b =>
+                {
+                    b.HasOne("Chronicles.Api.Models.Character", "Character")
+                        .WithOne()
+                        .HasForeignKey("Chronicles.Api.Models.CharacterSecret", "CharacterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Character");
                 });
 
             modelBuilder.Entity("Chronicles.Api.Models.ChatMessage", b =>

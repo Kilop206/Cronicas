@@ -11,6 +11,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<Campaign> Campaigns => Set<Campaign>();
     public DbSet<CampaignMembership> CampaignMemberships => Set<CampaignMembership>();
     public DbSet<Character> Characters => Set<Character>();
+    public DbSet<CharacterSecret> CharacterSecrets => Set<CharacterSecret>();
     public DbSet<RoomParticipant> RoomParticipants => Set<RoomParticipant>();
     public DbSet<CampaignInvite> CampaignInvites => Set<CampaignInvite>();
     public DbSet<NarrativeEntry> NarrativeEntries => Set<NarrativeEntry>();
@@ -91,6 +92,14 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(x => x.Version).IsConcurrencyToken();
             entity.HasOne(x => x.Campaign).WithMany().HasForeignKey(x => x.CampaignId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(x => x.Owner).WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
+        });
+        model.Entity<CharacterSecret>(entity =>
+        {
+            entity.ToTable("character_secrets");
+            entity.HasKey(x => x.CharacterId);
+            entity.Property(x => x.Notes).HasMaxLength(10000);
+            entity.Property(x => x.Revision).IsConcurrencyToken();
+            entity.HasOne(x => x.Character).WithOne().HasForeignKey<CharacterSecret>(x => x.CharacterId).OnDelete(DeleteBehavior.Cascade);
         });
         model.Entity<RoomParticipant>(entity =>
         {

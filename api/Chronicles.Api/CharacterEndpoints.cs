@@ -121,6 +121,42 @@ public static class CharacterEndpoints
             return Results.Created($"/api/characters/{copy.Id}", View(copy, true));
         });
 
+        api.MapGet("/characters/{id:guid}/secret", async Task<IResult> (Guid id, HttpContext http, AppDbContext db) =>
+        {
+            if (UserId(http) is not { } userId) return Results.Unauthorized();
+            var allowed = await db.Characters.AsNoTracking().AnyAsync(x => x.Id == id && x.Campaign.Memberships.Any(m => m.UserId == userId &&
+                (m.Role == "owner" || m.Role == "gm" || m.Role == "co-gm")));
+            if (!allowed) return Results.NotFound();
+            var secret = await db.CharacterSecrets.AsNoTracking().SingleOrDefaultAsync(x => x.CharacterId == id);
+            return Results.Ok(secret is null ? new { notes = "", revision = 1, updatedAt = (DateTime?)null } :
+                new { notes = secret.Notes, revision = secret.Revision, updatedAt = (DateTime?)secret.UpdatedAt });
+        });
+
+        api.MapPut("/characters/{id:guid}/secret", async Task<IResult> (Guid id, SecretInput input, HttpContext http, AppDbContext db) =>
+        {
+            if (UserId(http) is not { } userId) return Results.Unauthorized();
+            var allowed = await db.Characters.AsNoTracking().AnyAsync(x => x.Id == id && x.Campaign.Memberships.Any(m => m.UserId == userId &&
+                (m.Role == "owner" || m.Role == "gm" || m.Role == "co-gm")));
+            if (!allowed) return Results.NotFound();
+            if (input.Notes is null || input.Notes.Length > 10000) return Results.ValidationProblem(new Dictionary<string, string[]> { ["notes"] = ["Anotações excedem 10.000 caracteres."] });
+            var secret = await db.CharacterSecrets.SingleOrDefaultAsync(x => x.CharacterId == id);
+            if (secret is null)
+            {
+                if (input.Revision != 1) return Results.Conflict(new { message = "As anotações mudaram. Atualize antes de salvar." });
+                secret = new CharacterSecret { CharacterId = id, Notes = input.Notes.Trim() };
+                db.CharacterSecrets.Add(secret);
+            }
+            else
+            {
+                if (input.Revision != secret.Revision) return Results.Conflict(new { message = "As anotações mudaram. Atualize antes de salvar." });
+                secret.Notes = input.Notes.Trim(); secret.Revision++; secret.UpdatedAt = DateTime.UtcNow;
+            }
+            try { await db.SaveChangesAsync(); }
+            catch (DbUpdateConcurrencyException) { return Results.Conflict(new { message = "As anotações mudaram. Atualize antes de salvar." }); }
+            catch (DbUpdateException) { return Results.Conflict(new { message = "As anotações mudaram. Atualize antes de salvar." }); }
+            return Results.Ok(new { secret.Notes, secret.Revision, secret.UpdatedAt });
+        });
+
         api.MapPost("/characters/{id:guid}/overlay-key", async Task<IResult> (Guid id, HttpContext http, AppDbContext db) =>
         {
             if (UserId(http) is not { } userId) return Results.Unauthorized();
@@ -203,4 +239,5 @@ public static class CharacterEndpoints
     }
     public sealed record CharacterInput(string Name, string? PortraitUrl, string? BackgroundUrl, int Health, int MaxHealth, int Sanity, int MaxSanity, int Mana, int MaxMana, Dictionary<string, JsonElement>? Fields = null, int? Version = null);
     public sealed record RestoreInput(int ExpectedVersion);
+    public sealed record SecretInput(string Notes, int Revision);
 }

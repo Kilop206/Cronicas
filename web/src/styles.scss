@@ -402,10 +402,12 @@ html:has(.obs-page), body:has(.obs-page), html:has(.obs-camera-page), body:has(.
 .print-sheet { display: none; }
 .profile-export { margin-top: 24px; }
 .profile-export p { color: var(--muted); line-height: 1.6; max-width: 600px; }
+.character-secret { margin-top: 26px; border-color: #8d6a7b55; }
+.character-secret textarea { width: 100%; }
 @media print {
   :root { color-scheme: light; }
   body { background: #fff !important; color: #171717 !important; }
-  .sidebar, .topbar, .page-heading, .back-link, .character-editor, app-character-history, .notice { display: none !important; }
+  .sidebar, .topbar, .page-heading, .back-link, .character-editor, app-character-history, .character-secret, .notice { display: none !important; }
   .page { width: 100%; max-width: none; padding: 0; margin: 0; }
   .print-sheet { display: block; color: #171717; }
   .print-sheet h2 { font-size: 32px; margin: 0 0 10px; }

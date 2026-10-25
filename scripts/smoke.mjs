@@ -51,8 +51,17 @@ const characterInput = { name: 'Elara', portraitUrl: null, backgroundUrl: null, 
 const characterCreated = await request(`/api/campaigns/${id}/characters`, { method: 'POST', cookie: ownerCookie, body: characterInput });
 expect(characterCreated.status === 201, 'Character creation');
 const characterId = characterCreated.body.id;
+const emptySecret = await request(`/api/characters/${characterId}/secret`, { cookie: ownerCookie });
+expect(emptySecret.status === 200 && emptySecret.body.revision === 1 && emptySecret.body.notes === '', 'Master opens private character notes');
+const savedSecret = await request(`/api/characters/${characterId}/secret`, { method: 'PUT', cookie: ownerCookie, body: { notes: 'O farol esconde uma passagem.', revision: 1 } });
+expect(savedSecret.status === 200 && savedSecret.body.notes.includes('passagem'), 'Master saves private character notes');
+const revisedSecret = await request(`/api/characters/${characterId}/secret`, { method: 'PUT', cookie: ownerCookie, body: { notes: 'A passagem está fechada.', revision: savedSecret.body.revision } });
+expect(revisedSecret.status === 200 && revisedSecret.body.revision === 2, 'Private notes track revision');
+const staleSecret = await request(`/api/characters/${characterId}/secret`, { method: 'PUT', cookie: ownerCookie, body: { notes: 'Substituição antiga', revision: 1 } });
+expect(staleSecret.status === 409, 'Stale secret edit rejected');
 const characterList = await request(`/api/campaigns/${id}/characters`, { cookie: ownerCookie });
 expect(characterList.status === 200 && characterList.body.length === 1, 'Persisted character list');
+expect(!JSON.stringify(characterList.body).includes('passagem'), 'Private notes absent from public sheet projection');
 const forbiddenCharacter = await request(`/api/characters/${characterId}`, { cookie: second.cookie });
 expect(forbiddenCharacter.status === 404, 'Character campaign isolation');
 const invalidResource = await request(`/api/characters/${characterId}`, { method: 'PUT', cookie: ownerCookie, body: { ...characterInput, health: 11 } });
@@ -157,6 +166,10 @@ const playerInvite = await request(`/api/campaigns/${id}/invites`, { method: 'PO
 expect(playerInvite.status === 403, 'Player cannot invite others');
 const playerCharacterEdit = await request(`/api/characters/${characterId}`, { method: 'PUT', cookie: second.cookie, body: characterInput });
 expect(playerCharacterEdit.status === 403, 'Player cannot edit another character');
+const playerSecret = await request(`/api/characters/${characterId}/secret`, { cookie: second.cookie });
+expect(playerSecret.status === 404, 'Player cannot read master notes');
+const playerSecretWrite = await request(`/api/characters/${characterId}/secret`, { method: 'PUT', cookie: second.cookie, body: { notes: 'invasão', revision: 2 } });
+expect(playerSecretWrite.status === 404, 'Player cannot edit master notes');
 const playerDuplicate = await request(`/api/characters/${characterId}/duplicate`, { method: 'POST', cookie: second.cookie });
 expect(playerDuplicate.status === 403, 'Player cannot duplicate another character');
 const entryInput = { title: 'Carta do Farol', body: 'O segredo está no arquivo.', category: 'clue', visibility: 'gm', eventAt: null, revision: 1 };
@@ -313,4 +326,4 @@ const logout = await request('/api/auth/logout', { method: 'POST', cookie: curre
 expect(logout.status === 204, 'Logout');
 const afterLogout = await request('/api/dashboard', { cookie: currentCookie });
 expect(afterLogout.status === 401, 'Revogação da sessão');
-console.log('Smoke: contas, campanhas, sistemas, fichas/versionamento, universos/relações, pesquisa, convites, narrativa, dados, chat, encontros, OBS, permissões e logout passaram.');
+console.log('Smoke: contas, campanhas, sistemas, fichas/versionamento/sigilo, universos/relações, pesquisa, convites, narrativa, dados, chat, encontros, OBS, permissões e logout passaram.');

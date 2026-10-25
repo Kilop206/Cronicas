@@ -11,6 +11,7 @@ export interface Page<T> { items: T[]; total: number; page: number; }
 export interface Character { id: string; campaignId: string; ownerId: string; canEdit: boolean; name: string; portraitUrl: string | null; backgroundUrl: string | null; health: number; maxHealth: number; sanity: number; maxSanity: number; mana: number; maxMana: number; fields: Record<string, string | number | boolean>; version: number; updatedAt: string; }
 export type CharacterInput = Pick<Character, 'name' | 'portraitUrl' | 'backgroundUrl' | 'health' | 'maxHealth' | 'sanity' | 'maxSanity' | 'mana' | 'maxMana' | 'fields' | 'version'>;
 export interface CharacterRevision { id: string; version: number; createdAt: string; editedBy: string; }
+export interface CharacterSecret { notes: string; revision: number; updatedAt: string | null; }
 export interface SystemField { key: string; label: string; type: 'text' | 'longtext' | 'number' | 'boolean' | 'select'; section: string; min: number | null; max: number | null; options: string[] | null; }
 export interface RpgSystem { id: string; ownerId: string | null; name: string; description: string; fields: SystemField[]; createdAt: string; updatedAt: string; }
 export interface CampaignMember { userId: string; displayName: string; role: string; joinedAt: string; }
@@ -107,6 +108,8 @@ export class ApiService {
   duplicateCharacter(id: string) { return this.http.post<Character>(`/api/characters/${id}/duplicate`, {}, { withCredentials: true }); }
   characterRevisions(id: string) { return this.http.get<CharacterRevision[]>(`/api/characters/${id}/revisions`, { withCredentials: true }); }
   restoreCharacterRevision(id: string, revisionId: string, expectedVersion: number) { return this.http.post<Character>(`/api/characters/${id}/revisions/${revisionId}/restore`, { expectedVersion }, { withCredentials: true }); }
+  characterSecret(id: string) { return this.http.get<CharacterSecret>(`/api/characters/${id}/secret`, { withCredentials: true }); }
+  updateCharacterSecret(id: string, notes: string, revision: number) { return this.http.put<CharacterSecret>(`/api/characters/${id}/secret`, { notes, revision }, { withCredentials: true }); }
   rotateOverlayKey(id: string) { return this.http.post<{ key: string }>(`/api/characters/${id}/overlay-key`, {}, { withCredentials: true }); }
   overlay(key: string) { return this.http.get<Character>(`/api/overlay/${key}`); }
   joinRoom(campaignId: string) { return this.http.post<{ authToken: string }>(`/api/campaigns/${campaignId}/room/join`, {}, { withCredentials: true }); }

@@ -6,7 +6,7 @@
 - ASP.NET Core 10 Minimal API, EF Core e PostgreSQL. Cloudflare Pages serve os assets Angular. A Pages Function encaminha `/api/*` por service binding ao Worker que executa a API .NET em um Cloudflare Container. O banco é PostgreSQL gerenciado fora do contêiner e precisa de backups próprios. O Container é efêmero; nenhum dado durável fica em seu disco.
 - Cookies HttpOnly, Secure em produção e SameSite Lax guardam sessões aleatórias. O banco armazena somente o hash da chave. Senhas usam `PasswordHasher<T>`, recuperação por código de uso único e sessões antigas são revogadas depois da troca.
 - Campanhas exigem associação no servidor. O proprietário pode gerar convites de uso único, válidos por sete dias, para mestre, co-mestre, jogador ou espectador. A API guarda apenas o hash do token do convite e aceita o link em transação com bloqueio da linha para impedir uso duplo. Proprietários podem alterar papéis e remover participantes; a API revoga o participante de mídia associado.
-- Personagens pertencem a uma campanha e a um usuário. O proprietário da ficha ou um mestre autorizado pode editar e duplicar; qualquer membro pode consultar os campos públicos. A ficha usa campos tipados do sistema associado à campanha, controle de versão, histórico e restauração. A impressão do navegador permite salvar PDF. Campos secretos por ficha ainda não existem.
+- Personagens pertencem a uma campanha e a um usuário. O proprietário da ficha ou um mestre autorizado pode editar e duplicar; qualquer membro pode consultar os campos públicos. A ficha usa campos tipados do sistema associado à campanha, controle de versão, histórico e restauração. A impressão do navegador permite salvar PDF. Anotações secretas ficam em tabela e endpoints exclusivos para mestres; campos secretos dinâmicos definidos pelo sistema ainda não existem.
 - A URL de OBS contém uma chave aleatória de 256 bits; seu hash é persistido. Ela revela somente nome, portrait, fundo e recursos, pode ser revogada e não dá acesso à campanha.
 - Universos podem ser associados a várias campanhas. Artigos possuem visibilidade de campanha, privada ou de mestre; relações persistidas oferecem backlinks e respeitam a visibilidade de ambas as pontas. Documentos, sessões e wiki da campanha possuem edição autorizada e revelação de pistas. Dados são analisados por parser restrito, rolados com geração criptográfica e guardados com idempotência; chat e encontros também são persistidos.
 - A pesquisa global consulta campanhas, personagens, universos, artigos e registros narrativos com filtros de autorização aplicados na consulta ao banco.
@@ -23,7 +23,7 @@ O armazenamento de imagens ainda aceita URLs HTTPS externas. O próximo passo é
 
 | Fase | Entrega verificável |
 | --- | --- |
-| 2 | Campos secretos por ficha, inventário e habilidades estruturados, modelos e permissões mais granulares. |
+| 2 | Campos secretos dinâmicos, inventário e habilidades estruturados, modelos e permissões mais granulares. |
 | 3 | Links internos no texto com autocompletar, anexos e mídia de documentos, pistas associadas a sessões. |
 | 4 | Validar mídia com participantes reais, reconexão, múltiplos compartilhamentos e cenas individuais para OBS; sincronização de eventos da campanha. |
 | 5 | Fórmulas tipadas e progressão para sistemas, upload R2, personalização de layouts, exportação dos dados da conta. Não há módulo de tabletop. |
