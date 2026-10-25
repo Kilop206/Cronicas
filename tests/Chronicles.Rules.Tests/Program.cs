@@ -1,4 +1,5 @@
 using Chronicles.Api;
+using Chronicles.Api.Services;
 
 static void Check(bool condition, string name)
 {
@@ -25,5 +26,21 @@ Check(result.Total == 10 && result.KeptIndexes.SequenceEqual([0, 1, 2, 3]), "Som
 
 Check(DiceExpression.TryParse("1d100", out var percentile) && percentile is not null, "Analisa d100");
 Check(percentile!.Roll(_ => 100).Total == 100, "Limite superior d100");
+
+var rooms = new RoomRegistry();
+var campaign = Guid.NewGuid();
+var owner = Guid.NewGuid();
+var another = Guid.NewGuid();
+var session = Guid.NewGuid();
+var ownerPeer = new RoomPeer("owner", campaign, owner, "Owner", "player", "room");
+var otherPeer = new RoomPeer("other", campaign, another, "Other", "player", "room");
+var obsPeer = new RoomPeer("obs", campaign, another, "OBS", "player", "obs", TargetUserId: owner);
+Check(rooms.Join(ownerPeer, session).Count == 0, "Primeiro participante da sala");
+Check(rooms.Join(otherPeer, session).Single().ConnectionId == "owner", "Participantes da sala se conectam");
+Check(rooms.Join(obsPeer, session).Single().ConnectionId == "owner", "OBS encontra somente o proprietario do personagem");
+Check(rooms.SameCampaign("owner", "obs", campaign), "Proprietario pode sinalizar ao OBS");
+Check(!rooms.SameCampaign("other", "obs", campaign), "Outro participante nao pode sinalizar ao OBS");
+Check(!rooms.SameCampaign("obs", "other", campaign), "OBS nao pode sinalizar a outro participante");
+Check(!rooms.SameCampaign("owner", "obs", Guid.NewGuid()), "Sinalizacao bloqueada entre campanhas");
 
 Console.WriteLine("Regras de dados: expressões válidas/inválidas, kh1, kl1, modificadores e d100 passaram.");

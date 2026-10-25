@@ -1,6 +1,6 @@
 import { HubConnection, HubConnectionBuilder, HubConnectionState } from '@microsoft/signalr';
 
-export interface RoomPeer { connectionId: string; campaignId: string; userId: string; displayName: string; role: string; mode: 'room' | 'obs'; cameraEnabled: boolean; screenEnabled: boolean; }
+export interface RoomPeer { connectionId: string; campaignId: string; userId: string; displayName: string; role: string; mode: 'room' | 'obs'; cameraEnabled: boolean; screenEnabled: boolean; targetUserId: string | null; }
 export type MediaKind = 'audio' | 'camera' | 'screen';
 export interface RoomCallbacks {
   peers: (peers: RoomPeer[]) => void;
@@ -19,7 +19,7 @@ export class MeshRoom {
   private closed = false;
   private selfId = '';
 
-  constructor(private campaignId: string, private mode: 'room' | 'obs', private callbacks: RoomCallbacks) {
+  constructor(private campaignId: string, private mode: 'room' | 'obs', private callbacks: RoomCallbacks, private characterId: string | null = null) {
     this.hub = new HubConnectionBuilder().withUrl('/api/hubs/campaign', { withCredentials: true })
       .withAutomaticReconnect({ nextRetryDelayInMilliseconds: () => 3000 }).build();
     this.hub.on('PeerJoined', (peer: RoomPeer) => { void this.addPeer(peer); });
@@ -46,7 +46,7 @@ export class MeshRoom {
   private async join() {
     if (this.closed) return;
     this.clearPeers();
-    const existing = await this.hub.invoke<RoomPeer[]>('JoinCampaign', this.campaignId, this.mode);
+    const existing = await this.hub.invoke<RoomPeer[]>('JoinCampaign', this.campaignId, this.mode, this.characterId);
     this.selfId = this.hub.connectionId ?? '';
     for (const peer of existing) await this.addPeer(peer);
     this.callbacks.status('Conectado à sala.');
@@ -55,9 +55,10 @@ export class MeshRoom {
   private async addPeer(info: RoomPeer) {
     if (this.closed || info.connectionId === this.selfId || this.peers.has(info.connectionId)) return;
     const connection = new RTCPeerConnection({ iceServers: [{ urls: 'stun:stun.cloudflare.com:3478' }] });
-    const audio = connection.addTransceiver('audio', { direction: 'sendrecv' });
-    const camera = connection.addTransceiver('video', { direction: 'sendrecv' });
-    const screen = connection.addTransceiver('video', { direction: 'sendrecv' });
+    const obsLink = this.mode === 'obs' || info.mode === 'obs';
+    const audio = connection.addTransceiver('audio', { direction: obsLink ? 'inactive' : 'sendrecv' });
+    const camera = connection.addTransceiver('video', { direction: this.mode === 'obs' ? 'recvonly' : info.mode === 'obs' ? 'sendonly' : 'sendrecv' });
+    const screen = connection.addTransceiver('video', { direction: obsLink ? 'inactive' : 'sendrecv' });
     const remote: RemoteConnection = { info, connection, senders: { audio: audio.sender, camera: camera.sender, screen: screen.sender }, candidates: [] };
     this.peers.set(info.connectionId, remote);
     connection.onicecandidate = event => { if (event.candidate) void this.signal(info.connectionId, 'ice', JSON.stringify(event.candidate.toJSON())); };
@@ -69,7 +70,8 @@ export class MeshRoom {
     connection.onconnectionstatechange = () => {
       if (connection.connectionState === 'failed') this.callbacks.status(`Conexão direta com ${info.displayName} falhou nesta rede.`);
     };
-    for (const kind of ['audio', 'camera', 'screen'] as const) await remote.senders[kind].replaceTrack(this.tracks[kind] ?? null);
+    for (const kind of ['audio', 'camera', 'screen'] as const)
+      if (!obsLink || kind === 'camera' && this.mode === 'room') await remote.senders[kind].replaceTrack(this.tracks[kind] ?? null);
     this.emitPeers();
     for (const signal of this.pendingSignals.get(info.connectionId) ?? []) await this.receive(info.connectionId, signal.kind, signal.payload);
     this.pendingSignals.delete(info.connectionId);
@@ -109,9 +111,11 @@ export class MeshRoom {
   }
 
   async setTrack(kind: MediaKind, track: MediaStreamTrack | null) {
-    this.tracks[kind]?.stop();
+    const previous = this.tracks[kind];
     if (track) this.tracks[kind] = track; else delete this.tracks[kind];
-    await Promise.all([...this.peers.values()].map(peer => peer.senders[kind].replaceTrack(track).catch(() => {})));
+    await Promise.all([...this.peers.values()].filter(peer => peer.info.mode !== 'obs' || kind === 'camera')
+      .map(peer => peer.senders[kind].replaceTrack(track).catch(() => {})));
+    if (previous && previous !== track) previous.stop();
     if (kind !== 'audio' && this.hub.state === HubConnectionState.Connected)
       await this.hub.invoke('SetMediaState', !!this.tracks.camera, !!this.tracks.screen);
   }

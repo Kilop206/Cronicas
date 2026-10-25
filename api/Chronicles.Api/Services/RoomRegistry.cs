@@ -1,7 +1,7 @@
 namespace Chronicles.Api.Services;
 
 public sealed record RoomPeer(string ConnectionId, Guid CampaignId, Guid UserId, string DisplayName, string Role, string Mode,
-    bool CameraEnabled = false, bool ScreenEnabled = false);
+    bool CameraEnabled = false, bool ScreenEnabled = false, Guid? TargetUserId = null);
 
 public sealed class RoomRegistry
 {
@@ -17,7 +17,7 @@ public sealed class RoomRegistry
             peers.Remove(peer.ConnectionId);
             sessions.Remove(peer.ConnectionId);
             signalWindows.Remove(peer.ConnectionId);
-            var existing = peers.Values.Where(x => x.CampaignId == peer.CampaignId).ToArray();
+            var existing = peers.Values.Where(x => CanConnect(x, peer)).ToArray();
             peers.Add(peer.ConnectionId, peer);
             sessions.Add(peer.ConnectionId, sessionId);
             return existing;
@@ -37,7 +37,7 @@ public sealed class RoomRegistry
     public bool SameCampaign(string sourceId, string targetId, Guid campaignId)
     {
         lock (gate) return peers.TryGetValue(sourceId, out var source) && source.CampaignId == campaignId
-            && peers.TryGetValue(targetId, out var target) && target.CampaignId == campaignId;
+            && peers.TryGetValue(targetId, out var target) && CanConnect(source, target);
     }
 
     public RoomPeer? Update(string connectionId, bool camera, bool screen)
@@ -110,5 +110,13 @@ public sealed class RoomRegistry
         peers.Remove(connectionId);
         sessions.Remove(connectionId);
         signalWindows.Remove(connectionId);
+    }
+
+    private static bool CanConnect(RoomPeer first, RoomPeer second)
+    {
+        if (first.CampaignId != second.CampaignId) return false;
+        if (first.Mode == "room" && second.Mode == "room") return true;
+        if (first.Mode == "obs") return second.Mode == "room" && first.TargetUserId == second.UserId;
+        return second.Mode == "obs" && second.TargetUserId == first.UserId;
     }
 }

@@ -32,7 +32,7 @@ export class ObsCameraPage implements AfterViewInit, OnDestroy {
           track: (id, kind, stream) => { if (kind !== 'camera') return; if (stream) this.cameraStreams.set(id, stream); else this.cameraStreams.delete(id); this.pickCamera(); },
           status: message => this.waiting.set(message),
           revoked: () => this.error.set('O acesso à campanha mudou. Atualize esta fonte no OBS.')
-        });
+        }, this.characterId);
         void this.room.connect().catch(() => { if (!this.destroyed) this.error.set('Não foi possível conectar a fonte à sala.'); });
       },
       error: error => this.error.set(apiError(error))

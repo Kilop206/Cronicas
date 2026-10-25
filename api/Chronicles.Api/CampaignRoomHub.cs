@@ -10,7 +10,7 @@ public sealed class CampaignRoomHub(AppDbContext db, RoomRegistry registry) : Hu
 {
     public static string Group(Guid campaignId) => $"campaign:{campaignId:N}";
 
-    public async Task<IReadOnlyList<RoomPeer>> JoinCampaign(Guid campaignId, string mode)
+    public async Task<IReadOnlyList<RoomPeer>> JoinCampaign(Guid campaignId, string mode, Guid? characterId)
     {
         var userId = UserId();
         var sessionId = Context.GetHttpContext()?.Items["sessionId"] is Guid id ? id : (Guid?)null;
@@ -19,12 +19,20 @@ public sealed class CampaignRoomHub(AppDbContext db, RoomRegistry registry) : Hu
         var member = await db.CampaignMemberships.AsNoTracking().Where(x => x.CampaignId == campaignId && x.UserId == userId)
             .Select(x => new { x.Role, x.User.DisplayName }).SingleOrDefaultAsync();
         if (member is null) throw new HubException("Acesso à sala negado.");
+        Guid? targetUserId = null;
+        if (mode == "obs")
+        {
+            targetUserId = await db.Characters.AsNoTracking().Where(x => x.Id == characterId && x.CampaignId == campaignId)
+                .Select(x => (Guid?)x.OwnerId).SingleOrDefaultAsync();
+            if (targetUserId is null) throw new HubException("Personagem indisponível para esta fonte.");
+        }
+        else if (characterId is not null) throw new HubException("Destino de mídia inválido.");
         var previous = registry.Remove(Context.ConnectionId);
         if (previous is not null) await Groups.RemoveFromGroupAsync(Context.ConnectionId, Group(previous.CampaignId));
-        var peer = new RoomPeer(Context.ConnectionId, campaignId, userId.Value, member.DisplayName, member.Role, mode);
+        var peer = new RoomPeer(Context.ConnectionId, campaignId, userId.Value, member.DisplayName, member.Role, mode, TargetUserId: targetUserId);
         var existing = registry.Join(peer, sessionId.Value);
         await Groups.AddToGroupAsync(Context.ConnectionId, Group(campaignId));
-        await Clients.OthersInGroup(Group(campaignId)).SendAsync("PeerJoined", peer);
+        foreach (var other in existing) await Clients.Client(other.ConnectionId).SendAsync("PeerJoined", peer);
         return existing;
     }
 

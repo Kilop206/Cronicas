@@ -42,12 +42,17 @@ const campaign = await request('/api/campaigns', { method: 'POST', cookie: owner
 } });
 assert(campaign.status === 201, 'Campaign created');
 const id = campaign.body.id;
+const obsCharacter = await request(`/api/campaigns/${id}/characters`, { method: 'POST', cookie: owner.cookie, body: {
+  name: 'Personagem para OBS', portraitUrl: null, backgroundUrl: null,
+  health: 10, maxHealth: 10, sanity: 10, maxSanity: 10, mana: 10, maxMana: 10, fields: {}, version: 1,
+} });
+assert(obsCharacter.status === 201, 'OBS target character created');
 const hubs = [connection(owner.cookie), connection(player.cookie), connection(spectator.cookie)];
 
 try {
   for (const hub of hubs) await hub.start();
-  await rejects(hubs[1].invoke('JoinCampaign', id, 'room'), /negado|denied/i);
-  assert((await hubs[0].invoke('JoinCampaign', id, 'room')).length === 0, 'Owner joins empty room');
+  await rejects(hubs[1].invoke('JoinCampaign', id, 'room', null), /negado|denied/i);
+  assert((await hubs[0].invoke('JoinCampaign', id, 'room', null)).length === 0, 'Owner joins empty room');
 
   for (const [user, role] of [[player, 'player'], [spectator, 'spectator']]) {
     const invite = await request(`/api/campaigns/${id}/invites`, { method: 'POST', cookie: owner.cookie, body: { role } });
@@ -57,7 +62,7 @@ try {
   }
 
   const joined = event(hubs[0], 'PeerJoined');
-  const previous = await hubs[1].invoke('JoinCampaign', id, 'room');
+  const previous = await hubs[1].invoke('JoinCampaign', id, 'room', null);
   assert(previous.length === 1 && previous[0].mode === 'room', 'Player sees owner');
   const [peer] = await joined;
   assert(peer.connectionId === hubs[1].connectionId, 'Owner sees player');
@@ -66,7 +71,7 @@ try {
   const [sender, kind, payload] = await signal;
   assert(sender === hubs[1].connectionId && kind === 'ice' && payload === '{}', 'Signal delivered only to peer');
   await rejects(hubs[1].invoke('SendSignal', crypto.randomUUID(), hubs[0].connectionId, 'ice', '{}'), /indisponível|unavailable/i);
-  await hubs[2].invoke('JoinCampaign', id, 'room');
+  await hubs[2].invoke('JoinCampaign', id, 'room', null);
   await rejects(hubs[2].invoke('SetMediaState', true, false), /publicar|publish/i);
 
   const revoked = event(hubs[1], 'MembershipChanged');
@@ -76,7 +81,7 @@ try {
   await revoked;
   assert((await left)[0] === hubs[1].connectionId, 'Peer removal broadcast');
   await rejects(hubs[1].invoke('SendSignal', id, hubs[0].connectionId, 'ice', '{}'), /indisponível|unavailable/i);
-  await rejects(hubs[1].invoke('JoinCampaign', id, 'room'), /negado|denied/i);
+  await rejects(hubs[1].invoke('JoinCampaign', id, 'room', null), /negado|denied/i);
   const changed = event(hubs[2], 'MembershipChanged');
   const role = await request(`/api/campaigns/${id}/members/${spectator.body.id}`, {
     method: 'PATCH', cookie: owner.cookie, body: { role: 'player' },
@@ -84,7 +89,7 @@ try {
   assert(role.status === 204, 'Owner changes spectator role');
   await changed;
   await rejects(hubs[2].invoke('SetMediaState', true, false), /Entre|join/i);
-  const refreshed = await hubs[2].invoke('JoinCampaign', id, 'room');
+  const refreshed = await hubs[2].invoke('JoinCampaign', id, 'room', null);
   assert(refreshed.some(x => x.connectionId === hubs[0].connectionId), 'Changed role rejoins room');
   await hubs[2].invoke('SetMediaState', true, false);
   const extraLogin = await request('/api/auth/login', { method: 'POST', body: {
@@ -94,7 +99,10 @@ try {
   const extraHub = connection(extraLogin.cookie);
   hubs.push(extraHub);
   await extraHub.start();
-  await extraHub.invoke('JoinCampaign', id, 'obs');
+  await rejects(extraHub.invoke('JoinCampaign', id, 'obs', null), /personagem|character/i);
+  const obsPeers = await extraHub.invoke('JoinCampaign', id, 'obs', obsCharacter.body.id);
+  assert(obsPeers.length === 1 && obsPeers[0].userId === owner.body.id, 'OBS subscribes only to character owner');
+  await rejects(extraHub.invoke('SendSignal', id, hubs[2].connectionId, 'ice', '{}'), /indisponível|unavailable/i);
   const accountSessions = await request('/api/auth/sessions', { cookie: spectator.cookie });
   const extraSession = accountSessions.body?.find(x => !x.current);
   assert(accountSessions.status === 200 && extraSession, 'Extra session listed');
@@ -102,7 +110,7 @@ try {
   const ended = await request(`/api/auth/sessions/${extraSession.id}`, { method: 'DELETE', cookie: spectator.cookie });
   assert(ended.status === 204, 'Session revoked');
   await accessRevoked;
-  await rejects(extraHub.invoke('JoinCampaign', id, 'obs'), /negado|denied/i);
+  await rejects(extraHub.invoke('JoinCampaign', id, 'obs', obsCharacter.body.id), /negado|denied/i);
   console.log('Room signaling, authorization, spectator and revocation passed');
 } finally {
   await Promise.allSettled(hubs.map(hub => hub.stop()));
