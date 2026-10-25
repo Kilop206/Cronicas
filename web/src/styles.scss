@@ -397,6 +397,8 @@ html:has(.obs-page), body:has(.obs-page), html:has(.obs-camera-page), body:has(.
 .revision-row div { display: grid; gap: 4px; }
 .revision-row small { color: var(--muted); }
 .print-action { margin-top: 16px; }
+.character-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.character-actions .button { margin-top: 16px; }
 .print-sheet { display: none; }
 @media print {
   :root { color-scheme: light; }

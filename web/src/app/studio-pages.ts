@@ -1,7 +1,7 @@
 import { CommonModule, DOCUMENT } from '@angular/common';
 import { Component, forwardRef, Input, OnDestroy, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
-import { ActivatedRoute, RouterLink } from '@angular/router';
+import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize, Subscription, timer } from 'rxjs';
 import { ApiService, apiError, Character, CharacterInput, RpgSystem, SystemField } from './api';
 import { CharacterHistoryPanelComponent } from './character-history.component';
@@ -49,18 +49,19 @@ export class CharactersPage {
         </div>
       </div>
       <button class="button" [disabled]="form.invalid || saving()">{{ saving() ? 'Salvando...' : 'Salvar ficha' }}</button><p *ngIf="saved()" class="form-success" role="status">Ficha salva automaticamente.</p>
-    </form><div *ngIf="!item.canEdit" class="editor-panel"><div class="panel-heading"><span>FICHA</span><h2>{{ system()?.name || 'Personagem' }}</h2></div><div *ngFor="let field of system()?.fields" class="sheet-read-row"><span>{{ field.label }}</span><strong>{{ fieldValue(field.key) || '—' }}</strong></div></div><div class="character-preview"><app-overlay-card [character]="draft" /><button type="button" class="button button-small print-action" (click)="printSheet()">Imprimir / salvar PDF</button><div *ngIf="item.ownerId === api.user()?.id" class="obs-actions"><h2>Fonte do OBS</h2><p>Gere uma URL de Browser Source. A chave anterior deixa de funcionar a cada nova geração.</p><button class="button button-small" type="button" (click)="createOverlayKey()" [disabled]="saving()">Gerar nova URL</button><p *ngIf="overlayUrl()" class="obs-url"><code>{{ overlayUrl() }}</code><button type="button" (click)="copyUrl()">Copiar</button></p><small *ngIf="overlayUrl()">Guarde esta URL agora; ela não pode ser recuperada depois.</small><h3>Câmera e ficha juntas</h3><p>Adicione esta cena como outra Browser Source. Ela exige entrar na sua conta pelo botão Interagir do OBS e mostra a câmera publicada por este personagem.</p><p class="obs-url"><code>{{ cameraUrl(item) }}</code><button type="button" (click)="copyCameraUrl(item)">Copiar</button></p></div></div></div>
+    </form><div *ngIf="!item.canEdit" class="editor-panel"><div class="panel-heading"><span>FICHA</span><h2>{{ system()?.name || 'Personagem' }}</h2></div><div *ngFor="let field of system()?.fields" class="sheet-read-row"><span>{{ field.label }}</span><strong>{{ fieldValue(field.key) || '—' }}</strong></div></div><div class="character-preview"><app-overlay-card [character]="draft" /><div class="character-actions"><button type="button" class="button button-small print-action" (click)="printSheet()">Imprimir / salvar PDF</button><button *ngIf="item.canEdit" type="button" class="button button-small secondary" [disabled]="!canDuplicate()" (click)="duplicate()">Duplicar ficha</button></div><div *ngIf="item.ownerId === api.user()?.id" class="obs-actions"><h2>Fonte do OBS</h2><p>Gere uma URL de Browser Source. A chave anterior deixa de funcionar a cada nova geração.</p><button class="button button-small" type="button" (click)="createOverlayKey()" [disabled]="saving()">Gerar nova URL</button><p *ngIf="overlayUrl()" class="obs-url"><code>{{ overlayUrl() }}</code><button type="button" (click)="copyUrl()">Copiar</button></p><small *ngIf="overlayUrl()">Guarde esta URL agora; ela não pode ser recuperada depois.</small><h3>Câmera e ficha juntas</h3><p>Adicione esta cena como outra Browser Source. Ela exige entrar na sua conta pelo botão Interagir do OBS e mostra a câmera publicada por este personagem.</p><p class="obs-url"><code>{{ cameraUrl(item) }}</code><button type="button" (click)="copyCameraUrl(item)">Copiar</button></p></div></div></div>
     <section class="print-sheet"><h2>{{ draft.name }}</h2><p>Vida {{ draft.health }}/{{ draft.maxHealth }} · Sanidade {{ draft.sanity }}/{{ draft.maxSanity }} · Mana {{ draft.mana }}/{{ draft.maxMana }}</p><div *ngFor="let field of system()?.fields" class="sheet-read-row"><span>{{ field.label }}</span><strong>{{ fieldValue(field.key) === '' ? '—' : fieldValue(field.key) }}</strong></div></section>
     <app-character-history [character]="item" (restored)="onRestored($event)" />
   </main><main class="page" *ngIf="loading()"><div class="loading">Abrindo ficha...</div></main>` })
 export class CharacterEditorPage implements OnDestroy {
-  api = inject(ApiService); private route = inject(ActivatedRoute); private document = inject(DOCUMENT);
+  api = inject(ApiService); private route = inject(ActivatedRoute); private router = inject(Router); private document = inject(DOCUMENT);
   character = signal<Character | null>(null); system = signal<RpgSystem | null>(null); draft: CharacterInput = emptyCharacter(); loading = signal(true); saving = signal(false); saved = signal(false); error = signal(''); overlayUrl = signal('');
-  private saveTimer?: ReturnType<typeof setTimeout>; private editRevision = 0;
+  private saveTimer?: ReturnType<typeof setTimeout>; private editRevision = 0; private routeSubscription: Subscription;
   resources: { label: string; key: 'health' | 'sanity' | 'mana'; max: 'maxHealth' | 'maxSanity' | 'maxMana' }[] = [
     { label: 'Vida', key: 'health', max: 'maxHealth' }, { label: 'Sanidade', key: 'sanity', max: 'maxSanity' }, { label: 'Mana', key: 'mana', max: 'maxMana' }
   ];
-  constructor() { this.api.character(this.route.snapshot.paramMap.get('id')!).pipe(finalize(() => this.loading.set(false))).subscribe({ next: item => { this.character.set(item); this.draft = { ...item, fields: { ...item.fields } }; this.api.campaign(item.campaignId).subscribe({ next: campaign => this.api.system(campaign.systemId || 'a9e29682-c194-4aae-9c0e-7bbb3f6a72f1').subscribe({ next: system => this.system.set(system), error: e => this.error.set(apiError(e)) }), error: e => this.error.set(apiError(e)) }); }, error: error => this.error.set(apiError(error)) }); }
+  constructor() { this.routeSubscription = this.route.paramMap.subscribe(params => this.loadCharacter(params.get('id')!)); }
+  private loadCharacter(id: string) { clearTimeout(this.saveTimer); this.loading.set(true); this.character.set(null); this.overlayUrl.set(''); this.error.set(''); this.api.character(id).pipe(finalize(() => this.loading.set(false))).subscribe({ next: item => { this.character.set(item); this.draft = { ...item, fields: { ...item.fields } }; this.api.campaign(item.campaignId).subscribe({ next: campaign => this.api.system(campaign.systemId || 'a9e29682-c194-4aae-9c0e-7bbb3f6a72f1').subscribe({ next: system => this.system.set(system), error: e => this.error.set(apiError(e)) }), error: e => this.error.set(apiError(e)) }); }, error: error => this.error.set(apiError(error)) }); }
   fieldValue(key: string) { return this.draft.fields[key] ?? ''; }
   setField(field: SystemField, value: string | number | boolean) { if (value === '' || value === null) delete this.draft.fields[field.key]; else this.draft.fields[field.key] = field.type === 'number' ? Number(value) : value; this.scheduleSave(); }
   scheduleSave() { this.editRevision++; this.saved.set(false); clearTimeout(this.saveTimer); this.saveTimer = setTimeout(() => { if (this.validDraft()) this.save(); }, 900); }
@@ -76,7 +77,9 @@ export class CharacterEditorPage implements OnDestroy {
   }
   onRestored(item: Character) { clearTimeout(this.saveTimer); this.editRevision++; this.character.set(item); this.draft = { ...item, fields: { ...item.fields } }; this.error.set(''); this.saved.set(true); }
   printSheet() { this.document.defaultView?.print(); }
-  ngOnDestroy() { clearTimeout(this.saveTimer); }
+  canDuplicate() { return !this.saving() && (this.editRevision === 0 || this.saved()); }
+  duplicate() { const current = this.character(); if (!current) return; this.error.set(''); this.saving.set(true); this.api.duplicateCharacter(current.id).pipe(finalize(() => this.saving.set(false))).subscribe({ next: item => void this.router.navigate(['/characters', item.id]), error: e => this.error.set(apiError(e)) }); }
+  ngOnDestroy() { clearTimeout(this.saveTimer); this.routeSubscription.unsubscribe(); }
   createOverlayKey() { const current = this.character(); if (!current) return; this.error.set(''); this.saving.set(true); this.api.rotateOverlayKey(current.id).pipe(finalize(() => this.saving.set(false))).subscribe({ next: result => this.overlayUrl.set(`${this.document.location?.origin}/obs/${result.key}`), error: error => this.error.set(apiError(error)) }); }
   copyUrl() { void this.document.defaultView?.navigator.clipboard.writeText(this.overlayUrl()); }
   cameraUrl(item: Character) { return `${this.document.location?.origin}/obs-camera/${item.campaignId}/${item.id}`; }

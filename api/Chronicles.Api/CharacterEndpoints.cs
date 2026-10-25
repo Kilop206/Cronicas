@@ -98,6 +98,29 @@ public static class CharacterEndpoints
             return Results.Ok(View(character, true));
         });
 
+        api.MapPost("/characters/{id:guid}/duplicate", async Task<IResult> (Guid id, HttpContext http, AppDbContext db) =>
+        {
+            if (UserId(http) is not { } userId) return Results.Unauthorized();
+            var source = await db.Characters.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id);
+            if (source is null) return Results.NotFound();
+            var role = await db.CampaignMemberships.AsNoTracking().Where(x => x.CampaignId == source.CampaignId && x.UserId == userId).Select(x => x.Role).SingleOrDefaultAsync();
+            if (role is null) return Results.NotFound();
+            if (source.OwnerId != userId && role is not ("owner" or "gm" or "co-gm"))
+                return Results.Problem("Você não pode duplicar este personagem.", statusCode: 403);
+            var copy = new Character
+            {
+                CampaignId = source.CampaignId, OwnerId = userId,
+                Name = $"{source.Name[..Math.Min(source.Name.Length, 110)]} (cópia)",
+                PortraitUrl = source.PortraitUrl, BackgroundUrl = source.BackgroundUrl,
+                Health = source.Health, MaxHealth = source.MaxHealth,
+                Sanity = source.Sanity, MaxSanity = source.MaxSanity,
+                Mana = source.Mana, MaxMana = source.MaxMana,
+                FieldsJson = source.FieldsJson
+            };
+            db.Characters.Add(copy); await db.SaveChangesAsync();
+            return Results.Created($"/api/characters/{copy.Id}", View(copy, true));
+        });
+
         api.MapPost("/characters/{id:guid}/overlay-key", async Task<IResult> (Guid id, HttpContext http, AppDbContext db) =>
         {
             if (UserId(http) is not { } userId) return Results.Unauthorized();

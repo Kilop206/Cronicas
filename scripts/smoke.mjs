@@ -84,6 +84,8 @@ const preservedFields = await request(`/api/characters/${characterId}`, { method
 expect(preservedFields.status === 200 && preservedFields.body.fields.coragem === 7 && preservedFields.body.fields.nivel === 2, 'Old field values preserved after system switch');
 const restoredSystem = await request(`/api/campaigns/${id}/system`, { method: 'PATCH', cookie: ownerCookie, body: { systemId: customSystem.body.id } });
 expect(restoredSystem.status === 204, 'Restore custom campaign system');
+const duplicateCharacter = await request(`/api/characters/${characterId}/duplicate`, { method: 'POST', cookie: ownerCookie });
+expect(duplicateCharacter.status === 201 && duplicateCharacter.body.id !== characterId && duplicateCharacter.body.ownerId === first.body.id && duplicateCharacter.body.version === 1 && duplicateCharacter.body.fields.coragem === 7, 'Character duplication copies sheet into new owned record');
 const overlayKey = await request(`/api/characters/${characterId}/overlay-key`, { method: 'POST', cookie: ownerCookie });
 expect(overlayKey.status === 200 && overlayKey.body.key.length === 64, 'OBS key generation');
 const overlay = await request(`/api/overlay/${overlayKey.body.key}`);
@@ -155,6 +157,8 @@ const playerInvite = await request(`/api/campaigns/${id}/invites`, { method: 'PO
 expect(playerInvite.status === 403, 'Player cannot invite others');
 const playerCharacterEdit = await request(`/api/characters/${characterId}`, { method: 'PUT', cookie: second.cookie, body: characterInput });
 expect(playerCharacterEdit.status === 403, 'Player cannot edit another character');
+const playerDuplicate = await request(`/api/characters/${characterId}/duplicate`, { method: 'POST', cookie: second.cookie });
+expect(playerDuplicate.status === 403, 'Player cannot duplicate another character');
 const entryInput = { title: 'Carta do Farol', body: 'O segredo está no arquivo.', category: 'clue', visibility: 'gm', eventAt: null, revision: 1 };
 const document = await request(`/api/campaigns/${id}/entries/documents`, { method: 'POST', cookie: ownerCookie, body: entryInput });
 expect(document.status === 201 && document.body.visibility === 'gm', 'Master creates secret document');
