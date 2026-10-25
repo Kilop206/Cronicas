@@ -16,6 +16,7 @@ export interface CampaignMember { userId: string; displayName: string; role: str
 export interface World { id: string; ownerId: string; name: string; description: string; createdAt: string; updatedAt: string; }
 export interface WorldDetail extends World { campaigns: { campaignId: string; name: string; role: string }[]; }
 export interface WorldArticle { id: string; worldId: string; authorId: string; title: string; body: string; category: string; visibility: 'campaign' | 'private' | 'gm'; revision: number; createdAt: string; updatedAt: string; }
+export interface ChatMessage { id: string; campaignId: string; userId: string; userName: string; body: string; kind: 'chat' | 'announcement'; createdAt: string; }
 export type WorldArticleInput = Pick<WorldArticle, 'title' | 'body' | 'category' | 'visibility' | 'revision'>;
 export interface InvitePreview { campaignId: string; campaignName: string; role: string; expiresAt: string; }
 export type NarrativeKind = 'sessions' | 'documents' | 'wiki';
@@ -65,6 +66,8 @@ export class ApiService {
   createWorldArticle(worldId: string, input: WorldArticleInput) { return this.http.post<WorldArticle>(`/api/worlds/${worldId}/articles`, input, { withCredentials: true }); }
   updateWorldArticle(id: string, input: WorldArticleInput) { return this.http.put<WorldArticle>(`/api/world-articles/${id}`, input, { withCredentials: true }); }
   deleteWorldArticle(id: string) { return this.http.delete<void>(`/api/world-articles/${id}`, { withCredentials: true }); }
+  messages(campaignId: string) { return this.http.get<ChatMessage[]>(`/api/campaigns/${campaignId}/messages`, { withCredentials: true }); }
+  sendMessage(campaignId: string, body: string, kind: ChatMessage['kind'], clientId: string) { return this.http.post<ChatMessage>(`/api/campaigns/${campaignId}/messages`, { body, kind, clientId }, { withCredentials: true }); }
   systems() { return this.http.get<RpgSystem[]>('/api/systems', { withCredentials: true }); }
   system(id: string) { return this.http.get<RpgSystem>(`/api/systems/${id}`, { withCredentials: true }); }
   createSystem(data: Pick<RpgSystem, 'name' | 'description' | 'fields'>) { return this.http.post<RpgSystem>('/api/systems', data, { withCredentials: true }); }
