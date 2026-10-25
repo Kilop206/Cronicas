@@ -18,6 +18,8 @@ public static class ProfileExportEndpoints
 
             var memberships = await db.CampaignMemberships.AsNoTracking().Where(x => x.UserId == userId)
                 .Select(x => new { x.CampaignId, campaignName = x.Campaign.Name, x.Role, x.JoinedAt }).ToListAsync();
+            var invites = await db.CampaignInvites.AsNoTracking().Where(x => x.CreatedById == userId)
+                .Select(x => new { x.Id, x.CampaignId, x.Role, x.CreatedAt, x.ExpiresAt, x.UsedAt }).ToListAsync();
             var campaigns = await db.Campaigns.AsNoTracking().Where(x => x.OwnerId == userId)
                 .Select(x => new { x.Id, x.Name, x.Description, x.Status, x.AccentColor, x.WorldId, x.SystemId, x.CreatedAt, x.UpdatedAt }).ToListAsync();
             var characters = await db.Characters.AsNoTracking().Where(x => x.OwnerId == userId)
@@ -41,7 +43,7 @@ public static class ProfileExportEndpoints
             var messages = await db.ChatMessages.AsNoTracking().Where(x => x.UserId == userId)
                 .Select(x => new { x.Id, x.CampaignId, x.Body, x.Kind, x.CreatedAt }).ToListAsync();
 
-            var export = new { exportedAt = DateTime.UtcNow, profile, memberships, campaigns, characters, revisions,
+            var export = new { exportedAt = DateTime.UtcNow, profile, memberships, invites, campaigns, characters, revisions,
                 worlds, articles, entries, systems, rolls, messages };
             http.Response.Headers.CacheControl = "no-store";
             return Results.File(JsonSerializer.SerializeToUtf8Bytes(export, new JsonSerializerOptions(JsonSerializerDefaults.Web)),
