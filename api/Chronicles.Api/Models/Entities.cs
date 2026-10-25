@@ -49,6 +49,8 @@ public sealed class Campaign
     public Guid? RealtimeMeetingId { get; set; }
     public Guid? SystemId { get; set; }
     public RpgSystem? System { get; set; }
+    public Guid? WorldId { get; set; }
+    public World? World { get; set; }
 }
 
 public sealed class CampaignMembership
@@ -151,6 +153,33 @@ public sealed class RpgSystem
     public required string Name { get; set; }
     public string Description { get; set; } = "";
     public string SchemaJson { get; set; } = "[]";
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}
+
+public sealed class World
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid OwnerId { get; set; }
+    public User Owner { get; set; } = null!;
+    public required string Name { get; set; }
+    public string Description { get; set; } = "";
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+}
+
+public sealed class WorldArticle
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid WorldId { get; set; }
+    public World World { get; set; } = null!;
+    public Guid AuthorId { get; set; }
+    public User Author { get; set; } = null!;
+    public required string Title { get; set; }
+    public string Body { get; set; } = "";
+    public string Category { get; set; } = "general";
+    public string Visibility { get; set; } = "private";
+    public int Revision { get; set; } = 1;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }

@@ -63,6 +63,9 @@ namespace Chronicles.Api.Migrations
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<Guid?>("WorldId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
                     b.HasIndex("OwnerId");
@@ -70,6 +73,8 @@ namespace Chronicles.Api.Migrations
                     b.HasIndex("SystemId");
 
                     b.HasIndex("UpdatedAt");
+
+                    b.HasIndex("WorldId");
 
                     b.ToTable("campaigns", (string)null);
                 });
@@ -499,6 +504,90 @@ namespace Chronicles.Api.Migrations
                     b.ToTable("user_sessions", (string)null);
                 });
 
+            modelBuilder.Entity("Chronicles.Api.Models.World", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<Guid>("OwnerId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("OwnerId", "UpdatedAt");
+
+                    b.ToTable("worlds", (string)null);
+                });
+
+            modelBuilder.Entity("Chronicles.Api.Models.WorldArticle", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("AuthorId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Body")
+                        .IsRequired()
+                        .HasMaxLength(40000)
+                        .HasColumnType("character varying(40000)");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Revision")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Visibility")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("WorldId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("AuthorId");
+
+                    b.HasIndex("WorldId", "UpdatedAt");
+
+                    b.HasIndex("WorldId", "Category", "Title");
+
+                    b.ToTable("world_articles", (string)null);
+                });
+
             modelBuilder.Entity("Chronicles.Api.Models.Campaign", b =>
                 {
                     b.HasOne("Chronicles.Api.Models.User", "Owner")
@@ -512,9 +601,16 @@ namespace Chronicles.Api.Migrations
                         .HasForeignKey("SystemId")
                         .OnDelete(DeleteBehavior.Restrict);
 
+                    b.HasOne("Chronicles.Api.Models.World", "World")
+                        .WithMany()
+                        .HasForeignKey("WorldId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Owner");
 
                     b.Navigation("System");
+
+                    b.Navigation("World");
                 });
 
             modelBuilder.Entity("Chronicles.Api.Models.CampaignInvite", b =>
@@ -666,6 +762,36 @@ namespace Chronicles.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Chronicles.Api.Models.World", b =>
+                {
+                    b.HasOne("Chronicles.Api.Models.User", "Owner")
+                        .WithMany()
+                        .HasForeignKey("OwnerId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("Chronicles.Api.Models.WorldArticle", b =>
+                {
+                    b.HasOne("Chronicles.Api.Models.User", "Author")
+                        .WithMany()
+                        .HasForeignKey("AuthorId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Chronicles.Api.Models.World", "World")
+                        .WithMany()
+                        .HasForeignKey("WorldId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Author");
+
+                    b.Navigation("World");
                 });
 
             modelBuilder.Entity("Chronicles.Api.Models.Campaign", b =>

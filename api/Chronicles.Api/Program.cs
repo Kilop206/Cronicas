@@ -72,6 +72,7 @@ api.MapNarrativeEndpoints();
 api.MapDiceEndpoints();
 api.MapSystemEndpoints();
 api.MapCampaignMembersEndpoints();
+api.MapWorldEndpoints();
 api.MapPost("/campaigns/{id:guid}/room/join", async Task<IResult> (Guid id, HttpContext http, AppDbContext db, RealtimeKitService realtime) =>
 {
     if (CurrentUserId(http) is not { } userId) return Results.Unauthorized();
@@ -207,7 +208,7 @@ api.MapGet("/dashboard", async Task<IResult> (HttpContext http, AppDbContext db)
     var campaigns = await db.CampaignMemberships.AsNoTracking().Where(x => x.UserId == id)
         .OrderByDescending(x => x.Campaign.UpdatedAt).Take(6)
         .Select(x => new CampaignView(x.CampaignId, x.Campaign.Name, x.Campaign.Description, x.Campaign.Status,
-            x.Campaign.AccentColor, x.Role, x.Campaign.UpdatedAt, x.Campaign.SystemId)).ToListAsync();
+            x.Campaign.AccentColor, x.Role, x.Campaign.UpdatedAt, x.Campaign.SystemId, x.Campaign.WorldId)).ToListAsync();
     var total = await db.CampaignMemberships.CountAsync(x => x.UserId == id);
     return Results.Ok(new { totalCampaigns = total, activeCampaigns = await db.CampaignMemberships.CountAsync(x => x.UserId == id && x.Campaign.Status == "active"), recentCampaigns = campaigns });
 });
@@ -225,7 +226,7 @@ api.MapGet("/campaigns", async Task<IResult> (HttpContext http, AppDbContext db,
     var total = await query.CountAsync();
     var items = await query.OrderByDescending(x => x.Campaign.UpdatedAt).Skip((currentPage - 1) * 20).Take(20)
         .Select(x => new CampaignView(x.CampaignId, x.Campaign.Name, x.Campaign.Description, x.Campaign.Status,
-            x.Campaign.AccentColor, x.Role, x.Campaign.UpdatedAt, x.Campaign.SystemId)).ToListAsync();
+            x.Campaign.AccentColor, x.Role, x.Campaign.UpdatedAt, x.Campaign.SystemId, x.Campaign.WorldId)).ToListAsync();
     return Results.Ok(new { items, total, page = currentPage });
 });
 
@@ -239,7 +240,7 @@ api.MapPost("/campaigns", async Task<IResult> (CampaignRequest input, HttpContex
     campaign.Memberships.Add(new CampaignMembership { UserId = id, Role = "owner" });
     db.Campaigns.Add(campaign);
     await db.SaveChangesAsync();
-    return Results.Created($"/api/campaigns/{campaign.Id}", new CampaignView(campaign.Id, campaign.Name, campaign.Description, campaign.Status, campaign.AccentColor, "owner", campaign.UpdatedAt, campaign.SystemId));
+    return Results.Created($"/api/campaigns/{campaign.Id}", new CampaignView(campaign.Id, campaign.Name, campaign.Description, campaign.Status, campaign.AccentColor, "owner", campaign.UpdatedAt, campaign.SystemId, campaign.WorldId));
 });
 
 api.MapGet("/campaigns/{id:guid}", async Task<IResult> (Guid id, HttpContext http, AppDbContext db) =>
@@ -247,7 +248,7 @@ api.MapGet("/campaigns/{id:guid}", async Task<IResult> (Guid id, HttpContext htt
     if (CurrentUserId(http) is not { } userId) return Results.Unauthorized();
     var member = await db.CampaignMemberships.AsNoTracking().Where(x => x.UserId == userId && x.CampaignId == id)
         .Select(x => new CampaignView(x.CampaignId, x.Campaign.Name, x.Campaign.Description, x.Campaign.Status,
-            x.Campaign.AccentColor, x.Role, x.Campaign.UpdatedAt, x.Campaign.SystemId)).SingleOrDefaultAsync();
+            x.Campaign.AccentColor, x.Role, x.Campaign.UpdatedAt, x.Campaign.SystemId, x.Campaign.WorldId)).SingleOrDefaultAsync();
     return member is null ? Results.NotFound() : Results.Ok(member);
 });
 
@@ -265,7 +266,7 @@ api.MapPatch("/campaigns/{id:guid}", async Task<IResult> (Guid id, CampaignReque
     member.Campaign.AccentColor = input.AccentColor;
     member.Campaign.UpdatedAt = DateTime.UtcNow;
     await db.SaveChangesAsync();
-    return Results.Ok(new CampaignView(id, member.Campaign.Name, member.Campaign.Description, member.Campaign.Status, member.Campaign.AccentColor, member.Role, member.Campaign.UpdatedAt, member.Campaign.SystemId));
+    return Results.Ok(new CampaignView(id, member.Campaign.Name, member.Campaign.Description, member.Campaign.Status, member.Campaign.AccentColor, member.Role, member.Campaign.UpdatedAt, member.Campaign.SystemId, member.Campaign.WorldId));
 });
 
 api.MapPatch("/campaigns/{id:guid}/status", async Task<IResult> (Guid id, StatusRequest input, HttpContext http, AppDbContext db) =>
@@ -301,4 +302,4 @@ record ProfileRequest(string DisplayName, string? Bio);
 record PreferencesRequest(string Accent);
 record CampaignRequest(string Name, string Description, string AccentColor);
 record StatusRequest(string Status);
-record CampaignView(Guid Id, string Name, string Description, string Status, string AccentColor, string Role, DateTime UpdatedAt, Guid? SystemId);
+record CampaignView(Guid Id, string Name, string Description, string Status, string AccentColor, string Role, DateTime UpdatedAt, Guid? SystemId, Guid? WorldId);

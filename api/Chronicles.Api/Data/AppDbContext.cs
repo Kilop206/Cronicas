@@ -16,6 +16,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<NarrativeEntry> NarrativeEntries => Set<NarrativeEntry>();
     public DbSet<DiceRoll> DiceRolls => Set<DiceRoll>();
     public DbSet<RpgSystem> RpgSystems => Set<RpgSystem>();
+    public DbSet<World> Worlds => Set<World>();
+    public DbSet<WorldArticle> WorldArticles => Set<WorldArticle>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
@@ -58,6 +60,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(x => x.Status).HasMaxLength(20);
             entity.Property(x => x.AccentColor).HasMaxLength(7);
             entity.HasOne(x => x.System).WithMany().HasForeignKey(x => x.SystemId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.World).WithMany().HasForeignKey(x => x.WorldId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(x => x.Owner).WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
         });
         model.Entity<CampaignMembership>(entity =>
@@ -140,6 +143,28 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(x => x.Description).HasMaxLength(2000);
             entity.Property(x => x.SchemaJson).HasColumnType("jsonb");
             entity.HasOne(x => x.Owner).WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
+        });
+        model.Entity<World>(entity =>
+        {
+            entity.ToTable("worlds");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.OwnerId, x.UpdatedAt });
+            entity.Property(x => x.Name).HasMaxLength(120);
+            entity.Property(x => x.Description).HasMaxLength(4000);
+            entity.HasOne(x => x.Owner).WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
+        });
+        model.Entity<WorldArticle>(entity =>
+        {
+            entity.ToTable("world_articles");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.WorldId, x.Category, x.Title });
+            entity.HasIndex(x => new { x.WorldId, x.UpdatedAt });
+            entity.Property(x => x.Title).HasMaxLength(160);
+            entity.Property(x => x.Body).HasMaxLength(40000);
+            entity.Property(x => x.Category).HasMaxLength(40);
+            entity.Property(x => x.Visibility).HasMaxLength(20);
+            entity.HasOne(x => x.World).WithMany().HasForeignKey(x => x.WorldId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.Author).WithMany().HasForeignKey(x => x.AuthorId).OnDelete(DeleteBehavior.Restrict);
         });
     }
 }
