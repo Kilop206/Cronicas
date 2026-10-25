@@ -214,7 +214,11 @@ api.MapGet("/dashboard", async Task<IResult> (HttpContext http, AppDbContext db)
         .Select(x => new CampaignView(x.CampaignId, x.Campaign.Name, x.Campaign.Description, x.Campaign.Status,
             x.Campaign.AccentColor, x.Role, x.Campaign.UpdatedAt, x.Campaign.SystemId, x.Campaign.WorldId)).ToListAsync();
     var total = await db.CampaignMemberships.CountAsync(x => x.UserId == id);
-    return Results.Ok(new { totalCampaigns = total, activeCampaigns = await db.CampaignMemberships.CountAsync(x => x.UserId == id && x.Campaign.Status == "active"), recentCampaigns = campaigns });
+    var favorites = await db.CharacterFavorites.AsNoTracking().Where(x => x.UserId == id && x.Character.Campaign.Memberships.Any(m => m.UserId == id))
+        .OrderByDescending(x => x.CreatedAt).Take(8)
+        .Select(x => new { x.CharacterId, x.Character.Name, x.Character.PortraitUrl, x.Character.CampaignId,
+            campaignName = x.Character.Campaign.Name, x.Character.Health, x.Character.MaxHealth }).ToListAsync();
+    return Results.Ok(new { totalCampaigns = total, activeCampaigns = await db.CampaignMemberships.CountAsync(x => x.UserId == id && x.Campaign.Status == "active"), recentCampaigns = campaigns, favoriteCharacters = favorites });
 });
 
 api.MapGet("/campaigns", async Task<IResult> (HttpContext http, AppDbContext db, int? page, string? search) =>

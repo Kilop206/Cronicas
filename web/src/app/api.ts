@@ -6,7 +6,8 @@ import { catchError, map, Observable, of, tap } from 'rxjs';
 export type Accent = 'gold' | 'violet' | 'wine' | 'azure';
 export interface User { id: string; email: string; displayName: string; bio: string | null; accent: Accent; createdAt: string; }
 export interface Campaign { id: string; name: string; description: string; status: string; accentColor: string; role: string; updatedAt: string; systemId: string | null; worldId: string | null; }
-export interface Dashboard { totalCampaigns: number; activeCampaigns: number; recentCampaigns: Campaign[]; }
+export interface Dashboard { totalCampaigns: number; activeCampaigns: number; recentCampaigns: Campaign[]; favoriteCharacters: FavoriteCharacter[]; }
+export interface FavoriteCharacter { characterId: string; name: string; portraitUrl: string | null; campaignId: string; campaignName: string; health: number; maxHealth: number; }
 export interface Page<T> { items: T[]; total: number; page: number; }
 export interface Character { id: string; campaignId: string; ownerId: string; canEdit: boolean; name: string; portraitUrl: string | null; backgroundUrl: string | null; health: number; maxHealth: number; sanity: number; maxSanity: number; mana: number; maxMana: number; fields: Record<string, string | number | boolean>; version: number; updatedAt: string; }
 export type CharacterInput = Pick<Character, 'name' | 'portraitUrl' | 'backgroundUrl' | 'health' | 'maxHealth' | 'sanity' | 'maxSanity' | 'mana' | 'maxMana' | 'fields' | 'version'>;
@@ -110,6 +111,9 @@ export class ApiService {
   restoreCharacterRevision(id: string, revisionId: string, expectedVersion: number) { return this.http.post<Character>(`/api/characters/${id}/revisions/${revisionId}/restore`, { expectedVersion }, { withCredentials: true }); }
   characterSecret(id: string) { return this.http.get<CharacterSecret>(`/api/characters/${id}/secret`, { withCredentials: true }); }
   updateCharacterSecret(id: string, notes: string, revision: number) { return this.http.put<CharacterSecret>(`/api/characters/${id}/secret`, { notes, revision }, { withCredentials: true }); }
+  characterFavorite(id: string) { return this.http.get<{ favorite: boolean }>(`/api/characters/${id}/favorite`, { withCredentials: true }); }
+  addCharacterFavorite(id: string) { return this.http.put<void>(`/api/characters/${id}/favorite`, {}, { withCredentials: true }); }
+  removeCharacterFavorite(id: string) { return this.http.delete<void>(`/api/characters/${id}/favorite`, { withCredentials: true }); }
   rotateOverlayKey(id: string) { return this.http.post<{ key: string }>(`/api/characters/${id}/overlay-key`, {}, { withCredentials: true }); }
   overlay(key: string) { return this.http.get<Character>(`/api/overlay/${key}`); }
   joinRoom(campaignId: string) { return this.http.post<{ authToken: string }>(`/api/campaigns/${campaignId}/room/join`, {}, { withCredentials: true }); }

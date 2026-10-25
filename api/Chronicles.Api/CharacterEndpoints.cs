@@ -121,6 +121,33 @@ public static class CharacterEndpoints
             return Results.Created($"/api/characters/{copy.Id}", View(copy, true));
         });
 
+        api.MapGet("/characters/{id:guid}/favorite", async Task<IResult> (Guid id, HttpContext http, AppDbContext db) =>
+        {
+            if (UserId(http) is not { } userId) return Results.Unauthorized();
+            if (!await db.Characters.AnyAsync(x => x.Id == id && x.Campaign.Memberships.Any(m => m.UserId == userId))) return Results.NotFound();
+            return Results.Ok(new { favorite = await db.CharacterFavorites.AnyAsync(x => x.UserId == userId && x.CharacterId == id) });
+        });
+
+        api.MapPut("/characters/{id:guid}/favorite", async Task<IResult> (Guid id, HttpContext http, AppDbContext db) =>
+        {
+            if (UserId(http) is not { } userId) return Results.Unauthorized();
+            if (!await db.Characters.AnyAsync(x => x.Id == id && x.Campaign.Memberships.Any(m => m.UserId == userId))) return Results.NotFound();
+            if (!await db.CharacterFavorites.AnyAsync(x => x.UserId == userId && x.CharacterId == id))
+            {
+                db.CharacterFavorites.Add(new CharacterFavorite { UserId = userId, CharacterId = id });
+                await db.SaveChangesAsync();
+            }
+            return Results.NoContent();
+        });
+
+        api.MapDelete("/characters/{id:guid}/favorite", async Task<IResult> (Guid id, HttpContext http, AppDbContext db) =>
+        {
+            if (UserId(http) is not { } userId) return Results.Unauthorized();
+            if (!await db.Characters.AnyAsync(x => x.Id == id && x.Campaign.Memberships.Any(m => m.UserId == userId))) return Results.NotFound();
+            await db.CharacterFavorites.Where(x => x.UserId == userId && x.CharacterId == id).ExecuteDeleteAsync();
+            return Results.NoContent();
+        });
+
         api.MapGet("/characters/{id:guid}/secret", async Task<IResult> (Guid id, HttpContext http, AppDbContext db) =>
         {
             if (UserId(http) is not { } userId) return Results.Unauthorized();

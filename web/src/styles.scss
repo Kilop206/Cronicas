@@ -404,6 +404,15 @@ html:has(.obs-page), body:has(.obs-page), html:has(.obs-camera-page), body:has(.
 .profile-export p { color: var(--muted); line-height: 1.6; max-width: 600px; }
 .character-secret { margin-top: 26px; border-color: #8d6a7b55; }
 .character-secret textarea { width: 100%; }
+.character-favorite { margin: -8px 0 20px; }
+.favorite-section { margin: 24px 0 40px; }
+.favorite-list { border-top: 1px solid var(--border); }
+.favorite-row { display: flex; align-items: center; gap: 15px; padding: 11px 8px; border-bottom: 1px solid var(--border); color: var(--text); text-decoration: none; }
+.favorite-row:hover { background: var(--surface); }
+.favorite-row .character-thumb { width: 46px; height: 46px; }
+.favorite-name { display: grid; gap: 4px; flex: 1; }
+.favorite-name strong { font: 20px var(--font-editorial); }
+.favorite-name small, .favorite-health { color: var(--muted); font-size: 12px; }
 @media print {
   :root { color-scheme: light; }
   body { background: #fff !important; color: #171717 !important; }

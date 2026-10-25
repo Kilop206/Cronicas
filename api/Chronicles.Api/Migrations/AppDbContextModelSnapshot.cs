@@ -220,6 +220,24 @@ namespace Chronicles.Api.Migrations
                     b.ToTable("characters", (string)null);
                 });
 
+            modelBuilder.Entity("Chronicles.Api.Models.CharacterFavorite", b =>
+                {
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CharacterId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("UserId", "CharacterId");
+
+                    b.HasIndex("CharacterId");
+
+                    b.ToTable("character_favorites", (string)null);
+                });
+
             modelBuilder.Entity("Chronicles.Api.Models.CharacterRevision", b =>
                 {
                     b.Property<Guid>("Id")
@@ -878,6 +896,25 @@ namespace Chronicles.Api.Migrations
                     b.Navigation("Campaign");
 
                     b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("Chronicles.Api.Models.CharacterFavorite", b =>
+                {
+                    b.HasOne("Chronicles.Api.Models.Character", "Character")
+                        .WithMany()
+                        .HasForeignKey("CharacterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Chronicles.Api.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Character");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Chronicles.Api.Models.CharacterRevision", b =>
