@@ -17,6 +17,9 @@ export interface World { id: string; ownerId: string; name: string; description:
 export interface WorldDetail extends World { campaigns: { campaignId: string; name: string; role: string }[]; }
 export interface WorldArticle { id: string; worldId: string; authorId: string; title: string; body: string; category: string; visibility: 'campaign' | 'private' | 'gm'; revision: number; createdAt: string; updatedAt: string; }
 export interface ChatMessage { id: string; campaignId: string; userId: string; userName: string; body: string; kind: 'chat' | 'announcement'; createdAt: string; }
+export interface EncounterParticipant { id: string; characterId: string; name: string; initiative: number; health: number; maxHealth: number; conditions: string; }
+export interface Encounter { id: string; campaignId: string; title: string; status: 'planning' | 'active' | 'completed'; round: number; turnIndex: number; createdAt: string; updatedAt: string; participants: EncounterParticipant[]; }
+export type EncounterSummary = Omit<Encounter, 'participants' | 'createdAt'>;
 export type WorldArticleInput = Pick<WorldArticle, 'title' | 'body' | 'category' | 'visibility' | 'revision'>;
 export interface InvitePreview { campaignId: string; campaignName: string; role: string; expiresAt: string; }
 export type NarrativeKind = 'sessions' | 'documents' | 'wiki';
@@ -68,6 +71,15 @@ export class ApiService {
   deleteWorldArticle(id: string) { return this.http.delete<void>(`/api/world-articles/${id}`, { withCredentials: true }); }
   messages(campaignId: string) { return this.http.get<ChatMessage[]>(`/api/campaigns/${campaignId}/messages`, { withCredentials: true }); }
   sendMessage(campaignId: string, body: string, kind: ChatMessage['kind'], clientId: string) { return this.http.post<ChatMessage>(`/api/campaigns/${campaignId}/messages`, { body, kind, clientId }, { withCredentials: true }); }
+  encounters(campaignId: string) { return this.http.get<EncounterSummary[]>(`/api/campaigns/${campaignId}/encounters`, { withCredentials: true }); }
+  encounter(id: string) { return this.http.get<Encounter>(`/api/encounters/${id}`, { withCredentials: true }); }
+  createEncounter(campaignId: string, title: string) { return this.http.post<Encounter>(`/api/campaigns/${campaignId}/encounters`, { title }, { withCredentials: true }); }
+  setEncounterStatus(id: string, status: Encounter['status']) { return this.http.patch<void>(`/api/encounters/${id}/status`, { status }, { withCredentials: true }); }
+  addEncounterParticipant(id: string, characterId: string, initiative: number) { return this.http.post<EncounterParticipant>(`/api/encounters/${id}/participants`, { characterId, initiative }, { withCredentials: true }); }
+  updateEncounterParticipant(id: string, input: Pick<EncounterParticipant, 'initiative' | 'health' | 'maxHealth' | 'conditions'>) { return this.http.patch<EncounterParticipant>(`/api/encounter-participants/${id}`, input, { withCredentials: true }); }
+  deleteEncounterParticipant(id: string) { return this.http.delete<void>(`/api/encounter-participants/${id}`, { withCredentials: true }); }
+  advanceEncounter(id: string) { return this.http.post<Encounter>(`/api/encounters/${id}/advance`, {}, { withCredentials: true }); }
+  deleteEncounter(id: string) { return this.http.delete<void>(`/api/encounters/${id}`, { withCredentials: true }); }
   systems() { return this.http.get<RpgSystem[]>('/api/systems', { withCredentials: true }); }
   system(id: string) { return this.http.get<RpgSystem>(`/api/systems/${id}`, { withCredentials: true }); }
   createSystem(data: Pick<RpgSystem, 'name' | 'description' | 'fields'>) { return this.http.post<RpgSystem>('/api/systems', data, { withCredentials: true }); }

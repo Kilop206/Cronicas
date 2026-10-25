@@ -77,6 +77,7 @@ export class CampaignDetailPage extends DashboardPage {
   modules = [
     { path: 'characters', name: 'Personagens', symbol: '♙', ready: true }, { path: 'sessions', name: 'Sessões', symbol: '◷', ready: true },
     { path: 'wiki', name: 'Mundo', symbol: '◎', ready: true }, { path: 'documents', name: 'Documentos', symbol: '▤', ready: true },
+    { path: 'encounters', name: 'Encontros', symbol: '✧', ready: true },
     { path: 'room', name: 'Sala de transmissão', symbol: '◈', ready: true }
   ];
   override load() {

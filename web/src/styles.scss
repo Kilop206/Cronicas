@@ -353,6 +353,22 @@ html:has(.obs-page), body:has(.obs-page), html:has(.obs-camera-page), body:has(.
 .chat-history p { margin: 8px 0 0; white-space: pre-wrap; overflow-wrap: anywhere; font-size: 13px; line-height: 1.55; }
 .chat-panel form label { margin-bottom: 0; }
 .chat-panel .form-actions { justify-content: space-between; margin-top: 12px; }
+.encounter-create { display: flex; align-items: end; gap: 9px; margin-bottom: 18px; }
+.encounter-create label { flex: 1; margin: 0; }
+.encounter-toolbar { display: flex; gap: 20px; align-items: center; color: var(--muted); font-size: 12px; margin: 16px 0; }
+.encounter-toolbar strong { color: var(--gold-bright); }
+.encounter-toolbar button { margin-left: auto; }
+.initiative-list { display: grid; gap: 8px; margin: 22px 0; }
+.initiative-row { display: flex; align-items: center; gap: 14px; padding: 12px 15px; border: 1px solid var(--border); background: #11171b; }
+.initiative-row.current { border-color: var(--gold); background: #b39a6912; }
+.initiative-number { width: 36px; text-align: center; font: 26px var(--font-editorial); color: var(--gold-bright); }
+.initiative-name { display: grid; gap: 4px; flex: 1; }
+.initiative-name strong { font-size: 13px; }
+.initiative-name small { color: var(--muted); font-size: 10px; }
+.encounter-add { display: flex; gap: 10px; align-items: end; flex-wrap: wrap; padding: 18px 0; border-top: 1px solid var(--border); }
+.encounter-add label { flex: 1 1 140px; margin: 0; }
+.encounter-edit { margin-top: 18px; padding: 20px; border: 1px solid var(--border); background: #10151b; }
+.encounter-edit .resource-fields { margin: 18px 0; }
 @media (max-width: 900px) { .character-editor { grid-template-columns: 1fr; } .character-preview { position: static; } }
 @media (max-width: 620px) { .member-row { flex-wrap: wrap; } .member-row select { width: 100%; } }
 @media (max-width: 620px) { .system-field-grid { grid-template-columns: 1fr; } }

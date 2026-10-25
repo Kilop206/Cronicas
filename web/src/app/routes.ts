@@ -9,6 +9,7 @@ import { InvitePage } from './invite.page';
 import { NarrativePage } from './narrative.page';
 import { SystemsPage, SystemEditorPage } from './systems.page';
 import { WorldsPage, WorldDetailPage } from './worlds.page';
+import { EncountersPage } from './encounters.page';
 
 const protectedRoute: CanActivateFn = (_route, state: RouterStateSnapshot) => {
   const api = inject(ApiService), router = inject(Router);
@@ -36,6 +37,7 @@ export const routes: Routes = [
     { path: 'campaigns/:id/sessions', component: NarrativePage, data: { section: 'sessions' } },
     { path: 'campaigns/:id/documents', component: NarrativePage, data: { section: 'documents' } },
     { path: 'campaigns/:id/wiki', component: NarrativePage, data: { section: 'wiki' } },
+    { path: 'campaigns/:id/encounters', component: EncountersPage },
     { path: 'campaigns/:id/room', loadComponent: () => import('./media-room.page').then(m => m.MediaRoomPage) },
     { path: 'invites/:token', component: InvitePage },
     { path: 'campaigns/:id/:section', component: PlannedPage },
