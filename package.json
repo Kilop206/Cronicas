@@ -3,8 +3,7 @@
   "private": true,
   "scripts": {
     "build:web": "npm --prefix web run build",
-    "check:cloudflare": "wrangler deploy --dry-run --outdir .wrangler-dry-run",
-    "deploy:api": "wrangler deploy",
+    "test:pages-proxy": "node --test scripts/pages-proxy.test.mjs",
     "deploy:pages": "wrangler pages deploy dist/cronicas/browser --project-name cronicas --cwd web"
   },
   "devDependencies": {

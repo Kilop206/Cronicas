@@ -2,6 +2,5 @@
   "$schema": "../node_modules/wrangler/config-schema.json",
   "name": "cronicas",
   "compatibility_date": "2026-10-24",
-  "pages_build_output_dir": "./dist/cronicas/browser",
-  "services": [{ "binding": "API", "service": "cronicas-api" }]
+  "pages_build_output_dir": "./dist/cronicas/browser"
 }

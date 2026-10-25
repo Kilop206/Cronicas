@@ -24,7 +24,7 @@ A ficha também oferece uma URL de câmera + portrait, recomendada como Browser 
 
 ## Cloudflare Pages
 
-O Angular é publicado em **Cloudflare Pages**. Uma Pages Function em `/api/*` chama o Worker `cronicas-api` por service binding; esse Worker executa a API .NET em Cloudflare Containers. O navegador usa sempre a origem de Pages, inclusive para os cookies de sessão. O PostgreSQL persistente fica fora do Container e precisa aceitar conexões TLS, com backup definido. Consulte [o guia de implantação](docs/cloudflare-pages.md) para a configuração e a ordem de publicação.
+O Angular é publicado em **Cloudflare Pages**. Uma Pages Function encaminha `/api/*` para a API .NET em um Web Service gratuito do Render; PostgreSQL fica no projeto Neon dedicado. O navegador usa a origem de Pages, inclusive para os cookies de sessão. O serviço gratuito pode hibernar e exige uma rotina de backup externa antes de armazenar campanhas reais. Consulte [o guia de implantação](docs/cloudflare-pages.md).
 
 O frontend inclui SDK e UI Kit RealtimeKit em versões fixadas e carrega a sala sob demanda. O teste com mídia real requer conta Cloudflare, aplicativo RealtimeKit e participantes simultâneos.
 
@@ -39,7 +39,7 @@ O frontend inclui SDK e UI Kit RealtimeKit em versões fixadas e carrega a sala 
 
 - `api/Chronicles.Api`: API, EF Core e migrações.
 - `web`: Angular e design system.
-- `cloudflare/worker.js`, `wrangler.jsonc`: publicação serverless.
+- `render.yaml`: configuração da API no Render Free; `web/wrangler.jsonc` e `web/functions`: Pages e encaminhamento da API.
 - `docs/architecture.md`: decisões e próximos módulos.
 
 Não inclua `.env` ou credenciais no repositório. Consulte `docs/architecture.md` para limites atuais e próximos passos.
