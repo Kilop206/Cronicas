@@ -8,6 +8,7 @@ import { CharacterEditorPage, CharactersPage, ObsOverlayPage } from './studio-pa
 import { InvitePage } from './invite.page';
 import { NarrativePage } from './narrative.page';
 import { SystemsPage, SystemEditorPage } from './systems.page';
+import { WorldsPage, WorldDetailPage } from './worlds.page';
 
 const protectedRoute: CanActivateFn = (_route, state: RouterStateSnapshot) => {
   const api = inject(ApiService), router = inject(Router);
@@ -39,8 +40,8 @@ export const routes: Routes = [
     { path: 'invites/:token', component: InvitePage },
     { path: 'campaigns/:id/:section', component: PlannedPage },
     { path: 'characters/:id', component: CharacterEditorPage },
-    { path: 'worlds', component: PlannedPage },
-    { path: 'worlds/:id', component: PlannedPage },
+    { path: 'worlds', component: WorldsPage },
+    { path: 'worlds/:id', component: WorldDetailPage },
     { path: 'systems', component: SystemsPage },
     { path: 'systems/:id', component: SystemEditorPage },
     { path: 'profile', component: ProfilePage },

@@ -5,7 +5,7 @@ import { catchError, map, Observable, of, tap } from 'rxjs';
 
 export type Accent = 'gold' | 'violet' | 'wine' | 'azure';
 export interface User { id: string; email: string; displayName: string; bio: string | null; accent: Accent; createdAt: string; }
-export interface Campaign { id: string; name: string; description: string; status: string; accentColor: string; role: string; updatedAt: string; systemId: string | null; }
+export interface Campaign { id: string; name: string; description: string; status: string; accentColor: string; role: string; updatedAt: string; systemId: string | null; worldId: string | null; }
 export interface Dashboard { totalCampaigns: number; activeCampaigns: number; recentCampaigns: Campaign[]; }
 export interface Page<T> { items: T[]; total: number; page: number; }
 export interface Character { id: string; campaignId: string; ownerId: string; canEdit: boolean; name: string; portraitUrl: string | null; backgroundUrl: string | null; health: number; maxHealth: number; sanity: number; maxSanity: number; mana: number; maxMana: number; fields: Record<string, string | number | boolean>; updatedAt: string; }
@@ -13,6 +13,10 @@ export type CharacterInput = Pick<Character, 'name' | 'portraitUrl' | 'backgroun
 export interface SystemField { key: string; label: string; type: 'text' | 'longtext' | 'number' | 'boolean' | 'select'; section: string; min: number | null; max: number | null; options: string[] | null; }
 export interface RpgSystem { id: string; ownerId: string | null; name: string; description: string; fields: SystemField[]; createdAt: string; updatedAt: string; }
 export interface CampaignMember { userId: string; displayName: string; role: string; joinedAt: string; }
+export interface World { id: string; ownerId: string; name: string; description: string; createdAt: string; updatedAt: string; }
+export interface WorldDetail extends World { campaigns: { campaignId: string; name: string; role: string }[]; }
+export interface WorldArticle { id: string; worldId: string; authorId: string; title: string; body: string; category: string; visibility: 'campaign' | 'private' | 'gm'; revision: number; createdAt: string; updatedAt: string; }
+export type WorldArticleInput = Pick<WorldArticle, 'title' | 'body' | 'category' | 'visibility' | 'revision'>;
 export interface InvitePreview { campaignId: string; campaignName: string; role: string; expiresAt: string; }
 export type NarrativeKind = 'sessions' | 'documents' | 'wiki';
 export interface NarrativeEntry { id: string; campaignId: string; authorId: string; kind: NarrativeKind; title: string; body: string; category: string; visibility: 'campaign' | 'private' | 'gm'; eventAt: string | null; revealedAt: string | null; createdAt: string; updatedAt: string; revision: number; }
@@ -51,6 +55,16 @@ export class ApiService {
   members(campaignId: string) { return this.http.get<CampaignMember[]>(`/api/campaigns/${campaignId}/members`, { withCredentials: true }); }
   changeMemberRole(campaignId: string, memberId: string, role: string) { return this.http.patch<void>(`/api/campaigns/${campaignId}/members/${memberId}`, { role }, { withCredentials: true }); }
   removeMember(campaignId: string, memberId: string) { return this.http.delete<void>(`/api/campaigns/${campaignId}/members/${memberId}`, { withCredentials: true }); }
+  worlds() { return this.http.get<World[]>('/api/worlds', { withCredentials: true }); }
+  world(id: string) { return this.http.get<WorldDetail>(`/api/worlds/${id}`, { withCredentials: true }); }
+  createWorld(name: string, description: string) { return this.http.post<World>('/api/worlds', { name, description }, { withCredentials: true }); }
+  updateWorld(id: string, name: string, description: string) { return this.http.put<World>(`/api/worlds/${id}`, { name, description }, { withCredentials: true }); }
+  deleteWorld(id: string) { return this.http.delete<void>(`/api/worlds/${id}`, { withCredentials: true }); }
+  setCampaignWorld(id: string, worldId: string | null) { return this.http.patch<void>(`/api/campaigns/${id}/world`, { worldId }, { withCredentials: true }); }
+  worldArticles(worldId: string, page = 1, search = '') { return this.http.get<Page<WorldArticle>>(`/api/worlds/${worldId}/articles`, { params: { page, search }, withCredentials: true }); }
+  createWorldArticle(worldId: string, input: WorldArticleInput) { return this.http.post<WorldArticle>(`/api/worlds/${worldId}/articles`, input, { withCredentials: true }); }
+  updateWorldArticle(id: string, input: WorldArticleInput) { return this.http.put<WorldArticle>(`/api/world-articles/${id}`, input, { withCredentials: true }); }
+  deleteWorldArticle(id: string) { return this.http.delete<void>(`/api/world-articles/${id}`, { withCredentials: true }); }
   systems() { return this.http.get<RpgSystem[]>('/api/systems', { withCredentials: true }); }
   system(id: string) { return this.http.get<RpgSystem>(`/api/systems/${id}`, { withCredentials: true }); }
   createSystem(data: Pick<RpgSystem, 'name' | 'description' | 'fields'>) { return this.http.post<RpgSystem>('/api/systems', data, { withCredentials: true }); }

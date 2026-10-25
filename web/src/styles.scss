@@ -338,6 +338,11 @@ html:has(.obs-page), body:has(.obs-page), html:has(.obs-camera-page), body:has(.
 .member-identity strong { font-size: 13px; }
 .member-identity small { color: var(--muted); font-size: 10px; }
 .member-row select { width: 145px; }
+.world-create { margin-top: 32px; max-width: 650px; }
+.world-campaigns { margin: 25px 0 40px; border-top: 1px solid var(--border); padding-top: 20px; }
+.world-campaigns .campaign-row { margin-top: 10px; }
+.world-settings, .campaign-world-panel { margin-top: 35px; }
+.world-settings label, .campaign-world-panel label { max-width: 620px; }
 @media (max-width: 900px) { .character-editor { grid-template-columns: 1fr; } .character-preview { position: static; } }
 @media (max-width: 620px) { .member-row { flex-wrap: wrap; } .member-row select { width: 100%; } }
 @media (max-width: 620px) { .system-field-grid { grid-template-columns: 1fr; } }
