@@ -67,6 +67,7 @@ app.Use(async (context, next) =>
 app.MapHealthChecks("/health");
 var api = app.MapGroup("/api");
 api.MapCharacterEndpoints();
+api.MapCharacterInventoryEndpoints();
 api.MapInviteEndpoints();
 api.MapNarrativeEndpoints();
 api.MapDiceEndpoints();

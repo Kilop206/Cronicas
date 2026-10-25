@@ -13,6 +13,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<Character> Characters => Set<Character>();
     public DbSet<CharacterSecret> CharacterSecrets => Set<CharacterSecret>();
     public DbSet<CharacterFavorite> CharacterFavorites => Set<CharacterFavorite>();
+    public DbSet<CharacterInventoryItem> CharacterInventoryItems => Set<CharacterInventoryItem>();
     public DbSet<RoomParticipant> RoomParticipants => Set<RoomParticipant>();
     public DbSet<CampaignInvite> CampaignInvites => Set<CampaignInvite>();
     public DbSet<NarrativeEntry> NarrativeEntries => Set<NarrativeEntry>();
@@ -108,6 +109,23 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.HasKey(x => new { x.UserId, x.CharacterId });
             entity.HasIndex(x => x.CharacterId);
             entity.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.Character).WithMany().HasForeignKey(x => x.CharacterId).OnDelete(DeleteBehavior.Cascade);
+        });
+        model.Entity<CharacterInventoryItem>(entity =>
+        {
+            entity.ToTable("character_inventory_items", table =>
+            {
+                table.HasCheckConstraint("CK_inventory_quantity", "\"Quantity\" BETWEEN 1 AND 9999");
+                table.HasCheckConstraint("CK_inventory_weight", "\"Weight\" BETWEEN 0 AND 9999.99");
+                table.HasCheckConstraint("CK_inventory_category", "\"Category\" IN ('item','equipment','weapon','consumable','other')");
+            });
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.CharacterId, x.Name });
+            entity.Property(x => x.Name).HasMaxLength(120);
+            entity.Property(x => x.Category).HasMaxLength(20);
+            entity.Property(x => x.Notes).HasMaxLength(1000);
+            entity.Property(x => x.Weight).HasPrecision(10, 2);
+            entity.Property(x => x.Version).IsConcurrencyToken();
             entity.HasOne(x => x.Character).WithMany().HasForeignKey(x => x.CharacterId).OnDelete(DeleteBehavior.Cascade);
         });
         model.Entity<RoomParticipant>(entity =>

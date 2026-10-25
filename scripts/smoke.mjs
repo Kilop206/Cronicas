@@ -51,6 +51,17 @@ const characterInput = { name: 'Elara', portraitUrl: null, backgroundUrl: null, 
 const characterCreated = await request(`/api/campaigns/${id}/characters`, { method: 'POST', cookie: ownerCookie, body: characterInput });
 expect(characterCreated.status === 201, 'Character creation');
 const characterId = characterCreated.body.id;
+const inventoryInput = { name: 'Lâmina de cobre', category: 'weapon', quantity: 2, weight: 1.5, notes: 'Marca do farol', version: 1 };
+const createdItem = await request(`/api/characters/${characterId}/inventory`, { method: 'POST', cookie: ownerCookie, body: inventoryInput });
+expect(createdItem.status === 201 && createdItem.body.quantity === 2, 'Inventory item persists');
+const invalidItem = await request(`/api/characters/${characterId}/inventory`, { method: 'POST', cookie: ownerCookie, body: { ...inventoryInput, weight: -1 } });
+expect(invalidItem.status === 400, 'Inventory weight validated');
+const updatedItem = await request(`/api/characters/${characterId}/inventory/${createdItem.body.id}`, { method: 'PUT', cookie: ownerCookie, body: { ...inventoryInput, quantity: 3 } });
+expect(updatedItem.status === 200 && updatedItem.body.version === 2 && updatedItem.body.quantity === 3, 'Inventory edit persists with version');
+const staleItem = await request(`/api/characters/${characterId}/inventory/${createdItem.body.id}`, { method: 'PUT', cookie: ownerCookie, body: inventoryInput });
+expect(staleItem.status === 409, 'Stale inventory edit rejected');
+const outsiderInventory = await request(`/api/characters/${characterId}/inventory`, { cookie: second.cookie });
+expect(outsiderInventory.status === 404, 'Inventory hidden from outsider');
 const emptySecret = await request(`/api/characters/${characterId}/secret`, { cookie: ownerCookie });
 expect(emptySecret.status === 200 && emptySecret.body.revision === 1 && emptySecret.body.notes === '', 'Master opens private character notes');
 const savedSecret = await request(`/api/characters/${characterId}/secret`, { method: 'PUT', cookie: ownerCookie, body: { notes: 'O farol esconde uma passagem.', revision: 1 } });
@@ -105,6 +116,8 @@ const restoredSystem = await request(`/api/campaigns/${id}/system`, { method: 'P
 expect(restoredSystem.status === 204, 'Restore custom campaign system');
 const duplicateCharacter = await request(`/api/characters/${characterId}/duplicate`, { method: 'POST', cookie: ownerCookie });
 expect(duplicateCharacter.status === 201 && duplicateCharacter.body.id !== characterId && duplicateCharacter.body.ownerId === first.body.id && duplicateCharacter.body.version === 1 && duplicateCharacter.body.fields.coragem === 7, 'Character duplication copies sheet into new owned record');
+const duplicateInventory = await request(`/api/characters/${duplicateCharacter.body.id}/inventory`, { cookie: ownerCookie });
+expect(duplicateInventory.status === 200 && duplicateInventory.body.length === 1 && duplicateInventory.body[0].name === 'Lâmina de cobre', 'Duplication copies inventory');
 const overlayKey = await request(`/api/characters/${characterId}/overlay-key`, { method: 'POST', cookie: ownerCookie });
 expect(overlayKey.status === 200 && overlayKey.body.key.length === 64, 'OBS key generation');
 const overlay = await request(`/api/overlay/${overlayKey.body.key}`);
@@ -128,6 +141,10 @@ const reused = await request(`/api/invites/${inviteToken}/accept`, { method: 'PO
 expect(reused.status === 404, 'Invite cannot be reused');
 const joinedCampaign = await request(`/api/campaigns/${id}`, { cookie: second.cookie });
 expect(joinedCampaign.status === 200 && joinedCampaign.body.role === 'player', 'New member can read campaign');
+const playerInventory = await request(`/api/characters/${characterId}/inventory`, { cookie: second.cookie });
+expect(playerInventory.status === 200 && playerInventory.body.length === 1, 'Campaign player can read inventory');
+const playerInventoryEdit = await request(`/api/characters/${characterId}/inventory/${createdItem.body.id}`, { method: 'PUT', cookie: second.cookie, body: { ...inventoryInput, version: 2 } });
+expect(playerInventoryEdit.status === 403, 'Player cannot edit another character inventory');
 const sharedWorld = await request(`/api/worlds/${world.body.id}`, { cookie: second.cookie });
 expect(sharedWorld.status === 200 && sharedWorld.body.campaigns.length === 1, 'Campaign member can read linked world');
 const worldSearch = await request(`/api/worlds/${world.body.id}/articles?search=Farol`, { cookie: second.cookie });
@@ -310,6 +327,13 @@ const afterLeave = await request(`/api/campaigns/${id}`, { cookie: spectator.coo
 expect(afterLeave.status === 404, 'Former member loses campaign access');
 const exportOwner = await request('/api/profile/export', { cookie: ownerCookie });
 expect(exportOwner.status === 200 && exportOwner.body.profile.email === first.body.email && exportOwner.body.characters.some(x => x.id === characterId) && exportOwner.body.articles.some(x => x.id === secretArticle.body.id), 'Owner exports account data');
+expect(exportOwner.body.inventory.some(x => x.id === createdItem.body.id && x.quantity === 3), 'Account export includes inventory');
+const staleDeleteItem = await request(`/api/characters/${characterId}/inventory/${createdItem.body.id}?version=1`, { method: 'DELETE', cookie: ownerCookie });
+expect(staleDeleteItem.status === 409, 'Stale inventory deletion rejected');
+const deletedItem = await request(`/api/characters/${characterId}/inventory/${createdItem.body.id}?version=2`, { method: 'DELETE', cookie: ownerCookie });
+expect(deletedItem.status === 204, 'Owner deletes inventory item');
+const emptyInventory = await request(`/api/characters/${characterId}/inventory`, { cookie: ownerCookie });
+expect(emptyInventory.status === 200 && emptyInventory.body.length === 0, 'Inventory deletion persists');
 expect(!JSON.stringify(exportOwner.body).includes('passwordHash') && !JSON.stringify(exportOwner.body).includes('overlayKeyHash') && !JSON.stringify(exportOwner.body).includes('tokenHash'), 'Export omits credential hashes');
 const exportPlayer = await request('/api/profile/export', { cookie: second.cookie });
 expect(exportPlayer.status === 200 && exportPlayer.body.characters.length === 0 && exportPlayer.body.articles.length === 0, 'Export isolates personal data');
@@ -345,4 +369,4 @@ const logout = await request('/api/auth/logout', { method: 'POST', cookie: curre
 expect(logout.status === 204, 'Logout');
 const afterLogout = await request('/api/dashboard', { cookie: currentCookie });
 expect(afterLogout.status === 401, 'Revogação da sessão');
-console.log('Smoke: contas, campanhas, sistemas, fichas/versionamento/sigilo/favoritos, universos/relações, pesquisa, convites, narrativa/agenda, dados, chat, encontros, OBS, permissões e logout passaram.');
+console.log('Smoke: contas, campanhas, sistemas, fichas/inventário/versionamento/sigilo/favoritos, universos/relações, pesquisa, convites, narrativa/agenda, dados, chat, encontros, OBS, permissões e logout passaram.');

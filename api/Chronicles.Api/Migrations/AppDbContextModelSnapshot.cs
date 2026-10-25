@@ -238,6 +238,61 @@ namespace Chronicles.Api.Migrations
                     b.ToTable("character_favorites", (string)null);
                 });
 
+            modelBuilder.Entity("Chronicles.Api.Models.CharacterInventoryItem", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Category")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<Guid>("CharacterId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("Notes")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<int>("Quantity")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("Weight")
+                        .HasPrecision(10, 2)
+                        .HasColumnType("numeric(10,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CharacterId", "Name");
+
+                    b.ToTable("character_inventory_items", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_inventory_category", "\"Category\" IN ('item','equipment','weapon','consumable','other')");
+
+                            t.HasCheckConstraint("CK_inventory_quantity", "\"Quantity\" BETWEEN 1 AND 9999");
+
+                            t.HasCheckConstraint("CK_inventory_weight", "\"Weight\" BETWEEN 0 AND 9999.99");
+                        });
+                });
+
             modelBuilder.Entity("Chronicles.Api.Models.CharacterRevision", b =>
                 {
                     b.Property<Guid>("Id")
@@ -915,6 +970,17 @@ namespace Chronicles.Api.Migrations
                     b.Navigation("Character");
 
                     b.Navigation("User");
+                });
+
+            modelBuilder.Entity("Chronicles.Api.Models.CharacterInventoryItem", b =>
+                {
+                    b.HasOne("Chronicles.Api.Models.Character", "Character")
+                        .WithMany()
+                        .HasForeignKey("CharacterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Character");
                 });
 
             modelBuilder.Entity("Chronicles.Api.Models.CharacterRevision", b =>

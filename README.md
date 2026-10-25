@@ -1,6 +1,6 @@
 # Crônicas
 
-Workspace de campanhas de RPG de mesa. O fluxo local já inclui contas, campanhas, convites e papéis, fichas geradas por sistemas editáveis, histórico de alterações, notas secretas do mestre e favoritos, universos, enciclopédia com relações e backlinks, documentos e sessões com visibilidade, agenda das próximas sessões, pesquisa global, dados persistidos, chat e encontros. A sala de transmissão usa Cloudflare RealtimeKit quando configurada; portrait, recursos e câmera possuem fontes próprias para OBS.
+Workspace de campanhas de RPG de mesa. O fluxo local já inclui contas, campanhas, convites e papéis, fichas geradas por sistemas editáveis, inventário persistido, histórico de alterações, notas secretas do mestre e favoritos, universos, enciclopédia com relações e backlinks, documentos e sessões com visibilidade, agenda das próximas sessões, pesquisa global, dados persistidos, chat e encontros. A sala de transmissão usa Cloudflare RealtimeKit quando configurada; portrait, recursos e câmera possuem fontes próprias para OBS.
 
 O produto não inclui módulo de tabletop/VTT. A mesa visual é formada por compartilhamentos de tela, câmeras e fontes para OBS. A implantação de produção ainda depende de PostgreSQL gerenciado, configuração de RealtimeKit e validação com mídia real.
 

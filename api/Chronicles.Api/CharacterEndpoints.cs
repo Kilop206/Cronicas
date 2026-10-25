@@ -117,7 +117,15 @@ public static class CharacterEndpoints
                 Mana = source.Mana, MaxMana = source.MaxMana,
                 FieldsJson = source.FieldsJson
             };
-            db.Characters.Add(copy); await db.SaveChangesAsync();
+            var inventory = await db.CharacterInventoryItems.AsNoTracking().Where(x => x.CharacterId == id).ToListAsync();
+            db.Characters.Add(copy);
+            foreach (var item in inventory)
+                db.CharacterInventoryItems.Add(new CharacterInventoryItem
+                {
+                    CharacterId = copy.Id, Name = item.Name, Category = item.Category,
+                    Quantity = item.Quantity, Weight = item.Weight, Notes = item.Notes
+                });
+            await db.SaveChangesAsync();
             return Results.Created($"/api/characters/{copy.Id}", View(copy, true));
         });
 

@@ -14,6 +14,8 @@ export interface Character { id: string; campaignId: string; ownerId: string; ca
 export type CharacterInput = Pick<Character, 'name' | 'portraitUrl' | 'backgroundUrl' | 'health' | 'maxHealth' | 'sanity' | 'maxSanity' | 'mana' | 'maxMana' | 'fields' | 'version'>;
 export interface CharacterRevision { id: string; version: number; createdAt: string; editedBy: string; }
 export interface CharacterSecret { notes: string; revision: number; updatedAt: string | null; }
+export interface InventoryItem { id: string; characterId: string; name: string; category: 'item' | 'equipment' | 'weapon' | 'consumable' | 'other'; quantity: number; weight: number; notes: string; version: number; createdAt: string; updatedAt: string; }
+export type InventoryInput = Pick<InventoryItem, 'name' | 'category' | 'quantity' | 'weight' | 'notes' | 'version'>;
 export interface SystemField { key: string; label: string; type: 'text' | 'longtext' | 'number' | 'boolean' | 'select'; section: string; min: number | null; max: number | null; options: string[] | null; }
 export interface RpgSystem { id: string; ownerId: string | null; name: string; description: string; fields: SystemField[]; createdAt: string; updatedAt: string; }
 export interface CampaignMember { userId: string; displayName: string; role: string; joinedAt: string; }
@@ -105,6 +107,10 @@ export class ApiService {
   deleteSystem(id: string) { return this.http.delete<void>(`/api/systems/${id}`, { withCredentials: true }); }
   characters(campaignId: string) { return this.http.get<Character[]>(`/api/campaigns/${campaignId}/characters`, { withCredentials: true }); }
   character(id: string) { return this.http.get<Character>(`/api/characters/${id}`, { withCredentials: true }); }
+  inventory(id: string) { return this.http.get<InventoryItem[]>(`/api/characters/${id}/inventory`, { withCredentials: true }); }
+  createInventoryItem(id: string, input: InventoryInput) { return this.http.post<InventoryItem>(`/api/characters/${id}/inventory`, input, { withCredentials: true }); }
+  updateInventoryItem(id: string, itemId: string, input: InventoryInput) { return this.http.put<InventoryItem>(`/api/characters/${id}/inventory/${itemId}`, input, { withCredentials: true }); }
+  deleteInventoryItem(id: string, itemId: string, version: number) { return this.http.delete<void>(`/api/characters/${id}/inventory/${itemId}`, { params: { version }, withCredentials: true }); }
   createCharacter(campaignId: string, data: CharacterInput) { return this.http.post<Character>(`/api/campaigns/${campaignId}/characters`, data, { withCredentials: true }); }
   updateCharacter(id: string, data: CharacterInput) { return this.http.put<Character>(`/api/characters/${id}`, data, { withCredentials: true }); }
   duplicateCharacter(id: string) { return this.http.post<Character>(`/api/characters/${id}/duplicate`, {}, { withCredentials: true }); }
