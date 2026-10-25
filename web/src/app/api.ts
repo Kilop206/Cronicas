@@ -29,7 +29,7 @@ export interface WorldDetail extends World { campaigns: { campaignId: string; na
 export interface WorldArticle { id: string; worldId: string; authorId: string; title: string; body: string; category: string; visibility: 'campaign' | 'private' | 'gm'; revision: number; createdAt: string; updatedAt: string; }
 export interface WorldArticleLink { id: string; label: string; direction: 'incoming' | 'outgoing'; article: Pick<WorldArticle, 'id' | 'title' | 'category' | 'visibility'>; }
 export interface ChatMessage { id: string; campaignId: string; userId: string; userName: string; body: string; kind: 'chat' | 'announcement'; createdAt: string; }
-export interface EncounterParticipant { id: string; characterId: string; name: string; initiative: number; health: number; maxHealth: number; conditions: string; }
+export interface EncounterParticipant { id: string; characterId: string | null; npcId: string | null; name: string; initiative: number; health: number; maxHealth: number; conditions: string; }
 export interface Encounter { id: string; campaignId: string; title: string; status: 'planning' | 'active' | 'completed'; round: number; turnIndex: number; createdAt: string; updatedAt: string; participants: EncounterParticipant[]; }
 export type EncounterSummary = Omit<Encounter, 'participants' | 'createdAt'>;
 export type WorldArticleInput = Pick<WorldArticle, 'title' | 'body' | 'category' | 'visibility' | 'revision'>;
@@ -103,7 +103,7 @@ export class ApiService {
   encounter(id: string) { return this.http.get<Encounter>(`/api/encounters/${id}`, { withCredentials: true }); }
   createEncounter(campaignId: string, title: string) { return this.http.post<Encounter>(`/api/campaigns/${campaignId}/encounters`, { title }, { withCredentials: true }); }
   setEncounterStatus(id: string, status: Encounter['status']) { return this.http.patch<void>(`/api/encounters/${id}/status`, { status }, { withCredentials: true }); }
-  addEncounterParticipant(id: string, characterId: string, initiative: number) { return this.http.post<EncounterParticipant>(`/api/encounters/${id}/participants`, { characterId, initiative }, { withCredentials: true }); }
+  addEncounterParticipant(id: string, characterId: string | null, npcId: string | null, initiative: number) { return this.http.post<EncounterParticipant>(`/api/encounters/${id}/participants`, { characterId, npcId, initiative }, { withCredentials: true }); }
   updateEncounterParticipant(id: string, input: Pick<EncounterParticipant, 'initiative' | 'health' | 'maxHealth' | 'conditions'>) { return this.http.patch<EncounterParticipant>(`/api/encounter-participants/${id}`, input, { withCredentials: true }); }
   deleteEncounterParticipant(id: string) { return this.http.delete<void>(`/api/encounter-participants/${id}`, { withCredentials: true }); }
   advanceEncounter(id: string) { return this.http.post<Encounter>(`/api/encounters/${id}/advance`, {}, { withCredentials: true }); }

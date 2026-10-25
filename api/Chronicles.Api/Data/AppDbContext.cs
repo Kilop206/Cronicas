@@ -272,12 +272,14 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
         });
         model.Entity<EncounterParticipant>(entity =>
         {
-            entity.ToTable("encounter_participants");
+            entity.ToTable("encounter_participants", table => table.HasCheckConstraint("CK_encounter_actor", "(\"CharacterId\" IS NOT NULL AND \"NpcId\" IS NULL) OR (\"CharacterId\" IS NULL AND \"NpcId\" IS NOT NULL)"));
             entity.HasKey(x => x.Id);
             entity.HasIndex(x => new { x.EncounterId, x.CharacterId }).IsUnique();
+            entity.HasIndex(x => new { x.EncounterId, x.NpcId }).IsUnique();
             entity.Property(x => x.Conditions).HasMaxLength(1000);
             entity.HasOne(x => x.Encounter).WithMany(x => x.Participants).HasForeignKey(x => x.EncounterId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(x => x.Character).WithMany().HasForeignKey(x => x.CharacterId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.Npc).WithMany().HasForeignKey(x => x.NpcId).OnDelete(DeleteBehavior.Restrict);
         });
         model.Entity<CharacterRevision>(entity =>
         {

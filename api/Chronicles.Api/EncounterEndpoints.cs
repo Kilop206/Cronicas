@@ -61,19 +61,28 @@ public static class EncounterEndpoints
             if (!Master(role)) return Results.Problem("Apenas mestres alteram participantes.", statusCode: 403);
             if (encounter.Status == "completed") return Results.Conflict(new { message = "Encontro concluído." });
             if (input.Initiative is < -999 or > 999) return Results.ValidationProblem(new Dictionary<string, string[]> { ["initiative"] = ["Iniciativa fora do limite."] });
-            var character = await db.Characters.AsNoTracking().SingleOrDefaultAsync(x => x.Id == input.CharacterId && x.CampaignId == encounter.CampaignId);
-            if (character is null) return Results.ValidationProblem(new Dictionary<string, string[]> { ["characterId"] = ["Personagem indisponível."] });
-            if (await db.EncounterParticipants.AnyAsync(x => x.EncounterId == id && x.CharacterId == character.Id)) return Results.Conflict(new { message = "Personagem já participa deste encontro." });
-            var participant = new EncounterParticipant { EncounterId = id, CharacterId = character.Id, Initiative = input.Initiative, Health = character.Health, MaxHealth = character.MaxHealth };
+            if ((input.CharacterId is null) == (input.NpcId is null))
+                return Results.ValidationProblem(new Dictionary<string, string[]> { ["actor"] = ["Selecione um personagem ou NPC."] });
+            Character? character = input.CharacterId is { } characterId
+                ? await db.Characters.AsNoTracking().SingleOrDefaultAsync(x => x.Id == characterId && x.CampaignId == encounter.CampaignId) : null;
+            Npc? npc = input.NpcId is { } npcId
+                ? await db.Npcs.AsNoTracking().SingleOrDefaultAsync(x => x.Id == npcId && x.CampaignId == encounter.CampaignId) : null;
+            if (character is null && npc is null) return Results.ValidationProblem(new Dictionary<string, string[]> { ["actor"] = ["Participante indisponível."] });
+            if (await db.EncounterParticipants.AnyAsync(x => x.EncounterId == id &&
+                (input.CharacterId != null && x.CharacterId == input.CharacterId || input.NpcId != null && x.NpcId == input.NpcId)))
+                return Results.Conflict(new { message = "Participante já está neste encontro." });
+            var participant = new EncounterParticipant { EncounterId = id, CharacterId = character?.Id, NpcId = npc?.Id,
+                Initiative = input.Initiative, Health = character?.Health ?? npc!.Health, MaxHealth = character?.MaxHealth ?? npc!.MaxHealth };
             db.EncounterParticipants.Add(participant); encounter.UpdatedAt = DateTime.UtcNow;
             await db.SaveChangesAsync();
-            return Results.Created($"/api/encounters/{id}", new { participant.Id, participant.CharacterId, character.Name, participant.Initiative, participant.Health, participant.MaxHealth, participant.Conditions });
+            return Results.Created($"/api/encounters/{id}", new { participant.Id, participant.CharacterId, participant.NpcId,
+                name = character?.Name ?? npc!.Name, participant.Initiative, participant.Health, participant.MaxHealth, participant.Conditions });
         });
 
         api.MapPatch("/encounter-participants/{id:guid}", async Task<IResult> (Guid id, ParticipantInput input, HttpContext http, AppDbContext db) =>
         {
             if (UserId(http) is not { } userId) return Results.Unauthorized();
-            var participant = await db.EncounterParticipants.Include(x => x.Encounter).Include(x => x.Character).SingleOrDefaultAsync(x => x.Id == id);
+            var participant = await db.EncounterParticipants.Include(x => x.Encounter).Include(x => x.Character).Include(x => x.Npc).SingleOrDefaultAsync(x => x.Id == id);
             if (participant is null) return Results.NotFound();
             var role = await Role(db, participant.Encounter.CampaignId, userId); if (role is null) return Results.NotFound();
             if (!Master(role)) return Results.Problem("Apenas mestres alteram participantes.", statusCode: 403);
@@ -81,11 +90,20 @@ public static class EncounterEndpoints
             if (input.MaxHealth is < 1 or > 9999 || input.Health < 0 || input.Health > input.MaxHealth || input.Initiative is < -999 or > 999 || input.Conditions is null || input.Conditions.Length > 1000)
                 return Results.ValidationProblem(new Dictionary<string, string[]> { ["participant"] = ["Verifique vida, iniciativa e condições."] });
             participant.Health = input.Health; participant.MaxHealth = input.MaxHealth; participant.Initiative = input.Initiative; participant.Conditions = input.Conditions.Trim();
-            if (participant.Character.Health != input.Health || participant.Character.MaxHealth != input.MaxHealth) CharacterHistory.Capture(db, participant.Character, userId);
-            participant.Character.Health = input.Health; participant.Character.MaxHealth = input.MaxHealth; participant.Character.UpdatedAt = DateTime.UtcNow;
+            if (participant.Character is { } character)
+            {
+                if (character.Health != input.Health || character.MaxHealth != input.MaxHealth) CharacterHistory.Capture(db, character, userId);
+                character.Health = input.Health; character.MaxHealth = input.MaxHealth; character.UpdatedAt = DateTime.UtcNow;
+            }
+            else if (participant.Npc is { } npc && (npc.Health != input.Health || npc.MaxHealth != input.MaxHealth))
+            {
+                npc.Health = input.Health; npc.MaxHealth = input.MaxHealth; npc.Version++; npc.UpdatedAt = DateTime.UtcNow;
+            }
             participant.Encounter.UpdatedAt = DateTime.UtcNow;
-            await db.SaveChangesAsync();
-            return Results.Ok(new { participant.Id, participant.CharacterId, name = participant.Character.Name, participant.Initiative, participant.Health, participant.MaxHealth, participant.Conditions });
+            try { await db.SaveChangesAsync(); }
+            catch (DbUpdateConcurrencyException) { return Results.Conflict(new { message = "Os recursos mudaram. Atualize o encontro." }); }
+            return Results.Ok(new { participant.Id, participant.CharacterId, participant.NpcId,
+                name = participant.Character?.Name ?? participant.Npc!.Name, participant.Initiative, participant.Health, participant.MaxHealth, participant.Conditions });
         });
 
         api.MapDelete("/encounter-participants/{id:guid}", async Task<IResult> (Guid id, HttpContext http, AppDbContext db) =>
@@ -129,16 +147,17 @@ public static class EncounterEndpoints
     private static Task<string?> Role(AppDbContext db, Guid campaignId, Guid userId) => db.CampaignMemberships.AsNoTracking().Where(x => x.CampaignId == campaignId && x.UserId == userId).Select(x => x.Role).SingleOrDefaultAsync();
     private static bool Master(string role) => role is "owner" or "gm" or "co-gm";
     private static Task<Encounter?> Load(AppDbContext db, Guid id, bool participants = false) => participants
-        ? db.Encounters.Include(x => x.Participants).ThenInclude(x => x.Character).SingleOrDefaultAsync(x => x.Id == id)
+        ? db.Encounters.Include(x => x.Participants).ThenInclude(x => x.Character)
+            .Include(x => x.Participants).ThenInclude(x => x.Npc).SingleOrDefaultAsync(x => x.Id == id)
         : db.Encounters.SingleOrDefaultAsync(x => x.Id == id);
     private static object View(Encounter x)
     {
         var participants = x.Participants.OrderByDescending(p => p.Initiative).ThenBy(p => p.Id)
-            .Select(p => new { p.Id, p.CharacterId, name = p.Character.Name, p.Initiative, p.Health, p.MaxHealth, p.Conditions }).ToList();
+            .Select(p => new { p.Id, p.CharacterId, p.NpcId, name = p.Character?.Name ?? p.Npc!.Name, p.Initiative, p.Health, p.MaxHealth, p.Conditions }).ToList();
         return new { x.Id, x.CampaignId, x.Title, x.Status, x.Round, x.TurnIndex, x.CreatedAt, x.UpdatedAt, participants };
     }
     public sealed record CreateEncounterInput(string Title);
     public sealed record StatusInput(string Status);
-    public sealed record AddParticipantInput(Guid CharacterId, int Initiative);
+    public sealed record AddParticipantInput(Guid? CharacterId, Guid? NpcId, int Initiative);
     public sealed record ParticipantInput(int Initiative, int Health, int MaxHealth, string Conditions);
 }

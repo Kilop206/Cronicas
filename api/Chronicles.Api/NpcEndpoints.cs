@@ -81,6 +81,8 @@ public static class NpcEndpoints
             if (role is null) return Results.NotFound();
             if (!Master(role)) return Results.Problem("Apenas mestres excluem NPCs.", statusCode: 403);
             if (version != npc.Version) return Results.Conflict(new { message = "O NPC mudou. Atualize antes de excluir." });
+            if (await db.EncounterParticipants.AnyAsync(x => x.NpcId == id))
+                return Results.Conflict(new { message = "Remova o NPC dos encontros antes de excluir." });
             db.Npcs.Remove(npc);
             try { await db.SaveChangesAsync(); }
             catch (DbUpdateConcurrencyException) { return Results.Conflict(new { message = "O NPC mudou. Atualize antes de excluir." }); }

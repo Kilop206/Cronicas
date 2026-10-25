@@ -549,7 +549,7 @@ namespace Chronicles.Api.Migrations
                         .ValueGeneratedOnAdd()
                         .HasColumnType("uuid");
 
-                    b.Property<Guid>("CharacterId")
+                    b.Property<Guid?>("CharacterId")
                         .HasColumnType("uuid");
 
                     b.Property<string>("Conditions")
@@ -569,14 +569,25 @@ namespace Chronicles.Api.Migrations
                     b.Property<int>("MaxHealth")
                         .HasColumnType("integer");
 
+                    b.Property<Guid?>("NpcId")
+                        .HasColumnType("uuid");
+
                     b.HasKey("Id");
 
                     b.HasIndex("CharacterId");
 
+                    b.HasIndex("NpcId");
+
                     b.HasIndex("EncounterId", "CharacterId")
                         .IsUnique();
 
-                    b.ToTable("encounter_participants", (string)null);
+                    b.HasIndex("EncounterId", "NpcId")
+                        .IsUnique();
+
+                    b.ToTable("encounter_participants", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_encounter_actor", "(\"CharacterId\" IS NOT NULL AND \"NpcId\" IS NULL) OR (\"CharacterId\" IS NULL AND \"NpcId\" IS NOT NULL)");
+                        });
                 });
 
             modelBuilder.Entity("Chronicles.Api.Models.NarrativeEntry", b =>
@@ -1208,8 +1219,7 @@ namespace Chronicles.Api.Migrations
                     b.HasOne("Chronicles.Api.Models.Character", "Character")
                         .WithMany()
                         .HasForeignKey("CharacterId")
-                        .OnDelete(DeleteBehavior.Restrict)
-                        .IsRequired();
+                        .OnDelete(DeleteBehavior.Restrict);
 
                     b.HasOne("Chronicles.Api.Models.Encounter", "Encounter")
                         .WithMany("Participants")
@@ -1217,9 +1227,16 @@ namespace Chronicles.Api.Migrations
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
 
+                    b.HasOne("Chronicles.Api.Models.Npc", "Npc")
+                        .WithMany()
+                        .HasForeignKey("NpcId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Character");
 
                     b.Navigation("Encounter");
+
+                    b.Navigation("Npc");
                 });
 
             modelBuilder.Entity("Chronicles.Api.Models.NarrativeEntry", b =>
