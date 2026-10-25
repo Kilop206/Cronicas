@@ -73,6 +73,7 @@ api.MapDiceEndpoints();
 api.MapSystemEndpoints();
 api.MapCampaignMembersEndpoints();
 api.MapWorldEndpoints();
+api.MapChatEndpoints();
 api.MapPost("/campaigns/{id:guid}/room/join", async Task<IResult> (Guid id, HttpContext http, AppDbContext db, RealtimeKitService realtime) =>
 {
     if (CurrentUserId(http) is not { } userId) return Results.Unauthorized();

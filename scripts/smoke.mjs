@@ -182,6 +182,17 @@ const gmDocumentHidden = await request(`/api/entries/${gmOnly.body.id}`, { cooki
 expect(gmDocumentHidden.status === 404, 'Demoted player loses protected content');
 const invalidRole = await request(`/api/campaigns/${id}/members/${second.body.id}`, { method: 'PATCH', cookie: ownerCookie, body: { role: 'owner' } });
 expect(invalidRole.status === 400, 'Owner role cannot be assigned');
+const chatRequest = { clientId: crypto.randomUUID(), body: 'A porta do farol se abriu.', kind: 'chat' };
+const chat = await request(`/api/campaigns/${id}/messages`, { method: 'POST', cookie: second.cookie, body: chatRequest });
+expect(chat.status === 201 && chat.body.userName === 'Jogador', 'Campaign chat persists');
+const duplicateChat = await request(`/api/campaigns/${id}/messages`, { method: 'POST', cookie: second.cookie, body: chatRequest });
+expect(duplicateChat.status === 200 && duplicateChat.body.id === chat.body.id, 'Chat retries are idempotent');
+const playerAnnouncement = await request(`/api/campaigns/${id}/messages`, { method: 'POST', cookie: second.cookie, body: { clientId: crypto.randomUUID(), body: 'Atenção', kind: 'announcement' } });
+expect(playerAnnouncement.status === 403, 'Only masters announce');
+const announcement = await request(`/api/campaigns/${id}/messages`, { method: 'POST', cookie: ownerCookie, body: { clientId: crypto.randomUUID(), body: 'A sessão começou.', kind: 'announcement' } });
+expect(announcement.status === 201, 'Master announcement persists');
+const history = await request(`/api/campaigns/${id}/messages`, { cookie: second.cookie });
+expect(history.status === 200 && history.body.length === 2 && history.body.some(x => x.id === announcement.body.id), 'Campaign chat history visible');
 const spectator = await request('/api/auth/register', { method: 'POST', body: { displayName: 'Espectador', email: `espectador-${suffix}@example.test`, password: 'spectator-password-123' } });
 expect(spectator.status === 201 && spectator.cookie, 'Spectator registration');
 const spectatorInvite = await request(`/api/campaigns/${id}/invites`, { method: 'POST', cookie: ownerCookie, body: { role: 'spectator' } });
@@ -192,6 +203,8 @@ const spectatorCharacter = await request(`/api/campaigns/${id}/characters`, { me
 expect(spectatorCharacter.status === 403, 'Spectator cannot create characters');
 const spectatorRoll = await request(`/api/campaigns/${id}/rolls`, { method: 'POST', cookie: spectator.cookie, body: { requestId: crypto.randomUUID(), expression: '1d6', visibility: 'campaign' } });
 expect(spectatorRoll.status === 403, 'Spectator cannot roll dice');
+const spectatorChat = await request(`/api/campaigns/${id}/messages`, { method: 'POST', cookie: spectator.cookie, body: { clientId: crypto.randomUUID(), body: 'Mensagem', kind: 'chat' } });
+expect(spectatorChat.status === 403, 'Spectator cannot send chat');
 const spectatorLeft = await request(`/api/campaigns/${id}/members/${spectator.body.id}`, { method: 'DELETE', cookie: spectator.cookie });
 expect(spectatorLeft.status === 204, 'Member can leave campaign');
 const afterLeave = await request(`/api/campaigns/${id}`, { cookie: spectator.cookie });
@@ -228,4 +241,4 @@ const logout = await request('/api/auth/logout', { method: 'POST', cookie: curre
 expect(logout.status === 204, 'Logout');
 const afterLogout = await request('/api/dashboard', { cookie: currentCookie });
 expect(afterLogout.status === 401, 'Revogação da sessão');
-console.log('Smoke: contas, campanhas, sistemas, fichas dinâmicas, universos, convites, narrativa, dados, OBS, permissões e logout passaram.');
+console.log('Smoke: contas, campanhas, sistemas, fichas dinâmicas, universos, convites, narrativa, dados, chat, OBS, permissões e logout passaram.');

@@ -18,6 +18,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<RpgSystem> RpgSystems => Set<RpgSystem>();
     public DbSet<World> Worlds => Set<World>();
     public DbSet<WorldArticle> WorldArticles => Set<WorldArticle>();
+    public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
@@ -165,6 +166,17 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(x => x.Visibility).HasMaxLength(20);
             entity.HasOne(x => x.World).WithMany().HasForeignKey(x => x.WorldId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(x => x.Author).WithMany().HasForeignKey(x => x.AuthorId).OnDelete(DeleteBehavior.Restrict);
+        });
+        model.Entity<ChatMessage>(entity =>
+        {
+            entity.ToTable("chat_messages");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.CampaignId, x.CreatedAt });
+            entity.HasIndex(x => new { x.CampaignId, x.UserId, x.ClientId }).IsUnique();
+            entity.Property(x => x.Body).HasMaxLength(2000);
+            entity.Property(x => x.Kind).HasMaxLength(20);
+            entity.HasOne(x => x.Campaign).WithMany().HasForeignKey(x => x.CampaignId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
         });
     }
 }
