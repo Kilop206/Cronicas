@@ -46,7 +46,6 @@ public sealed class Campaign
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
     public List<CampaignMembership> Memberships { get; set; } = [];
-    public Guid? RealtimeMeetingId { get; set; }
     public Guid? SystemId { get; set; }
     public RpgSystem? System { get; set; }
     public Guid? WorldId { get; set; }
@@ -134,16 +133,6 @@ public sealed class CharacterAbility
     public int Version { get; set; } = 1;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
-}
-
-public sealed class RoomParticipant
-{
-    public Guid CampaignId { get; set; }
-    public Campaign Campaign { get; set; } = null!;
-    public Guid UserId { get; set; }
-    public User User { get; set; } = null!;
-    public Guid RealtimeParticipantId { get; set; }
-    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
 
 public sealed class CampaignInvite

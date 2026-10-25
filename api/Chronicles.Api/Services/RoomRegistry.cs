@@ -1,0 +1,78 @@
+namespace Chronicles.Api.Services;
+
+public sealed record RoomPeer(string ConnectionId, Guid CampaignId, Guid UserId, string DisplayName, string Role, string Mode,
+    bool CameraEnabled = false, bool ScreenEnabled = false);
+
+public sealed class RoomRegistry
+{
+    private readonly Dictionary<string, RoomPeer> peers = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, (DateTime Started, int Count)> signalWindows = new(StringComparer.Ordinal);
+    private readonly object gate = new();
+
+    public IReadOnlyList<RoomPeer> Join(RoomPeer peer)
+    {
+        lock (gate)
+        {
+            peers.Remove(peer.ConnectionId);
+            signalWindows.Remove(peer.ConnectionId);
+            var existing = peers.Values.Where(x => x.CampaignId == peer.CampaignId).ToArray();
+            peers.Add(peer.ConnectionId, peer);
+            return existing;
+        }
+    }
+
+    public RoomPeer? Get(string connectionId)
+    {
+        lock (gate) return peers.GetValueOrDefault(connectionId);
+    }
+
+    public bool SameCampaign(string sourceId, string targetId, Guid campaignId)
+    {
+        lock (gate) return peers.TryGetValue(sourceId, out var source) && source.CampaignId == campaignId
+            && peers.TryGetValue(targetId, out var target) && target.CampaignId == campaignId;
+    }
+
+    public RoomPeer? Update(string connectionId, bool camera, bool screen)
+    {
+        lock (gate)
+        {
+            if (!peers.TryGetValue(connectionId, out var current)) return null;
+            var updated = current with { CameraEnabled = camera, ScreenEnabled = screen };
+            peers[connectionId] = updated;
+            return updated;
+        }
+    }
+
+    public RoomPeer? Remove(string connectionId)
+    {
+        lock (gate)
+        {
+            signalWindows.Remove(connectionId);
+            return peers.Remove(connectionId, out var peer) ? peer : null;
+        }
+    }
+
+    public bool AllowSignal(string connectionId)
+    {
+        lock (gate)
+        {
+            if (!peers.ContainsKey(connectionId)) return false;
+            var now = DateTime.UtcNow;
+            var window = signalWindows.GetValueOrDefault(connectionId);
+            if (now - window.Started >= TimeSpan.FromSeconds(10)) window = (now, 0);
+            if (window.Count >= 500) return false;
+            signalWindows[connectionId] = (window.Started, window.Count + 1);
+            return true;
+        }
+    }
+
+    public IReadOnlyList<RoomPeer> RemoveUser(Guid campaignId, Guid userId)
+    {
+        lock (gate)
+        {
+            var removed = peers.Values.Where(x => x.CampaignId == campaignId && x.UserId == userId).ToArray();
+            foreach (var peer in removed) { peers.Remove(peer.ConnectionId); signalWindows.Remove(peer.ConnectionId); }
+            return removed;
+        }
+    }
+}

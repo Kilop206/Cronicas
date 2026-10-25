@@ -44,3 +44,11 @@ test('returns a controlled error when the API is unreachable', async () => {
   assert.equal(response.status, 502);
   assert.doesNotMatch(await response.text(), /connection refused/);
 });
+
+test('preserves a WebSocket upgrade response for signaling', async () => {
+  const upgrade = { status: 101, webSocket: { readyState: 0 } };
+  globalThis.fetch = async () => upgrade;
+  const response = await onRequest({ env: { API_ORIGIN: 'https://cronicas-api.onrender.com' },
+    request: new Request('https://cronicas.pages.dev/api/hubs/campaign?id=abc', { headers: { Upgrade: 'websocket' } }) });
+  assert.equal(response, upgrade);
+});

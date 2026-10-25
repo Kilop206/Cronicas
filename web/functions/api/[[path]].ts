@@ -17,6 +17,7 @@ export const onRequest: PagesFunction<Env> = async context => {
   request.headers.delete('host');
   try {
     const response = await fetch(request, { redirect: 'manual' });
+    if (response.status === 101) return response;
     const forwarded = new Response(response.body, response);
     forwarded.headers.set('Cache-Control', 'no-store');
     return forwarded;

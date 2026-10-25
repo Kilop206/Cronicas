@@ -49,9 +49,6 @@ namespace Chronicles.Api.Migrations
                     b.Property<Guid>("OwnerId")
                         .HasColumnType("uuid");
 
-                    b.Property<Guid?>("RealtimeMeetingId")
-                        .HasColumnType("uuid");
-
                     b.Property<string>("Status")
                         .IsRequired()
                         .HasMaxLength(20)
@@ -678,30 +675,6 @@ namespace Chronicles.Api.Migrations
                     b.ToTable("password_reset_codes", (string)null);
                 });
 
-            modelBuilder.Entity("Chronicles.Api.Models.RoomParticipant", b =>
-                {
-                    b.Property<Guid>("CampaignId")
-                        .HasColumnType("uuid");
-
-                    b.Property<Guid>("UserId")
-                        .HasColumnType("uuid");
-
-                    b.Property<DateTime>("CreatedAt")
-                        .HasColumnType("timestamp with time zone");
-
-                    b.Property<Guid>("RealtimeParticipantId")
-                        .HasColumnType("uuid");
-
-                    b.HasKey("CampaignId", "UserId");
-
-                    b.HasIndex("RealtimeParticipantId")
-                        .IsUnique();
-
-                    b.HasIndex("UserId");
-
-                    b.ToTable("room_participants", (string)null);
-                });
-
             modelBuilder.Entity("Chronicles.Api.Models.RpgSystem", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1183,25 +1156,6 @@ namespace Chronicles.Api.Migrations
                         .HasForeignKey("UserId")
                         .OnDelete(DeleteBehavior.Cascade)
                         .IsRequired();
-
-                    b.Navigation("User");
-                });
-
-            modelBuilder.Entity("Chronicles.Api.Models.RoomParticipant", b =>
-                {
-                    b.HasOne("Chronicles.Api.Models.Campaign", "Campaign")
-                        .WithMany()
-                        .HasForeignKey("CampaignId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.HasOne("Chronicles.Api.Models.User", "User")
-                        .WithMany()
-                        .HasForeignKey("UserId")
-                        .OnDelete(DeleteBehavior.Cascade)
-                        .IsRequired();
-
-                    b.Navigation("Campaign");
 
                     b.Navigation("User");
                 });

@@ -30,5 +30,7 @@ jobs:
           docker compose up -d --build
           for i in $(seq 1 30); do curl -fsS http://localhost:8081/health && break || sleep 3; done
           SMOKE_MAILPIT_URL=http://localhost:8025 node scripts/smoke.mjs
+          docker compose restart api
+          node scripts/room-smoke.mjs
       - if: always()
         run: docker compose down

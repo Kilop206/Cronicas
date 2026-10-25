@@ -139,8 +139,6 @@ const rotated = await request(`/api/characters/${characterId}/overlay-key`, { me
 expect(rotated.status === 200 && rotated.body.key !== overlayKey.body.key, 'OBS key rotation');
 const revokedOverlay = await request(`/api/overlay/${overlayKey.body.key}`);
 expect(revokedOverlay.status === 404, 'Old OBS key revocation');
-const forbiddenRoom = await request(`/api/campaigns/${id}/room/join`, { method: 'POST', cookie: second.cookie });
-expect(forbiddenRoom.status === 404, 'Non-member cannot get room token');
 const outsiderInvite = await request(`/api/campaigns/${id}/invites`, { method: 'POST', cookie: second.cookie, body: { role: 'player' } });
 expect(outsiderInvite.status === 404, 'Outsider cannot create an invite');
 const createdInvite = await request(`/api/campaigns/${id}/invites`, { method: 'POST', cookie: ownerCookie, body: { role: 'player' } });
@@ -252,8 +250,6 @@ const wiki = await request(`/api/campaigns/${id}/entries/wiki`, { method: 'POST'
 expect(wiki.status === 201, 'Player creates private wiki entry');
 const wikiSearch = await request(`/api/campaigns/${id}/entries/wiki?search=Cidade`, { cookie: second.cookie });
 expect(wikiSearch.status === 200 && wikiSearch.body.total === 1, 'Wiki search');
-const joinedRoom = await request(`/api/campaigns/${id}/room/join`, { method: 'POST', cookie: second.cookie });
-expect(joinedRoom.status === 503, 'Member reaches room configuration check');
 const invalidDice = await request(`/api/campaigns/${id}/rolls`, { method: 'POST', cookie: second.cookie, body: { requestId: crypto.randomUUID(), expression: '1d20;hack', visibility: 'campaign' } });
 expect(invalidDice.status === 400, 'Dice parser rejects arbitrary expressions');
 const rollRequest = { requestId: crypto.randomUUID(), expression: '2d20kh1+5', visibility: 'campaign' };

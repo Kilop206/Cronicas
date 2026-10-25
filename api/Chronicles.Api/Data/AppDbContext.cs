@@ -15,7 +15,6 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<CharacterFavorite> CharacterFavorites => Set<CharacterFavorite>();
     public DbSet<CharacterInventoryItem> CharacterInventoryItems => Set<CharacterInventoryItem>();
     public DbSet<CharacterAbility> CharacterAbilities => Set<CharacterAbility>();
-    public DbSet<RoomParticipant> RoomParticipants => Set<RoomParticipant>();
     public DbSet<CampaignInvite> CampaignInvites => Set<CampaignInvite>();
     public DbSet<NarrativeEntry> NarrativeEntries => Set<NarrativeEntry>();
     public DbSet<DiceRoll> DiceRolls => Set<DiceRoll>();
@@ -144,15 +143,6 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(x => x.RollExpression).HasMaxLength(40);
             entity.Property(x => x.Version).IsConcurrencyToken();
             entity.HasOne(x => x.Character).WithMany().HasForeignKey(x => x.CharacterId).OnDelete(DeleteBehavior.Cascade);
-        });
-        model.Entity<RoomParticipant>(entity =>
-        {
-            entity.ToTable("room_participants");
-            entity.HasKey(x => new { x.CampaignId, x.UserId });
-            entity.HasIndex(x => x.RealtimeParticipantId).IsUnique();
-            entity.HasIndex(x => x.UserId);
-            entity.HasOne(x => x.Campaign).WithMany().HasForeignKey(x => x.CampaignId).OnDelete(DeleteBehavior.Cascade);
-            entity.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Cascade);
         });
         model.Entity<CampaignInvite>(entity =>
         {

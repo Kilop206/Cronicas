@@ -17,8 +17,8 @@ builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<SessionService>();
 builder.Services.AddScoped<PasswordRecoveryService>();
 builder.Services.AddSingleton<SmtpEmailSender>();
-builder.Services.AddHttpClient(nameof(RealtimeKitService), client => client.Timeout = TimeSpan.FromSeconds(20));
-builder.Services.AddScoped<RealtimeKitService>();
+builder.Services.AddSignalR(options => options.MaximumReceiveMessageSize = 128 * 1024);
+builder.Services.AddSingleton<RoomRegistry>();
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks().AddDbContextCheck<AppDbContext>();
 builder.Services.AddRateLimiter(options =>
@@ -45,6 +45,13 @@ app.UseCors();
 app.UseRateLimiter();
 app.Use(async (context, next) =>
 {
+    if (context.Request.Path.StartsWithSegments("/api/hubs/campaign") &&
+        context.Request.Headers.Origin is { Count: > 0 } hubOrigins &&
+        !allowedOrigins.Contains(hubOrigins.ToString(), StringComparer.OrdinalIgnoreCase))
+    {
+        context.Response.StatusCode = StatusCodes.Status403Forbidden;
+        return;
+    }
     if (context.Request.Method is not ("GET" or "HEAD" or "OPTIONS"))
     {
         var origin = context.Request.Headers.Origin.ToString();
@@ -65,6 +72,7 @@ app.Use(async (context, next) =>
 });
 
 app.MapHealthChecks("/health");
+app.MapHub<CampaignRoomHub>("/api/hubs/campaign");
 var api = app.MapGroup("/api");
 api.MapCharacterEndpoints();
 api.MapCharacterInventoryEndpoints();
@@ -79,46 +87,6 @@ api.MapChatEndpoints();
 api.MapEncounterEndpoints();
 api.MapSearchEndpoints();
 api.MapProfileExportEndpoints();
-api.MapPost("/campaigns/{id:guid}/room/join", async Task<IResult> (Guid id, HttpContext http, AppDbContext db, RealtimeKitService realtime) =>
-{
-    if (CurrentUserId(http) is not { } userId) return Results.Unauthorized();
-    var member = await db.CampaignMemberships.AsNoTracking().Where(x => x.CampaignId == id && x.UserId == userId)
-        .Select(x => new { x.Campaign.Name, x.Campaign.RealtimeMeetingId, x.User.DisplayName, x.Role }).SingleOrDefaultAsync();
-    if (member is null) return Results.NotFound();
-    if (!realtime.IsConfigured) return Results.Problem("A sala de mídia ainda não foi configurada.", statusCode: 503);
-    var preset = realtime.PresetFor(member.Role);
-    if (string.IsNullOrWhiteSpace(preset)) return Results.Problem("O papel deste participante ainda não possui um preset de mídia configurado.", statusCode: 503);
-    Guid meetingId;
-    try
-    {
-        await using var transaction = await db.Database.BeginTransactionAsync(http.RequestAborted);
-        await db.Database.ExecuteSqlInterpolatedAsync($"SELECT pg_advisory_xact_lock(hashtext({id.ToString()}))", http.RequestAborted);
-        var campaign = await db.Campaigns.SingleAsync(x => x.Id == id, http.RequestAborted);
-        meetingId = campaign.RealtimeMeetingId ?? await realtime.CreateMeetingAsync(campaign.Name, http.RequestAborted);
-        if (campaign.RealtimeMeetingId is null)
-        {
-            campaign.RealtimeMeetingId = meetingId;
-            await db.SaveChangesAsync(http.RequestAborted);
-        }
-        var participant = await db.RoomParticipants.SingleOrDefaultAsync(x => x.CampaignId == id && x.UserId == userId, http.RequestAborted);
-        string token;
-        if (participant is null)
-        {
-            var created = await realtime.AddParticipantAsync(meetingId, userId, member.DisplayName, preset, http.RequestAborted);
-            db.RoomParticipants.Add(new RoomParticipant { CampaignId = id, UserId = userId, RealtimeParticipantId = created.Id });
-            await db.SaveChangesAsync(http.RequestAborted);
-            token = created.Token;
-        }
-        else token = await realtime.RefreshParticipantAsync(meetingId, participant.RealtimeParticipantId, http.RequestAborted);
-        await transaction.CommitAsync(http.RequestAborted);
-        http.Response.Headers.CacheControl = "no-store";
-        return Results.Ok(new { authToken = token });
-    }
-    catch (HttpRequestException)
-    {
-        return Results.Problem("A sala de mídia está indisponível no momento.", statusCode: 502);
-    }
-}).RequireRateLimiting("auth");
 var auth = api.MapGroup("/auth");
 
 auth.MapPost("/register", async Task<IResult> (RegisterRequest input, AppDbContext db, IPasswordHasher<User> hasher, SessionService sessions, HttpContext http) =>
