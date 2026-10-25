@@ -57,6 +57,8 @@ export class NarrativePage implements OnInit, OnDestroy {
       this.selected.set(null); this.editing.set(false); this.currentPage = 1; this.search = '';
       this.api.campaign(this.campaignId).subscribe({ next: c => this.campaign.set(c), error: e => this.error.set(apiError(e)) });
       this.load();
+      const entryId = this.route.snapshot.queryParamMap.get('entry');
+      if (entryId) this.api.entry(entryId).subscribe({ next: entry => { if (entry.campaignId === this.campaignId && entry.kind === this.kind) this.select(entry); }, error: e => this.error.set(apiError(e)) });
     });
   }
   ngOnDestroy() { this.subscription?.unsubscribe(); clearTimeout(this.searchTimer); }

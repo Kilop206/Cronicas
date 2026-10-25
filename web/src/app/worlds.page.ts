@@ -56,7 +56,7 @@ export class WorldDetailPage implements OnInit, OnDestroy {
   id = this.route.snapshot.paramMap.get('id')!; world = signal<WorldDetail | null>(null); articles = signal<Page<WorldArticle> | null>(null); selected = signal<WorldArticle | null>(null);
   links = signal<WorldArticleLink[]>([]); targetResults = signal<WorldArticle[]>([]); targetSearch = ''; targetId = ''; linkLabel = '';
   editing = signal(false); editingId: string | null = null; draft = emptyArticle(); error = signal(''); busy = signal(false); name = ''; description = ''; search = ''; pageNumber = 1;
-  ngOnInit() { this.subscription = this.route.paramMap.subscribe(params => { this.id = params.get('id')!; this.loadWorld(); this.loadArticles(); }); }
+  ngOnInit() { this.subscription = this.route.paramMap.subscribe(params => { this.id = params.get('id')!; this.loadWorld(); this.loadArticles(); const articleId = this.route.snapshot.queryParamMap.get('article'); if (articleId) this.openLinkedArticle(articleId); }); }
   ngOnDestroy() { this.subscription?.unsubscribe(); clearTimeout(this.searchTimer); clearTimeout(this.targetTimer); }
   loadWorld() { this.api.world(this.id).subscribe({ next: value => { this.world.set(value); this.name = value.name; this.description = value.description; }, error: e => this.error.set(apiError(e)) }); }
   loadArticles() { this.api.worldArticles(this.id, this.pageNumber, this.search).subscribe({ next: value => this.articles.set(value), error: e => this.error.set(apiError(e)) }); }

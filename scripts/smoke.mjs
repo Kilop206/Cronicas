@@ -32,6 +32,8 @@ const second = await request('/api/auth/register', { method: 'POST', body: { dis
 expect(second.status === 201 && second.cookie, 'Cadastro do segundo usuário');
 const forbidden = await request(`/api/campaigns/${id}`, { cookie: second.cookie });
 expect(forbidden.status === 404, 'Isolamento da campanha');
+const outsiderSearch = await request('/api/search?q=Farol', { cookie: second.cookie });
+expect(outsiderSearch.status === 200 && outsiderSearch.body.campaigns.length === 0, 'Global search isolates campaigns');
 const forbiddenWrite = await request(`/api/campaigns/${id}`, { method: 'PATCH', cookie: second.cookie, body: { name: 'Invasão', description: '', accentColor: '#ffffff' } });
 expect(forbiddenWrite.status === 404, 'Bloqueio de edição por não participante');
 const world = await request('/api/worlds', { method: 'POST', cookie: ownerCookie, body: { name: 'Arquipélago das Marés', description: 'Um universo de ilhas e segredos.' } });
@@ -131,6 +133,14 @@ const removedLink = await request(`/api/world-article-links/${publicLink.body.id
 expect(removedLink.status === 204, 'World relation can be removed');
 const playerSecretArticle = await request(`/api/worlds/${world.body.id}/articles`, { method: 'POST', cookie: second.cookie, body: { ...articleInput, visibility: 'gm' } });
 expect(playerSecretArticle.status === 403, 'Player cannot create master-only article');
+const playerSearch = await request('/api/search?q=Farol', { cookie: second.cookie });
+expect(playerSearch.status === 200 && playerSearch.body.campaigns.length === 1 && playerSearch.body.articles.some(x => x.id === article.body.id), 'Global search finds accessible campaign and article');
+const secretSearch = await request('/api/search?q=pacto%20secreto', { cookie: second.cookie });
+expect(secretSearch.status === 200 && secretSearch.body.articles.length === 0, 'Global search hides master-only article');
+const masterSearch = await request('/api/search?q=pacto%20secreto', { cookie: ownerCookie });
+expect(masterSearch.status === 200 && masterSearch.body.articles.some(x => x.id === secretArticle.body.id), 'Master can find secret article');
+const wildcardSearch = await request('/api/search?q=%25%25', { cookie: second.cookie });
+expect(wildcardSearch.status === 200 && wildcardSearch.body.articles.length === 0, 'Search wildcards are escaped');
 const usedWorldDelete = await request(`/api/worlds/${world.body.id}`, { method: 'DELETE', cookie: ownerCookie });
 expect(usedWorldDelete.status === 409, 'Linked world cannot be deleted');
 const sharedSystem = await request(`/api/systems/${customSystem.body.id}`, { cookie: second.cookie });
@@ -158,6 +168,8 @@ const revealed = await request(`/api/entries/${document.body.id}/reveal`, { meth
 expect(revealed.status === 200 && revealed.body.revealedAt, 'Master reveals clue');
 const visibleDocument = await request(`/api/entries/${document.body.id}`, { cookie: second.cookie });
 expect(visibleDocument.status === 200, 'Player sees revealed clue');
+const revealedSearch = await request('/api/search?q=Carta%20do%20Farol', { cookie: second.cookie });
+expect(revealedSearch.status === 200 && revealedSearch.body.entries.some(x => x.id === document.body.id), 'Global search finds revealed document');
 const staleEdit = await request(`/api/entries/${document.body.id}`, { method: 'PUT', cookie: ownerCookie, body: { ...entryInput, revision: 1 } });
 expect(staleEdit.status === 409, 'Narrative edit detects stale revision');
 const playerSession = await request(`/api/campaigns/${id}/entries/sessions`, { method: 'POST', cookie: second.cookie, body: { ...entryInput, visibility: 'campaign' } });

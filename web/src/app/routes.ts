@@ -9,6 +9,7 @@ import { InvitePage } from './invite.page';
 import { NarrativePage } from './narrative.page';
 import { SystemsPage, SystemEditorPage } from './systems.page';
 import { WorldsPage, WorldDetailPage } from './worlds.page';
+import { SearchPage } from './search.page';
 import { EncountersPage } from './encounters.page';
 
 const protectedRoute: CanActivateFn = (_route, state: RouterStateSnapshot) => {
@@ -30,6 +31,7 @@ export const routes: Routes = [
   { path: 'obs-camera/:campaignId/:characterId', loadComponent: () => import('./obs-camera.page').then(m => m.ObsCameraPage), canActivate: [protectedRoute] },
   { path: '', component: ShellComponent, canActivate: [protectedRoute], children: [
     { path: 'dashboard', component: DashboardPage },
+    { path: 'search', component: SearchPage },
     { path: 'campaigns', component: CampaignsPage },
     { path: 'campaigns/new', component: CampaignFormPage },
     { path: 'campaigns/:id', component: CampaignDetailPage },

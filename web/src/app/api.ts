@@ -28,6 +28,13 @@ export type NarrativeKind = 'sessions' | 'documents' | 'wiki';
 export interface NarrativeEntry { id: string; campaignId: string; authorId: string; kind: NarrativeKind; title: string; body: string; category: string; visibility: 'campaign' | 'private' | 'gm'; eventAt: string | null; revealedAt: string | null; createdAt: string; updatedAt: string; revision: number; }
 export type NarrativeInput = Pick<NarrativeEntry, 'title' | 'body' | 'category' | 'visibility' | 'eventAt' | 'revision'>;
 export interface DiceRoll { id: string; campaignId: string; userId: string; userName: string; expression: string; rolls: number[]; keptIndexes: number[]; modifier: number; total: number; visibility: 'campaign' | 'private' | 'gm'; createdAt: string; }
+export interface SearchResults {
+  campaigns: { id: string; name: string; status: string; updatedAt: string }[];
+  characters: { id: string; name: string; campaignId: string; campaignName: string; updatedAt: string }[];
+  worlds: { id: string; name: string; updatedAt: string }[];
+  articles: { id: string; worldId: string; title: string; category: string; worldName: string; updatedAt: string }[];
+  entries: { id: string; campaignId: string; kind: NarrativeKind; title: string; category: string; campaignName: string; updatedAt: string }[];
+}
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -52,6 +59,7 @@ export class ApiService {
   requestPasswordReset(email: string) { return this.http.post<void>('/api/auth/password-reset/request', { email }, { withCredentials: true }); }
   completePasswordReset(email: string, code: string, password: string) { return this.http.post<void>('/api/auth/password-reset/complete', { email, code, password }, { withCredentials: true }); }
   dashboard() { return this.http.get<Dashboard>('/api/dashboard', { withCredentials: true }); }
+  search(q: string) { return this.http.get<SearchResults>('/api/search', { params: { q }, withCredentials: true }); }
   campaigns(page = 1, search = '') { return this.http.get<Page<Campaign>>('/api/campaigns', { params: { page, search }, withCredentials: true }); }
   campaign(id: string) { return this.http.get<Campaign>(`/api/campaigns/${id}`, { withCredentials: true }); }
   createCampaign(data: { name: string; description: string; accentColor: string }) { return this.http.post<Campaign>('/api/campaigns', data, { withCredentials: true }); }
@@ -104,6 +112,7 @@ export class ApiService {
   invite(token: string) { return this.http.get<InvitePreview>(`/api/invites/${token}`, { withCredentials: true }); }
   acceptInvite(token: string) { return this.http.post<{ campaignId: string }>(`/api/invites/${token}/accept`, {}, { withCredentials: true }); }
   entries(campaignId: string, kind: NarrativeKind, page = 1, search = '') { return this.http.get<Page<NarrativeEntry>>(`/api/campaigns/${campaignId}/entries/${kind}`, { params: { page, search }, withCredentials: true }); }
+  entry(id: string) { return this.http.get<NarrativeEntry>(`/api/entries/${id}`, { withCredentials: true }); }
   createEntry(campaignId: string, kind: NarrativeKind, data: NarrativeInput) { return this.http.post<NarrativeEntry>(`/api/campaigns/${campaignId}/entries/${kind}`, data, { withCredentials: true }); }
   updateEntry(id: string, data: NarrativeInput) { return this.http.put<NarrativeEntry>(`/api/entries/${id}`, data, { withCredentials: true }); }
   deleteEntry(id: string) { return this.http.delete<void>(`/api/entries/${id}`, { withCredentials: true }); }
