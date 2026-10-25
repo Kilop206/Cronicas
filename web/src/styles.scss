@@ -413,6 +413,17 @@ html:has(.obs-page), body:has(.obs-page), html:has(.obs-camera-page), body:has(.
 .favorite-name { display: grid; gap: 4px; flex: 1; }
 .favorite-name strong { font: 20px var(--font-editorial); }
 .favorite-name small, .favorite-health { color: var(--muted); font-size: 12px; }
+.upcoming-section { margin: 24px 0 40px; }
+.upcoming-list { border-top: 1px solid var(--border); }
+.upcoming-row { display: flex; align-items: center; gap: 16px; padding: 11px 8px; border-bottom: 1px solid var(--border); color: var(--text); text-decoration: none; }
+.upcoming-row:hover { background: var(--surface); }
+.upcoming-row time { display: grid; place-items: center; width: 54px; height: 54px; border: 1px solid var(--border); }
+.upcoming-row time strong { font: 24px var(--font-editorial); line-height: 1; }
+.upcoming-row time small { color: var(--muted); font-size: 10px; text-transform: uppercase; }
+.upcoming-row > span { display: grid; gap: 5px; flex: 1; }
+.upcoming-row > span strong { font-size: 14px; }
+.upcoming-row > span small { color: var(--muted); }
+.upcoming-row b { color: var(--gold-bright); }
 @media print {
   :root { color-scheme: light; }
   body { background: #fff !important; color: #171717 !important; }

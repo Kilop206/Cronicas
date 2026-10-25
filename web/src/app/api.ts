@@ -6,7 +6,8 @@ import { catchError, map, Observable, of, tap } from 'rxjs';
 export type Accent = 'gold' | 'violet' | 'wine' | 'azure';
 export interface User { id: string; email: string; displayName: string; bio: string | null; accent: Accent; createdAt: string; }
 export interface Campaign { id: string; name: string; description: string; status: string; accentColor: string; role: string; updatedAt: string; systemId: string | null; worldId: string | null; }
-export interface Dashboard { totalCampaigns: number; activeCampaigns: number; recentCampaigns: Campaign[]; favoriteCharacters: FavoriteCharacter[]; }
+export interface Dashboard { totalCampaigns: number; activeCampaigns: number; recentCampaigns: Campaign[]; favoriteCharacters: FavoriteCharacter[]; upcomingSessions: UpcomingSession[]; }
+export interface UpcomingSession { id: string; campaignId: string; title: string; eventAt: string; campaignName: string; }
 export interface FavoriteCharacter { characterId: string; name: string; portraitUrl: string | null; campaignId: string; campaignName: string; health: number; maxHealth: number; }
 export interface Page<T> { items: T[]; total: number; page: number; }
 export interface Character { id: string; campaignId: string; ownerId: string; canEdit: boolean; name: string; portraitUrl: string | null; backgroundUrl: string | null; health: number; maxHealth: number; sanity: number; maxSanity: number; mana: number; maxMana: number; fields: Record<string, string | number | boolean>; version: number; updatedAt: string; }

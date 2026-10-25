@@ -205,6 +205,15 @@ const session = await request(`/api/campaigns/${id}/entries/sessions`, { method:
 expect(session.status === 201, 'Session persisted');
 const sessionList = await request(`/api/campaigns/${id}/entries/sessions`, { cookie: second.cookie });
 expect(sessionList.status === 200 && sessionList.body.total === 1, 'Player reads session timeline');
+const tomorrow = new Date(Date.now() + 24 * 60 * 60 * 1000).toISOString();
+const scheduledSession = await request(`/api/campaigns/${id}/entries/sessions`, { method: 'POST', cookie: ownerCookie, body: { ...entryInput, title: 'Sessão do amanhã', visibility: 'campaign', category: 'schedule', eventAt: tomorrow } });
+expect(scheduledSession.status === 201, 'Scheduled session persists');
+const privateSchedule = await request(`/api/campaigns/${id}/entries/sessions`, { method: 'POST', cookie: ownerCookie, body: { ...entryInput, title: 'Plano secreto', visibility: 'gm', category: 'schedule', eventAt: tomorrow } });
+expect(privateSchedule.status === 201, 'Master schedule persists privately');
+const playerAgenda = await request('/api/dashboard', { cookie: second.cookie });
+expect(playerAgenda.status === 200 && playerAgenda.body.upcomingSessions.some(x => x.id === scheduledSession.body.id) && !playerAgenda.body.upcomingSessions.some(x => x.id === privateSchedule.body.id), 'Dashboard agenda respects visibility');
+const masterAgenda = await request('/api/dashboard', { cookie: ownerCookie });
+expect(masterAgenda.status === 200 && masterAgenda.body.upcomingSessions.some(x => x.id === privateSchedule.body.id), 'Master sees private schedule');
 const wiki = await request(`/api/campaigns/${id}/entries/wiki`, { method: 'POST', cookie: second.cookie, body: { ...entryInput, title: 'Cidade do Farol', visibility: 'private', category: 'location' } });
 expect(wiki.status === 201, 'Player creates private wiki entry');
 const wikiSearch = await request(`/api/campaigns/${id}/entries/wiki?search=Cidade`, { cookie: second.cookie });
@@ -336,4 +345,4 @@ const logout = await request('/api/auth/logout', { method: 'POST', cookie: curre
 expect(logout.status === 204, 'Logout');
 const afterLogout = await request('/api/dashboard', { cookie: currentCookie });
 expect(afterLogout.status === 401, 'Revogação da sessão');
-console.log('Smoke: contas, campanhas, sistemas, fichas/versionamento/sigilo/favoritos, universos/relações, pesquisa, convites, narrativa, dados, chat, encontros, OBS, permissões e logout passaram.');
+console.log('Smoke: contas, campanhas, sistemas, fichas/versionamento/sigilo/favoritos, universos/relações, pesquisa, convites, narrativa/agenda, dados, chat, encontros, OBS, permissões e logout passaram.');

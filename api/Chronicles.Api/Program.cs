@@ -218,7 +218,13 @@ api.MapGet("/dashboard", async Task<IResult> (HttpContext http, AppDbContext db)
         .OrderByDescending(x => x.CreatedAt).Take(8)
         .Select(x => new { x.CharacterId, x.Character.Name, x.Character.PortraitUrl, x.Character.CampaignId,
             campaignName = x.Character.Campaign.Name, x.Character.Health, x.Character.MaxHealth }).ToListAsync();
-    return Results.Ok(new { totalCampaigns = total, activeCampaigns = await db.CampaignMemberships.CountAsync(x => x.UserId == id && x.Campaign.Status == "active"), recentCampaigns = campaigns, favoriteCharacters = favorites });
+    var upcoming = await db.NarrativeEntries.AsNoTracking()
+        .Where(x => x.Kind == "sessions" && x.EventAt >= DateTime.UtcNow && x.Campaign.Memberships.Any(m => m.UserId == id) &&
+            (x.Visibility == "campaign" || x.Visibility == "private" && x.AuthorId == id ||
+             x.Campaign.Memberships.Any(m => m.UserId == id && (m.Role == "owner" || m.Role == "gm" || m.Role == "co-gm"))))
+        .OrderBy(x => x.EventAt).Take(8)
+        .Select(x => new { x.Id, x.CampaignId, x.Title, x.EventAt, campaignName = x.Campaign.Name }).ToListAsync();
+    return Results.Ok(new { totalCampaigns = total, activeCampaigns = await db.CampaignMemberships.CountAsync(x => x.UserId == id && x.Campaign.Status == "active"), recentCampaigns = campaigns, favoriteCharacters = favorites, upcomingSessions = upcoming });
 });
 
 api.MapGet("/campaigns", async Task<IResult> (HttpContext http, AppDbContext db, int? page, string? search) =>
