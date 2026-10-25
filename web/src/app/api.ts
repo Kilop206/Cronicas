@@ -14,6 +14,7 @@ export interface InvitePreview { campaignId: string; campaignName: string; role:
 export type NarrativeKind = 'sessions' | 'documents' | 'wiki';
 export interface NarrativeEntry { id: string; campaignId: string; authorId: string; kind: NarrativeKind; title: string; body: string; category: string; visibility: 'campaign' | 'private' | 'gm'; eventAt: string | null; revealedAt: string | null; createdAt: string; updatedAt: string; revision: number; }
 export type NarrativeInput = Pick<NarrativeEntry, 'title' | 'body' | 'category' | 'visibility' | 'eventAt' | 'revision'>;
+export interface DiceRoll { id: string; campaignId: string; userId: string; userName: string; expression: string; rolls: number[]; keptIndexes: number[]; modifier: number; total: number; visibility: 'campaign' | 'private' | 'gm'; createdAt: string; }
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -58,6 +59,8 @@ export class ApiService {
   updateEntry(id: string, data: NarrativeInput) { return this.http.put<NarrativeEntry>(`/api/entries/${id}`, data, { withCredentials: true }); }
   deleteEntry(id: string) { return this.http.delete<void>(`/api/entries/${id}`, { withCredentials: true }); }
   revealEntry(id: string) { return this.http.post<NarrativeEntry>(`/api/entries/${id}/reveal`, {}, { withCredentials: true }); }
+  rolls(campaignId: string) { return this.http.get<DiceRoll[]>(`/api/campaigns/${campaignId}/rolls`, { withCredentials: true }); }
+  roll(campaignId: string, expression: string, visibility: DiceRoll['visibility'], requestId: string) { return this.http.post<DiceRoll>(`/api/campaigns/${campaignId}/rolls`, { expression, visibility, requestId }, { withCredentials: true }); }
   private setUser(user: User | null) {
     this.user.set(user);
     this.document.documentElement.dataset['accent'] = user?.accent || 'gold';
