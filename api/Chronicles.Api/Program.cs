@@ -65,6 +65,7 @@ app.MapHealthChecks("/health");
 var api = app.MapGroup("/api");
 api.MapCharacterEndpoints();
 api.MapInviteEndpoints();
+api.MapNarrativeEndpoints();
 api.MapPost("/campaigns/{id:guid}/room/join", async Task<IResult> (Guid id, HttpContext http, AppDbContext db, RealtimeKitService realtime) =>
 {
     if (CurrentUserId(http) is not { } userId) return Results.Unauthorized();

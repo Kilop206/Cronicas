@@ -13,6 +13,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<Character> Characters => Set<Character>();
     public DbSet<RoomParticipant> RoomParticipants => Set<RoomParticipant>();
     public DbSet<CampaignInvite> CampaignInvites => Set<CampaignInvite>();
+    public DbSet<NarrativeEntry> NarrativeEntries => Set<NarrativeEntry>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
@@ -98,6 +99,20 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.HasOne(x => x.Campaign).WithMany().HasForeignKey(x => x.CampaignId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(x => x.CreatedBy).WithMany().HasForeignKey(x => x.CreatedById).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne<User>().WithMany().HasForeignKey(x => x.UsedById).OnDelete(DeleteBehavior.SetNull);
+        });
+        model.Entity<NarrativeEntry>(entity =>
+        {
+            entity.ToTable("narrative_entries");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.CampaignId, x.Kind, x.UpdatedAt });
+            entity.HasIndex(x => new { x.CampaignId, x.Kind, x.Title });
+            entity.Property(x => x.Kind).HasMaxLength(20);
+            entity.Property(x => x.Title).HasMaxLength(160);
+            entity.Property(x => x.Body).HasMaxLength(40000);
+            entity.Property(x => x.Category).HasMaxLength(40);
+            entity.Property(x => x.Visibility).HasMaxLength(20);
+            entity.HasOne(x => x.Campaign).WithMany().HasForeignKey(x => x.CampaignId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.Author).WithMany().HasForeignKey(x => x.AuthorId).OnDelete(DeleteBehavior.Restrict);
         });
     }
 }
