@@ -55,6 +55,7 @@ export class ApiService {
   register(displayName: string, email: string, password: string) { return this.http.post<User>('/api/auth/register', { displayName, email, password }, { withCredentials: true }).pipe(tap(user => { this.setUser(user); this.loaded = true; })); }
   logout() { return this.http.post<void>('/api/auth/logout', {}, { withCredentials: true }).pipe(tap(() => { this.setUser(null); this.loaded = true; })); }
   updateProfile(displayName: string, bio: string) { return this.http.patch<User>('/api/profile', { displayName, bio }, { withCredentials: true }).pipe(tap(user => this.setUser(user))); }
+  exportProfile() { return this.http.get('/api/profile/export', { withCredentials: true, responseType: 'blob' }); }
   updatePreferences(accent: Accent) { return this.http.patch<User>('/api/profile/preferences', { accent }, { withCredentials: true }).pipe(tap(user => this.setUser(user))); }
   requestPasswordReset(email: string) { return this.http.post<void>('/api/auth/password-reset/request', { email }, { withCredentials: true }); }
   completePasswordReset(email: string, code: string, password: string) { return this.http.post<void>('/api/auth/password-reset/complete', { email, code, password }, { withCredentials: true }); }

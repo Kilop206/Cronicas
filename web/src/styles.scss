@@ -400,6 +400,8 @@ html:has(.obs-page), body:has(.obs-page), html:has(.obs-camera-page), body:has(.
 .character-actions { display: flex; flex-wrap: wrap; gap: 10px; }
 .character-actions .button { margin-top: 16px; }
 .print-sheet { display: none; }
+.profile-export { margin-top: 24px; }
+.profile-export p { color: var(--muted); line-height: 1.6; max-width: 600px; }
 @media print {
   :root { color-scheme: light; }
   body { background: #fff !important; color: #171717 !important; }

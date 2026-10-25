@@ -276,6 +276,11 @@ const spectatorLeft = await request(`/api/campaigns/${id}/members/${spectator.bo
 expect(spectatorLeft.status === 204, 'Member can leave campaign');
 const afterLeave = await request(`/api/campaigns/${id}`, { cookie: spectator.cookie });
 expect(afterLeave.status === 404, 'Former member loses campaign access');
+const exportOwner = await request('/api/profile/export', { cookie: ownerCookie });
+expect(exportOwner.status === 200 && exportOwner.body.profile.email === first.body.email && exportOwner.body.characters.some(x => x.id === characterId) && exportOwner.body.articles.some(x => x.id === secretArticle.body.id), 'Owner exports account data');
+expect(!JSON.stringify(exportOwner.body).includes('passwordHash') && !JSON.stringify(exportOwner.body).includes('overlayKeyHash') && !JSON.stringify(exportOwner.body).includes('tokenHash'), 'Export omits credential hashes');
+const exportPlayer = await request('/api/profile/export', { cookie: second.cookie });
+expect(exportPlayer.status === 200 && exportPlayer.body.characters.length === 0 && exportPlayer.body.articles.length === 0, 'Export isolates personal data');
 let currentCookie = ownerCookie;
 if (process.env.SMOKE_MAILPIT_URL) {
   const email = `mestre-${suffix}@example.test`;
