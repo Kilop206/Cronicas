@@ -15,6 +15,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<CampaignInvite> CampaignInvites => Set<CampaignInvite>();
     public DbSet<NarrativeEntry> NarrativeEntries => Set<NarrativeEntry>();
     public DbSet<DiceRoll> DiceRolls => Set<DiceRoll>();
+    public DbSet<RpgSystem> RpgSystems => Set<RpgSystem>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
@@ -56,6 +57,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(x => x.Description).HasMaxLength(2000);
             entity.Property(x => x.Status).HasMaxLength(20);
             entity.Property(x => x.AccentColor).HasMaxLength(7);
+            entity.HasOne(x => x.System).WithMany().HasForeignKey(x => x.SystemId).OnDelete(DeleteBehavior.Restrict);
             entity.HasOne(x => x.Owner).WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
         });
         model.Entity<CampaignMembership>(entity =>
@@ -77,6 +79,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(x => x.PortraitUrl).HasMaxLength(2048);
             entity.Property(x => x.BackgroundUrl).HasMaxLength(2048);
             entity.Property(x => x.OverlayKeyHash).HasMaxLength(64);
+            entity.Property(x => x.FieldsJson).HasColumnType("jsonb");
             entity.HasOne(x => x.Campaign).WithMany().HasForeignKey(x => x.CampaignId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(x => x.Owner).WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
         });
@@ -127,6 +130,16 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(x => x.Visibility).HasMaxLength(20);
             entity.HasOne(x => x.Campaign).WithMany().HasForeignKey(x => x.CampaignId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+        });
+        model.Entity<RpgSystem>(entity =>
+        {
+            entity.ToTable("rpg_systems");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.OwnerId, x.Name });
+            entity.Property(x => x.Name).HasMaxLength(120);
+            entity.Property(x => x.Description).HasMaxLength(2000);
+            entity.Property(x => x.SchemaJson).HasColumnType("jsonb");
+            entity.HasOne(x => x.Owner).WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

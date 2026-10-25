@@ -46,6 +46,28 @@ const invalidResource = await request(`/api/characters/${characterId}`, { method
 expect(invalidResource.status === 400, 'Resource boundaries');
 const updatedCharacter = await request(`/api/characters/${characterId}`, { method: 'PUT', cookie: ownerCookie, body: { ...characterInput, health: 6 } });
 expect(updatedCharacter.status === 200 && updatedCharacter.body.health === 6, 'Resource update');
+const systems = await request('/api/systems', { cookie: ownerCookie });
+expect(systems.status === 200 && systems.body.length >= 3, 'Original systems seeded');
+const systemInput = { name: 'Arquivo das Marés', description: 'Sistema autoral de teste', fields: [
+  { key: 'coragem', label: 'Coragem', type: 'number', section: 'Atributos', min: 0, max: 10, options: null },
+  { key: 'origem', label: 'Origem', type: 'text', section: 'Identidade', min: null, max: null, options: null }
+] };
+const customSystem = await request('/api/systems', { method: 'POST', cookie: ownerCookie, body: systemInput });
+expect(customSystem.status === 201 && customSystem.body.fields.length === 2, 'Custom typed system persisted');
+const hiddenSystem = await request(`/api/systems/${customSystem.body.id}`, { cookie: second.cookie });
+expect(hiddenSystem.status === 404, 'Private system hidden from outsider');
+const campaignSystem = await request(`/api/campaigns/${id}/system`, { method: 'PATCH', cookie: ownerCookie, body: { systemId: customSystem.body.id } });
+expect(campaignSystem.status === 204, 'Campaign system changed');
+const invalidField = await request(`/api/characters/${characterId}`, { method: 'PUT', cookie: ownerCookie, body: { ...characterInput, fields: { coragem: 11 } } });
+expect(invalidField.status === 400, 'Dynamic numeric field range validated');
+const dynamicCharacter = await request(`/api/characters/${characterId}`, { method: 'PUT', cookie: ownerCookie, body: { ...characterInput, health: 6, fields: { coragem: 7, origem: 'Ilhas do Norte' } } });
+expect(dynamicCharacter.status === 200 && dynamicCharacter.body.fields.coragem === 7, 'Dynamic sheet fields persisted');
+const genericSystem = await request(`/api/campaigns/${id}/system`, { method: 'PATCH', cookie: ownerCookie, body: { systemId: 'a9e29682-c194-4aae-9c0e-7bbb3f6a72f1' } });
+expect(genericSystem.status === 204, 'Switch campaign system');
+const preservedFields = await request(`/api/characters/${characterId}`, { method: 'PUT', cookie: ownerCookie, body: { ...characterInput, health: 6, fields: { ...dynamicCharacter.body.fields, nivel: 2 } } });
+expect(preservedFields.status === 200 && preservedFields.body.fields.coragem === 7 && preservedFields.body.fields.nivel === 2, 'Old field values preserved after system switch');
+const restoredSystem = await request(`/api/campaigns/${id}/system`, { method: 'PATCH', cookie: ownerCookie, body: { systemId: customSystem.body.id } });
+expect(restoredSystem.status === 204, 'Restore custom campaign system');
 const overlayKey = await request(`/api/characters/${characterId}/overlay-key`, { method: 'POST', cookie: ownerCookie });
 expect(overlayKey.status === 200 && overlayKey.body.key.length === 64, 'OBS key generation');
 const overlay = await request(`/api/overlay/${overlayKey.body.key}`);
@@ -69,6 +91,12 @@ const reused = await request(`/api/invites/${inviteToken}/accept`, { method: 'PO
 expect(reused.status === 404, 'Invite cannot be reused');
 const joinedCampaign = await request(`/api/campaigns/${id}`, { cookie: second.cookie });
 expect(joinedCampaign.status === 200 && joinedCampaign.body.role === 'player', 'New member can read campaign');
+const sharedSystem = await request(`/api/systems/${customSystem.body.id}`, { cookie: second.cookie });
+expect(sharedSystem.status === 200, 'Campaign member can read applied custom system');
+const playerSystemChange = await request(`/api/campaigns/${id}/system`, { method: 'PATCH', cookie: second.cookie, body: { systemId: systems.body[0].id } });
+expect(playerSystemChange.status === 404, 'Only campaign owner changes system');
+const usedSystemDelete = await request(`/api/systems/${customSystem.body.id}`, { method: 'DELETE', cookie: ownerCookie });
+expect(usedSystemDelete.status === 409, 'System used by campaign cannot be deleted');
 const playerEdit = await request(`/api/campaigns/${id}`, { method: 'PATCH', cookie: second.cookie, body: { name: 'Invasao', description: '', accentColor: '#ffffff' } });
 expect(playerEdit.status === 403, 'Player cannot edit campaign settings');
 const playerInvite = await request(`/api/campaigns/${id}/invites`, { method: 'POST', cookie: second.cookie, body: { role: 'gm' } });
@@ -113,8 +141,12 @@ const gmRoll = await request(`/api/campaigns/${id}/rolls`, { method: 'POST', coo
 expect(gmRoll.status === 201, 'Master-only roll persisted');
 const blockedGmRoll = await request(`/api/campaigns/${id}/rolls`, { method: 'POST', cookie: second.cookie, body: { requestId: crypto.randomUUID(), expression: '1d6', visibility: 'gm' } });
 expect(blockedGmRoll.status === 403, 'Player cannot send master-only roll');
+const privateRoll = await request(`/api/campaigns/${id}/rolls`, { method: 'POST', cookie: second.cookie, body: { requestId: crypto.randomUUID(), expression: '1d6', visibility: 'private' } });
+expect(privateRoll.status === 201, 'Player private roll');
 const playerRolls = await request(`/api/campaigns/${id}/rolls`, { cookie: second.cookie });
-expect(playerRolls.status === 200 && playerRolls.body.length === 1 && playerRolls.body[0].id === rolled.body.id, 'Master roll hidden from player history');
+expect(playerRolls.status === 200 && playerRolls.body.length === 2 && playerRolls.body.some(x => x.id === rolled.body.id) && playerRolls.body.some(x => x.id === privateRoll.body.id), 'Player sees public and own private rolls');
+const masterRolls = await request(`/api/campaigns/${id}/rolls`, { cookie: ownerCookie });
+expect(masterRolls.status === 200 && masterRolls.body.some(x => x.id === gmRoll.body.id) && !masterRolls.body.some(x => x.id === privateRoll.body.id), 'Private roll hidden from master');
 const spectator = await request('/api/auth/register', { method: 'POST', body: { displayName: 'Espectador', email: `espectador-${suffix}@example.test`, password: 'spectator-password-123' } });
 expect(spectator.status === 201 && spectator.cookie, 'Spectator registration');
 const spectatorInvite = await request(`/api/campaigns/${id}/invites`, { method: 'POST', cookie: ownerCookie, body: { role: 'spectator' } });
@@ -157,4 +189,4 @@ const logout = await request('/api/auth/logout', { method: 'POST', cookie: curre
 expect(logout.status === 204, 'Logout');
 const afterLogout = await request('/api/dashboard', { cookie: currentCookie });
 expect(afterLogout.status === 401, 'Revogação da sessão');
-console.log('Smoke: contas, campanhas, personagens, convites, narrativa, dados, overlay OBS, permissões e logout passaram.');
+console.log('Smoke: contas, campanhas, sistemas, fichas dinâmicas, convites, narrativa, dados, OBS, permissões e logout passaram.');

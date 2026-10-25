@@ -1,5 +1,6 @@
 using System.Security.Claims;
 using System.Security.Cryptography;
+using System.Text.Json;
 using Chronicles.Api.Data;
 using Chronicles.Api.Models;
 using Microsoft.EntityFrameworkCore;
@@ -28,6 +29,8 @@ public static class CharacterEndpoints
             if (role is "spectator") return Results.Problem("Espectadores não podem criar personagens.", statusCode: 403);
             var error = Validate(input);
             if (error is not null) return Results.ValidationProblem(error);
+            var fieldErrors = await ValidateFields(db, campaignId, input.Fields);
+            if (fieldErrors is not null) return Results.ValidationProblem(fieldErrors);
             var character = new Character { CampaignId = campaignId, OwnerId = userId, Name = input.Name.Trim() };
             Apply(character, input);
             db.Characters.Add(character);
@@ -53,6 +56,8 @@ public static class CharacterEndpoints
             if (character.OwnerId != userId && !character.Campaign.Memberships.Any(x => x.UserId == userId && x.Role is "owner" or "gm" or "co-gm")) return Results.Problem("Você não pode editar este personagem.", statusCode: 403);
             var error = Validate(input);
             if (error is not null) return Results.ValidationProblem(error);
+            var fieldErrors = await ValidateFields(db, character.CampaignId, input.Fields, character.FieldsJson);
+            if (fieldErrors is not null) return Results.ValidationProblem(fieldErrors);
             Apply(character, input);
             await db.SaveChangesAsync();
             return Results.Ok(View(character, true));
@@ -86,7 +91,7 @@ public static class CharacterEndpoints
 
     private static Guid? UserId(HttpContext http) => Guid.TryParse(http.User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : null;
     private static Task<bool> Member(AppDbContext db, Guid campaignId, Guid userId) => db.CampaignMemberships.AnyAsync(x => x.CampaignId == campaignId && x.UserId == userId);
-    private static object View(Character x, bool canEdit = false) => new { x.Id, x.CampaignId, x.OwnerId, x.Name, x.PortraitUrl, x.BackgroundUrl, x.Health, x.MaxHealth, x.Sanity, x.MaxSanity, x.Mana, x.MaxMana, x.UpdatedAt, canEdit };
+    private static object View(Character x, bool canEdit = false) => new { x.Id, x.CampaignId, x.OwnerId, x.Name, x.PortraitUrl, x.BackgroundUrl, x.Health, x.MaxHealth, x.Sanity, x.MaxSanity, x.Mana, x.MaxMana, fields = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(x.FieldsJson), x.UpdatedAt, canEdit };
     private static string Hash(string key) => Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(key))).ToLowerInvariant();
     private static Dictionary<string, string[]>? Validate(CharacterInput input)
     {
@@ -98,6 +103,35 @@ public static class CharacterEndpoints
     }
     private static bool ValidUrl(string? value) => string.IsNullOrWhiteSpace(value) || value.Length <= 2048 && Uri.TryCreate(value, UriKind.Absolute, out var url) && url.Scheme == Uri.UriSchemeHttps;
     private static bool ValidResource(int value, int max) => max is >= 1 and <= 9999 && value >= 0 && value <= max;
+    private static async Task<Dictionary<string, string[]>?> ValidateFields(AppDbContext db, Guid campaignId, Dictionary<string, JsonElement>? values, string? previousJson = null)
+    {
+        if (values is null) return null;
+        if (values.Count > 50 || JsonSerializer.Serialize(values).Length > 20000) return new() { ["fields"] = ["Campos excedem o limite."] };
+        var systemId = await db.Campaigns.Where(x => x.Id == campaignId).Select(x => x.SystemId).SingleAsync() ?? SystemCatalog.GenericId;
+        var schema = await db.RpgSystems.Where(x => x.Id == systemId).Select(x => x.SchemaJson).SingleAsync();
+        var fields = JsonSerializer.Deserialize<SystemField[]>(schema) ?? [];
+        var byKey = fields.ToDictionary(x => x.Key);
+        var previous = previousJson is null ? new Dictionary<string, JsonElement>() : JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(previousJson) ?? [];
+        foreach (var (key, value) in values)
+        {
+            if (!byKey.TryGetValue(key, out var field))
+            {
+                if (previous.TryGetValue(key, out var oldValue) && JsonElement.DeepEquals(value, oldValue)) continue;
+                return new() { ["fields"] = [$"Campo desconhecido: {key}."] };
+            }
+            var valid = field.Type switch
+            {
+                "number" => value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var number) && (field.Min is null || number >= field.Min) && (field.Max is null || number <= field.Max),
+                "boolean" => value.ValueKind is JsonValueKind.True or JsonValueKind.False,
+                "select" => value.ValueKind == JsonValueKind.String && field.Options?.Contains(value.GetString()) == true,
+                "longtext" => value.ValueKind == JsonValueKind.String && value.GetString()?.Length <= 10000,
+                "text" => value.ValueKind == JsonValueKind.String && value.GetString()?.Length <= 300,
+                _ => false
+            };
+            if (!valid) return new() { ["fields"] = [$"Valor inválido para {field.Label}."] };
+        }
+        return null;
+    }
     private static void Apply(Character target, CharacterInput input)
     {
         target.Name = input.Name.Trim();
@@ -106,7 +140,8 @@ public static class CharacterEndpoints
         target.Health = input.Health; target.MaxHealth = input.MaxHealth;
         target.Sanity = input.Sanity; target.MaxSanity = input.MaxSanity;
         target.Mana = input.Mana; target.MaxMana = input.MaxMana;
+        if (input.Fields is not null) target.FieldsJson = JsonSerializer.Serialize(input.Fields);
         target.UpdatedAt = DateTime.UtcNow;
     }
-    public sealed record CharacterInput(string Name, string? PortraitUrl, string? BackgroundUrl, int Health, int MaxHealth, int Sanity, int MaxSanity, int Mana, int MaxMana);
+    public sealed record CharacterInput(string Name, string? PortraitUrl, string? BackgroundUrl, int Health, int MaxHealth, int Sanity, int MaxSanity, int Mana, int MaxMana, Dictionary<string, JsonElement>? Fields = null);
 }
