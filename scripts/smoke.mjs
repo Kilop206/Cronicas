@@ -308,4 +308,4 @@ const logout = await request('/api/auth/logout', { method: 'POST', cookie: curre
 expect(logout.status === 204, 'Logout');
 const afterLogout = await request('/api/dashboard', { cookie: currentCookie });
 expect(afterLogout.status === 401, 'Revogação da sessão');
-console.log('Smoke: contas, campanhas, sistemas, fichas dinâmicas, universos, convites, narrativa, dados, chat, encontros, OBS, permissões e logout passaram.');
+console.log('Smoke: contas, campanhas, sistemas, fichas/versionamento, universos/relações, pesquisa, convites, narrativa, dados, chat, encontros, OBS, permissões e logout passaram.');
