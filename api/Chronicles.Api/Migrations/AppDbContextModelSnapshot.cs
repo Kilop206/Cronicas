@@ -204,6 +204,10 @@ namespace Chronicles.Api.Migrations
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer");
+
                     b.HasKey("Id");
 
                     b.HasIndex("OverlayKeyHash")
@@ -214,6 +218,38 @@ namespace Chronicles.Api.Migrations
                     b.HasIndex("CampaignId", "Name");
 
                     b.ToTable("characters", (string)null);
+                });
+
+            modelBuilder.Entity("Chronicles.Api.Models.CharacterRevision", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CharacterId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<Guid>("EditedById")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("SnapshotJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<int>("Version")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("EditedById");
+
+                    b.HasIndex("CharacterId", "Version")
+                        .IsUnique();
+
+                    b.ToTable("character_revisions", (string)null);
                 });
 
             modelBuilder.Entity("Chronicles.Api.Models.ChatMessage", b =>
@@ -787,6 +823,25 @@ namespace Chronicles.Api.Migrations
                     b.Navigation("Campaign");
 
                     b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("Chronicles.Api.Models.CharacterRevision", b =>
+                {
+                    b.HasOne("Chronicles.Api.Models.Character", "Character")
+                        .WithMany()
+                        .HasForeignKey("CharacterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Chronicles.Api.Models.User", "EditedBy")
+                        .WithMany()
+                        .HasForeignKey("EditedById")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Character");
+
+                    b.Navigation("EditedBy");
                 });
 
             modelBuilder.Entity("Chronicles.Api.Models.ChatMessage", b =>

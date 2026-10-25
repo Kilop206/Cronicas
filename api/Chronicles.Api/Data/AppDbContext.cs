@@ -21,6 +21,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
     public DbSet<Encounter> Encounters => Set<Encounter>();
     public DbSet<EncounterParticipant> EncounterParticipants => Set<EncounterParticipant>();
+    public DbSet<CharacterRevision> CharacterRevisions => Set<CharacterRevision>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
@@ -86,6 +87,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(x => x.BackgroundUrl).HasMaxLength(2048);
             entity.Property(x => x.OverlayKeyHash).HasMaxLength(64);
             entity.Property(x => x.FieldsJson).HasColumnType("jsonb");
+            entity.Property(x => x.Version).IsConcurrencyToken();
             entity.HasOne(x => x.Campaign).WithMany().HasForeignKey(x => x.CampaignId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(x => x.Owner).WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
         });
@@ -197,6 +199,15 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(x => x.Conditions).HasMaxLength(1000);
             entity.HasOne(x => x.Encounter).WithMany(x => x.Participants).HasForeignKey(x => x.EncounterId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(x => x.Character).WithMany().HasForeignKey(x => x.CharacterId).OnDelete(DeleteBehavior.Restrict);
+        });
+        model.Entity<CharacterRevision>(entity =>
+        {
+            entity.ToTable("character_revisions");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.CharacterId, x.Version }).IsUnique();
+            entity.Property(x => x.SnapshotJson).HasColumnType("jsonb");
+            entity.HasOne(x => x.Character).WithMany().HasForeignKey(x => x.CharacterId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.EditedBy).WithMany().HasForeignKey(x => x.EditedById).OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

@@ -4,8 +4,9 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize, Subscription, timer } from 'rxjs';
 import { ApiService, apiError, Character, CharacterInput, RpgSystem, SystemField } from './api';
+import { CharacterHistoryPanelComponent } from './character-history.component';
 
-const emptyCharacter = (): CharacterInput => ({ name: '', portraitUrl: null, backgroundUrl: null, health: 10, maxHealth: 10, sanity: 10, maxSanity: 10, mana: 10, maxMana: 10, fields: {} });
+const emptyCharacter = (): CharacterInput => ({ name: '', portraitUrl: null, backgroundUrl: null, health: 10, maxHealth: 10, sanity: 10, maxSanity: 10, mana: 10, maxMana: 10, fields: {}, version: 1 });
 
 @Component({ standalone: true, imports: [CommonModule, FormsModule, RouterLink], template: `
   <main class="page narrow"><a [routerLink]="['/campaigns', campaignId]" class="back-link">← Voltar à campanha</a>
@@ -29,16 +30,16 @@ export class CharactersPage {
   create() { this.saving.set(true); this.error.set(''); this.api.createCharacter(this.campaignId, { ...emptyCharacter(), name: this.newName }).pipe(finalize(() => this.saving.set(false))).subscribe({ next: item => { this.characters.update(items => [...items, item].sort((a, b) => a.name.localeCompare(b.name))); this.newName = ''; }, error: error => this.error.set(apiError(error)) }); }
 }
 
-@Component({ standalone: true, imports: [CommonModule, FormsModule, RouterLink, forwardRef(() => OverlayCardComponent)], template: `
+@Component({ standalone: true, imports: [CommonModule, FormsModule, RouterLink, forwardRef(() => OverlayCardComponent), CharacterHistoryPanelComponent], template: `
   <main class="page narrow" *ngIf="character() as item"><a [routerLink]="['/campaigns', item.campaignId, 'characters']" class="back-link">← Personagens</a>
     <div class="page-heading"><div><span class="overline">FICHA / CENA</span><h1>{{ item.name }}</h1><p>Ficha da campanha e composição para OBS.</p></div></div>
     <div *ngIf="error()" class="notice error" role="alert">{{ error() }}</div>
     <div class="character-editor"><form *ngIf="item.canEdit" class="editor-panel" (ngSubmit)="save()" #form="ngForm">
       <div class="panel-heading"><span>IDENTIDADE VISUAL</span><h2>Portrait e recursos</h2></div>
-      <label>Nome<input name="name" [(ngModel)]="draft.name" required minlength="2" maxlength="120"></label>
-      <label>URL HTTPS do portrait<input name="portraitUrl" [(ngModel)]="draft.portraitUrl" type="url" placeholder="https://..."></label>
-      <label>URL HTTPS do fundo<input name="backgroundUrl" [(ngModel)]="draft.backgroundUrl" type="url" placeholder="https://..."></label>
-      <div class="resource-fields"><div *ngFor="let resource of resources"><label>{{ resource.label }}<input type="number" [name]="resource.key" [(ngModel)]="draft[resource.key]" min="0" max="9999" required></label><label>Máximo<input type="number" [name]="resource.max" [(ngModel)]="draft[resource.max]" min="1" max="9999" required></label></div></div>
+      <label>Nome<input name="name" [(ngModel)]="draft.name" (ngModelChange)="scheduleSave()" required minlength="2" maxlength="120"></label>
+      <label>URL HTTPS do portrait<input name="portraitUrl" [(ngModel)]="draft.portraitUrl" (ngModelChange)="scheduleSave()" type="url" placeholder="https://..."></label>
+      <label>URL HTTPS do fundo<input name="backgroundUrl" [(ngModel)]="draft.backgroundUrl" (ngModelChange)="scheduleSave()" type="url" placeholder="https://..."></label>
+      <div class="resource-fields"><div *ngFor="let resource of resources"><label>{{ resource.label }}<input type="number" [name]="resource.key" [(ngModel)]="draft[resource.key]" (ngModelChange)="scheduleSave()" min="0" max="9999" required></label><label>Máximo<input type="number" [name]="resource.max" [(ngModel)]="draft[resource.max]" (ngModelChange)="scheduleSave()" min="1" max="9999" required></label></div></div>
       <div *ngIf="system() as sheet" class="dynamic-fields"><div class="panel-heading"><span>SISTEMA / {{ sheet.name }}</span><h2>Campos da ficha</h2></div>
         <div *ngFor="let field of sheet.fields" class="dynamic-field">
           <label *ngIf="field.type === 'text' || field.type === 'number'">{{ field.label }} <small>{{ field.section }}</small><input [name]="field.key" [type]="field.type === 'number' ? 'number' : 'text'" [min]="field.min" [max]="field.max" [ngModel]="fieldValue(field.key)" (ngModelChange)="setField(field, $event)"></label>
@@ -47,19 +48,35 @@ export class CharactersPage {
           <label *ngIf="field.type === 'boolean'" class="checkbox-field"><input type="checkbox" [name]="field.key" [ngModel]="fieldValue(field.key)" (ngModelChange)="setField(field, $event)"> {{ field.label }}</label>
         </div>
       </div>
-      <button class="button" [disabled]="form.invalid || saving()">{{ saving() ? 'Salvando...' : 'Salvar ficha' }}</button><p *ngIf="saved()" class="form-success" role="status">Ficha salva.</p>
-    </form><div *ngIf="!item.canEdit" class="editor-panel"><div class="panel-heading"><span>FICHA</span><h2>{{ system()?.name || 'Personagem' }}</h2></div><div *ngFor="let field of system()?.fields" class="sheet-read-row"><span>{{ field.label }}</span><strong>{{ fieldValue(field.key) || '—' }}</strong></div></div><div class="character-preview"><app-overlay-card [character]="draft" /><div *ngIf="item.ownerId === api.user()?.id" class="obs-actions"><h2>Fonte do OBS</h2><p>Gere uma URL de Browser Source. A chave anterior deixa de funcionar a cada nova geração.</p><button class="button button-small" type="button" (click)="createOverlayKey()" [disabled]="saving()">Gerar nova URL</button><p *ngIf="overlayUrl()" class="obs-url"><code>{{ overlayUrl() }}</code><button type="button" (click)="copyUrl()">Copiar</button></p><small *ngIf="overlayUrl()">Guarde esta URL agora; ela não pode ser recuperada depois.</small><h3>Câmera e ficha juntas</h3><p>Adicione esta cena como outra Browser Source. Ela exige entrar na sua conta pelo botão Interagir do OBS e mostra a câmera publicada por este personagem.</p><p class="obs-url"><code>{{ cameraUrl(item) }}</code><button type="button" (click)="copyCameraUrl(item)">Copiar</button></p></div></div></div>
+      <button class="button" [disabled]="form.invalid || saving()">{{ saving() ? 'Salvando...' : 'Salvar ficha' }}</button><p *ngIf="saved()" class="form-success" role="status">Ficha salva automaticamente.</p>
+    </form><div *ngIf="!item.canEdit" class="editor-panel"><div class="panel-heading"><span>FICHA</span><h2>{{ system()?.name || 'Personagem' }}</h2></div><div *ngFor="let field of system()?.fields" class="sheet-read-row"><span>{{ field.label }}</span><strong>{{ fieldValue(field.key) || '—' }}</strong></div></div><div class="character-preview"><app-overlay-card [character]="draft" /><button type="button" class="button button-small print-action" (click)="printSheet()">Imprimir / salvar PDF</button><div *ngIf="item.ownerId === api.user()?.id" class="obs-actions"><h2>Fonte do OBS</h2><p>Gere uma URL de Browser Source. A chave anterior deixa de funcionar a cada nova geração.</p><button class="button button-small" type="button" (click)="createOverlayKey()" [disabled]="saving()">Gerar nova URL</button><p *ngIf="overlayUrl()" class="obs-url"><code>{{ overlayUrl() }}</code><button type="button" (click)="copyUrl()">Copiar</button></p><small *ngIf="overlayUrl()">Guarde esta URL agora; ela não pode ser recuperada depois.</small><h3>Câmera e ficha juntas</h3><p>Adicione esta cena como outra Browser Source. Ela exige entrar na sua conta pelo botão Interagir do OBS e mostra a câmera publicada por este personagem.</p><p class="obs-url"><code>{{ cameraUrl(item) }}</code><button type="button" (click)="copyCameraUrl(item)">Copiar</button></p></div></div></div>
+    <section class="print-sheet"><h2>{{ draft.name }}</h2><p>Vida {{ draft.health }}/{{ draft.maxHealth }} · Sanidade {{ draft.sanity }}/{{ draft.maxSanity }} · Mana {{ draft.mana }}/{{ draft.maxMana }}</p><div *ngFor="let field of system()?.fields" class="sheet-read-row"><span>{{ field.label }}</span><strong>{{ fieldValue(field.key) === '' ? '—' : fieldValue(field.key) }}</strong></div></section>
+    <app-character-history [character]="item" (restored)="onRestored($event)" />
   </main><main class="page" *ngIf="loading()"><div class="loading">Abrindo ficha...</div></main>` })
-export class CharacterEditorPage {
+export class CharacterEditorPage implements OnDestroy {
   api = inject(ApiService); private route = inject(ActivatedRoute); private document = inject(DOCUMENT);
   character = signal<Character | null>(null); system = signal<RpgSystem | null>(null); draft: CharacterInput = emptyCharacter(); loading = signal(true); saving = signal(false); saved = signal(false); error = signal(''); overlayUrl = signal('');
+  private saveTimer?: ReturnType<typeof setTimeout>; private editRevision = 0;
   resources: { label: string; key: 'health' | 'sanity' | 'mana'; max: 'maxHealth' | 'maxSanity' | 'maxMana' }[] = [
     { label: 'Vida', key: 'health', max: 'maxHealth' }, { label: 'Sanidade', key: 'sanity', max: 'maxSanity' }, { label: 'Mana', key: 'mana', max: 'maxMana' }
   ];
   constructor() { this.api.character(this.route.snapshot.paramMap.get('id')!).pipe(finalize(() => this.loading.set(false))).subscribe({ next: item => { this.character.set(item); this.draft = { ...item, fields: { ...item.fields } }; this.api.campaign(item.campaignId).subscribe({ next: campaign => this.api.system(campaign.systemId || 'a9e29682-c194-4aae-9c0e-7bbb3f6a72f1').subscribe({ next: system => this.system.set(system), error: e => this.error.set(apiError(e)) }), error: e => this.error.set(apiError(e)) }); }, error: error => this.error.set(apiError(error)) }); }
   fieldValue(key: string) { return this.draft.fields[key] ?? ''; }
-  setField(field: SystemField, value: string | number | boolean) { if (value === '' || value === null) delete this.draft.fields[field.key]; else this.draft.fields[field.key] = field.type === 'number' ? Number(value) : value; }
-  save() { const current = this.character(); if (!current) return; this.error.set(''); this.saved.set(false); this.saving.set(true); this.api.updateCharacter(current.id, this.draft).pipe(finalize(() => this.saving.set(false))).subscribe({ next: item => { this.character.set(item); this.saved.set(true); }, error: error => this.error.set(apiError(error)) }); }
+  setField(field: SystemField, value: string | number | boolean) { if (value === '' || value === null) delete this.draft.fields[field.key]; else this.draft.fields[field.key] = field.type === 'number' ? Number(value) : value; this.scheduleSave(); }
+  scheduleSave() { this.editRevision++; this.saved.set(false); clearTimeout(this.saveTimer); this.saveTimer = setTimeout(() => { if (this.validDraft()) this.save(); }, 900); }
+  private validDraft() { return this.draft.name.trim().length >= 2 && this.resources.every(r => this.draft[r.key] >= 0 && this.draft[r.key] <= this.draft[r.max] && this.draft[r.max] >= 1); }
+  save() {
+    const current = this.character(); if (!current || this.saving() || !this.validDraft()) return;
+    clearTimeout(this.saveTimer); this.error.set(''); this.saved.set(false); this.saving.set(true);
+    const revision = this.editRevision; const payload = { ...this.draft, fields: { ...this.draft.fields }, version: current.version };
+    this.api.updateCharacter(current.id, payload).pipe(finalize(() => this.saving.set(false))).subscribe({
+      next: item => { this.character.set(item); this.draft.version = item.version; this.saved.set(revision === this.editRevision); if (revision !== this.editRevision) this.saveTimer = setTimeout(() => this.save(), 0); },
+      error: error => this.error.set(apiError(error))
+    });
+  }
+  onRestored(item: Character) { clearTimeout(this.saveTimer); this.editRevision++; this.character.set(item); this.draft = { ...item, fields: { ...item.fields } }; this.error.set(''); this.saved.set(true); }
+  printSheet() { this.document.defaultView?.print(); }
+  ngOnDestroy() { clearTimeout(this.saveTimer); }
   createOverlayKey() { const current = this.character(); if (!current) return; this.error.set(''); this.saving.set(true); this.api.rotateOverlayKey(current.id).pipe(finalize(() => this.saving.set(false))).subscribe({ next: result => this.overlayUrl.set(`${this.document.location?.origin}/obs/${result.key}`), error: error => this.error.set(apiError(error)) }); }
   copyUrl() { void this.document.defaultView?.navigator.clipboard.writeText(this.overlayUrl()); }
   cameraUrl(item: Character) { return `${this.document.location?.origin}/obs-camera/${item.campaignId}/${item.id}`; }

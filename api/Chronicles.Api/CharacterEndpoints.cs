@@ -17,7 +17,8 @@ public static class CharacterEndpoints
             if (!await Member(db, campaignId, userId)) return Results.NotFound();
             var characters = await db.Characters.AsNoTracking().Where(x => x.CampaignId == campaignId)
                 .OrderBy(x => x.Name).ToListAsync();
-            var items = characters.Select(x => View(x)).ToList();
+            var role = await db.CampaignMemberships.AsNoTracking().Where(x => x.CampaignId == campaignId && x.UserId == userId).Select(x => x.Role).SingleAsync();
+            var items = characters.Select(x => View(x, x.OwnerId == userId || role is "owner" or "gm" or "co-gm")).ToList();
             return Results.Ok(items);
         });
 
@@ -54,12 +55,46 @@ public static class CharacterEndpoints
             var character = await db.Characters.Include(x => x.Campaign).ThenInclude(x => x.Memberships).SingleOrDefaultAsync(x => x.Id == id);
             if (character is null || !character.Campaign.Memberships.Any(x => x.UserId == userId)) return Results.NotFound();
             if (character.OwnerId != userId && !character.Campaign.Memberships.Any(x => x.UserId == userId && x.Role is "owner" or "gm" or "co-gm")) return Results.Problem("Você não pode editar este personagem.", statusCode: 403);
+            if (input.Version is { } expected && expected != character.Version) return Results.Conflict(new { message = "A ficha mudou. Atualize antes de salvar." });
             var error = Validate(input);
             if (error is not null) return Results.ValidationProblem(error);
             var fieldErrors = await ValidateFields(db, character.CampaignId, input.Fields, character.FieldsJson);
             if (fieldErrors is not null) return Results.ValidationProblem(fieldErrors);
+            CharacterHistory.Capture(db, character, userId);
             Apply(character, input);
-            await db.SaveChangesAsync();
+            try { await db.SaveChangesAsync(); }
+            catch (DbUpdateConcurrencyException) { return Results.Conflict(new { message = "A ficha mudou. Atualize antes de salvar." }); }
+            return Results.Ok(View(character, true));
+        });
+
+        api.MapGet("/characters/{id:guid}/revisions", async Task<IResult> (Guid id, HttpContext http, AppDbContext db) =>
+        {
+            if (UserId(http) is not { } userId) return Results.Unauthorized();
+            var character = await db.Characters.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id);
+            if (character is null) return Results.NotFound();
+            var role = await db.CampaignMemberships.AsNoTracking().Where(x => x.CampaignId == character.CampaignId && x.UserId == userId).Select(x => x.Role).SingleOrDefaultAsync();
+            if (role is null || character.OwnerId != userId && role is not ("owner" or "gm" or "co-gm")) return Results.NotFound();
+            var revisions = await db.CharacterRevisions.AsNoTracking().Where(x => x.CharacterId == id).OrderByDescending(x => x.Version).Take(100)
+                .Select(x => new { x.Id, x.Version, x.CreatedAt, editedBy = x.EditedBy.DisplayName }).ToListAsync();
+            return Results.Ok(revisions);
+        });
+
+        api.MapPost("/characters/{id:guid}/revisions/{revisionId:guid}/restore", async Task<IResult> (Guid id, Guid revisionId, RestoreInput input, HttpContext http, AppDbContext db) =>
+        {
+            if (UserId(http) is not { } userId) return Results.Unauthorized();
+            var character = await db.Characters.SingleOrDefaultAsync(x => x.Id == id);
+            if (character is null) return Results.NotFound();
+            var role = await db.CampaignMemberships.AsNoTracking().Where(x => x.CampaignId == character.CampaignId && x.UserId == userId).Select(x => x.Role).SingleOrDefaultAsync();
+            if (role is null || character.OwnerId != userId && role is not ("owner" or "gm" or "co-gm")) return Results.NotFound();
+            if (input.ExpectedVersion != character.Version) return Results.Conflict(new { message = "A ficha mudou. Atualize antes de restaurar." });
+            var revision = await db.CharacterRevisions.AsNoTracking().SingleOrDefaultAsync(x => x.Id == revisionId && x.CharacterId == id);
+            if (revision is null) return Results.NotFound();
+            var snapshot = JsonSerializer.Deserialize<CharacterSnapshot>(revision.SnapshotJson);
+            if (snapshot is null) return Results.Problem("Revisão inválida.", statusCode: 500);
+            CharacterHistory.Capture(db, character, userId);
+            CharacterHistory.Restore(character, snapshot);
+            try { await db.SaveChangesAsync(); }
+            catch (DbUpdateConcurrencyException) { return Results.Conflict(new { message = "A ficha mudou. Atualize antes de restaurar." }); }
             return Results.Ok(View(character, true));
         });
 
@@ -91,7 +126,7 @@ public static class CharacterEndpoints
 
     private static Guid? UserId(HttpContext http) => Guid.TryParse(http.User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : null;
     private static Task<bool> Member(AppDbContext db, Guid campaignId, Guid userId) => db.CampaignMemberships.AnyAsync(x => x.CampaignId == campaignId && x.UserId == userId);
-    private static object View(Character x, bool canEdit = false) => new { x.Id, x.CampaignId, x.OwnerId, x.Name, x.PortraitUrl, x.BackgroundUrl, x.Health, x.MaxHealth, x.Sanity, x.MaxSanity, x.Mana, x.MaxMana, fields = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(x.FieldsJson), x.UpdatedAt, canEdit };
+    private static object View(Character x, bool canEdit = false) => new { x.Id, x.CampaignId, x.OwnerId, x.Name, x.PortraitUrl, x.BackgroundUrl, x.Health, x.MaxHealth, x.Sanity, x.MaxSanity, x.Mana, x.MaxMana, fields = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(x.FieldsJson), x.Version, x.UpdatedAt, canEdit };
     private static string Hash(string key) => Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(key))).ToLowerInvariant();
     private static Dictionary<string, string[]>? Validate(CharacterInput input)
     {
@@ -143,5 +178,6 @@ public static class CharacterEndpoints
         if (input.Fields is not null) target.FieldsJson = JsonSerializer.Serialize(input.Fields);
         target.UpdatedAt = DateTime.UtcNow;
     }
-    public sealed record CharacterInput(string Name, string? PortraitUrl, string? BackgroundUrl, int Health, int MaxHealth, int Sanity, int MaxSanity, int Mana, int MaxMana, Dictionary<string, JsonElement>? Fields = null);
+    public sealed record CharacterInput(string Name, string? PortraitUrl, string? BackgroundUrl, int Health, int MaxHealth, int Sanity, int MaxSanity, int Mana, int MaxMana, Dictionary<string, JsonElement>? Fields = null, int? Version = null);
+    public sealed record RestoreInput(int ExpectedVersion);
 }

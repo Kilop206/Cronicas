@@ -81,6 +81,7 @@ public static class EncounterEndpoints
             if (input.MaxHealth is < 1 or > 9999 || input.Health < 0 || input.Health > input.MaxHealth || input.Initiative is < -999 or > 999 || input.Conditions is null || input.Conditions.Length > 1000)
                 return Results.ValidationProblem(new Dictionary<string, string[]> { ["participant"] = ["Verifique vida, iniciativa e condições."] });
             participant.Health = input.Health; participant.MaxHealth = input.MaxHealth; participant.Initiative = input.Initiative; participant.Conditions = input.Conditions.Trim();
+            if (participant.Character.Health != input.Health || participant.Character.MaxHealth != input.MaxHealth) CharacterHistory.Capture(db, participant.Character, userId);
             participant.Character.Health = input.Health; participant.Character.MaxHealth = input.MaxHealth; participant.Character.UpdatedAt = DateTime.UtcNow;
             participant.Encounter.UpdatedAt = DateTime.UtcNow;
             await db.SaveChangesAsync();

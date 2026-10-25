@@ -57,6 +57,9 @@ const invalidResource = await request(`/api/characters/${characterId}`, { method
 expect(invalidResource.status === 400, 'Resource boundaries');
 const updatedCharacter = await request(`/api/characters/${characterId}`, { method: 'PUT', cookie: ownerCookie, body: { ...characterInput, health: 6 } });
 expect(updatedCharacter.status === 200 && updatedCharacter.body.health === 6, 'Resource update');
+expect(updatedCharacter.body.version === 2, 'Character version increments');
+const staleCharacter = await request(`/api/characters/${characterId}`, { method: 'PUT', cookie: ownerCookie, body: { ...characterInput, version: 1 } });
+expect(staleCharacter.status === 409, 'Stale character update is rejected');
 const systems = await request('/api/systems', { cookie: ownerCookie });
 expect(systems.status === 200 && systems.body.length >= 3, 'Original systems seeded');
 const systemInput = { name: 'Arquivo das Marés', description: 'Sistema autoral de teste', fields: [
@@ -211,6 +214,14 @@ const combatEdit = await request(`/api/encounter-participants/${addedCombatant.b
 expect(combatEdit.status === 200 && combatEdit.body.health === 4, 'Master changes encounter health and conditions');
 const sheetAfterCombat = await request(`/api/characters/${characterId}`, { cookie: ownerCookie });
 expect(sheetAfterCombat.status === 200 && sheetAfterCombat.body.health === 4, 'Encounter health syncs to character sheet');
+const revisions = await request(`/api/characters/${characterId}/revisions`, { cookie: ownerCookie });
+expect(revisions.status === 200 && revisions.body.length >= 4 && revisions.body[0].version === sheetAfterCombat.body.version - 1, 'Character history includes combat changes');
+const hiddenRevisions = await request(`/api/characters/${characterId}/revisions`, { cookie: second.cookie });
+expect(hiddenRevisions.status === 404, 'Another player cannot read character history');
+const staleRestore = await request(`/api/characters/${characterId}/revisions/${revisions.body[0].id}/restore`, { method: 'POST', cookie: ownerCookie, body: { expectedVersion: 1 } });
+expect(staleRestore.status === 409, 'Stale restore is rejected');
+const restoredCharacter = await request(`/api/characters/${characterId}/revisions/${revisions.body[0].id}/restore`, { method: 'POST', cookie: ownerCookie, body: { expectedVersion: sheetAfterCombat.body.version } });
+expect(restoredCharacter.status === 200 && restoredCharacter.body.health === 6 && restoredCharacter.body.version === sheetAfterCombat.body.version + 1, 'Character revision restores prior sheet');
 const nextTurn = await request(`/api/encounters/${encounter.body.id}/advance`, { method: 'POST', cookie: ownerCookie });
 expect(nextTurn.status === 200 && nextTurn.body.round === 2 && nextTurn.body.turnIndex === 0, 'Single combatant advances round');
 const endedEncounter = await request(`/api/encounters/${encounter.body.id}/status`, { method: 'PATCH', cookie: ownerCookie, body: { status: 'completed' } });
