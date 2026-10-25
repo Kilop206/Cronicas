@@ -11,6 +11,9 @@ export interface Page<T> { items: T[]; total: number; page: number; }
 export interface Character { id: string; campaignId: string; ownerId: string; canEdit: boolean; name: string; portraitUrl: string | null; backgroundUrl: string | null; health: number; maxHealth: number; sanity: number; maxSanity: number; mana: number; maxMana: number; updatedAt: string; }
 export type CharacterInput = Pick<Character, 'name' | 'portraitUrl' | 'backgroundUrl' | 'health' | 'maxHealth' | 'sanity' | 'maxSanity' | 'mana' | 'maxMana'>;
 export interface InvitePreview { campaignId: string; campaignName: string; role: string; expiresAt: string; }
+export type NarrativeKind = 'sessions' | 'documents' | 'wiki';
+export interface NarrativeEntry { id: string; campaignId: string; authorId: string; kind: NarrativeKind; title: string; body: string; category: string; visibility: 'campaign' | 'private' | 'gm'; eventAt: string | null; revealedAt: string | null; createdAt: string; updatedAt: string; revision: number; }
+export type NarrativeInput = Pick<NarrativeEntry, 'title' | 'body' | 'category' | 'visibility' | 'eventAt' | 'revision'>;
 
 @Injectable({ providedIn: 'root' })
 export class ApiService {
@@ -50,6 +53,11 @@ export class ApiService {
   createInvite(campaignId: string, role: string) { return this.http.post<{ token: string; role: string; expiresAt: string }>(`/api/campaigns/${campaignId}/invites`, { role }, { withCredentials: true }); }
   invite(token: string) { return this.http.get<InvitePreview>(`/api/invites/${token}`, { withCredentials: true }); }
   acceptInvite(token: string) { return this.http.post<{ campaignId: string }>(`/api/invites/${token}/accept`, {}, { withCredentials: true }); }
+  entries(campaignId: string, kind: NarrativeKind, page = 1, search = '') { return this.http.get<Page<NarrativeEntry>>(`/api/campaigns/${campaignId}/entries/${kind}`, { params: { page, search }, withCredentials: true }); }
+  createEntry(campaignId: string, kind: NarrativeKind, data: NarrativeInput) { return this.http.post<NarrativeEntry>(`/api/campaigns/${campaignId}/entries/${kind}`, data, { withCredentials: true }); }
+  updateEntry(id: string, data: NarrativeInput) { return this.http.put<NarrativeEntry>(`/api/entries/${id}`, data, { withCredentials: true }); }
+  deleteEntry(id: string) { return this.http.delete<void>(`/api/entries/${id}`, { withCredentials: true }); }
+  revealEntry(id: string) { return this.http.post<NarrativeEntry>(`/api/entries/${id}/reveal`, {}, { withCredentials: true }); }
   private setUser(user: User | null) {
     this.user.set(user);
     this.document.documentElement.dataset['accent'] = user?.accent || 'gold';

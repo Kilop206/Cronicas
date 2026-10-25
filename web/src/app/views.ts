@@ -72,8 +72,8 @@ export class CampaignDetailPage extends DashboardPage {
   private campaignApi = inject(ApiService); private route = inject(ActivatedRoute);
   campaign = signal<Campaign | null>(null); name = ''; description = ''; accentColor = '#b39a69'; status = 'planning'; busy = signal(false); saved = signal(false);
   modules = [
-    { path: 'characters', name: 'Personagens', symbol: '♙', ready: true }, { path: 'sessions', name: 'Sessões', symbol: '◷' },
-    { path: 'wiki', name: 'Mundo', symbol: '◎' }, { path: 'documents', name: 'Documentos', symbol: '▤' },
+    { path: 'characters', name: 'Personagens', symbol: '♙', ready: true }, { path: 'sessions', name: 'Sessões', symbol: '◷', ready: true },
+    { path: 'wiki', name: 'Mundo', symbol: '◎', ready: true }, { path: 'documents', name: 'Documentos', symbol: '▤', ready: true },
     { path: 'room', name: 'Sala de transmissão', symbol: '◈', ready: true }
   ];
   override load() {

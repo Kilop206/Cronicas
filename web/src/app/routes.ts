@@ -6,6 +6,7 @@ import { ForgotPasswordPage, PreferencesPage, ResetPasswordPage } from './accoun
 import { AuthPage, CampaignDetailPage, CampaignFormPage, CampaignsPage, DashboardPage, LandingPage, NotFoundPage, PlannedPage, ProfilePage, ShellComponent } from './views';
 import { CharacterEditorPage, CharactersPage, ObsOverlayPage } from './studio-pages';
 import { InvitePage } from './invite.page';
+import { NarrativePage } from './narrative.page';
 
 const protectedRoute: CanActivateFn = (_route, state: RouterStateSnapshot) => {
   const api = inject(ApiService), router = inject(Router);
@@ -30,6 +31,9 @@ export const routes: Routes = [
     { path: 'campaigns/new', component: CampaignFormPage },
     { path: 'campaigns/:id', component: CampaignDetailPage },
     { path: 'campaigns/:id/characters', component: CharactersPage },
+    { path: 'campaigns/:id/sessions', component: NarrativePage, data: { section: 'sessions' } },
+    { path: 'campaigns/:id/documents', component: NarrativePage, data: { section: 'documents' } },
+    { path: 'campaigns/:id/wiki', component: NarrativePage, data: { section: 'wiki' } },
     { path: 'campaigns/:id/room', loadComponent: () => import('./media-room.page').then(m => m.MediaRoomPage) },
     { path: 'invites/:token', component: InvitePage },
     { path: 'campaigns/:id/:section', component: PlannedPage },

@@ -282,5 +282,21 @@ html:has(.obs-page), body:has(.obs-page), html:has(.obs-camera-page), body:has(.
 .invite-result code { color: var(--gold-bright); overflow-wrap: anywhere; user-select: all; }
 .invite-result button { justify-self: start; border: 0; background: transparent; color: var(--gold-bright); text-decoration: underline; }
 .invite-accept h2 { font-family: var(--font-editorial); font-size: 38px; margin: 12px 0; }
+.narrative-layout { display: grid; grid-template-columns: minmax(260px, 340px) minmax(0, 1fr); align-items: start; gap: 24px; margin-top: 28px; }
+.narrative-list { display: grid; gap: 0; min-width: 0; }
+.narrative-list .search-field { margin-bottom: 16px; }
+.narrative-row { display: grid; gap: 7px; width: 100%; min-height: 96px; padding: 17px 16px; border: 0; border-bottom: 1px solid var(--border); background: transparent; color: var(--text); text-align: left; cursor: pointer; }
+.narrative-row:hover, .narrative-row.selected { background: var(--surface); }
+.narrative-row.selected { border-left: 2px solid var(--gold); }
+.narrative-row strong { font-family: var(--font-editorial); font-size: 21px; font-weight: 500; }
+.narrative-row small, .narrative-meta { color: var(--muted); font-size: 11px; }
+.narrative-detail { min-height: 440px; }
+.narrative-detail .panel-heading h2 { font-size: 32px; }
+.narrative-meta { display: flex; gap: 18px; margin: 18px 0; }
+.narrative-body { min-height: 180px; white-space: pre-wrap; overflow-wrap: anywhere; line-height: 1.75; color: var(--text); font-size: 14px; }
+.narrative-placeholder { min-height: 430px; display: grid; align-content: center; justify-content: center; border: 1px dashed var(--border); padding: 28px; text-align: center; color: var(--muted); }
+.narrative-placeholder p { max-width: 280px; line-height: 1.6; }
+.form-actions .danger { color: #d88e8e; }
 @media (max-width: 900px) { .character-editor { grid-template-columns: 1fr; } .character-preview { position: static; } }
+@media (max-width: 900px) { .narrative-layout { grid-template-columns: 1fr; } .narrative-list { max-height: 420px; overflow: auto; } }
 @media (max-width: 620px) { .resource-fields { grid-template-columns: 1fr; } .obs-card { min-height: 280px; gap: 12px; padding: 14px; } .obs-info h2 { font-size: 24px; } .obs-portrait { flex-basis: 35%; } .invite-controls { flex-direction: column; align-items: stretch; } }
