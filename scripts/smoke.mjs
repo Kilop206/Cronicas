@@ -102,6 +102,19 @@ const wikiSearch = await request(`/api/campaigns/${id}/entries/wiki?search=Cidad
 expect(wikiSearch.status === 200 && wikiSearch.body.total === 1, 'Wiki search');
 const joinedRoom = await request(`/api/campaigns/${id}/room/join`, { method: 'POST', cookie: second.cookie });
 expect(joinedRoom.status === 503, 'Member reaches room configuration check');
+const invalidDice = await request(`/api/campaigns/${id}/rolls`, { method: 'POST', cookie: second.cookie, body: { requestId: crypto.randomUUID(), expression: '1d20;hack', visibility: 'campaign' } });
+expect(invalidDice.status === 400, 'Dice parser rejects arbitrary expressions');
+const rollRequest = { requestId: crypto.randomUUID(), expression: '2d20kh1+5', visibility: 'campaign' };
+const rolled = await request(`/api/campaigns/${id}/rolls`, { method: 'POST', cookie: second.cookie, body: rollRequest });
+expect(rolled.status === 201 && rolled.body.rolls.length === 2 && rolled.body.total >= 6 && rolled.body.total <= 25, 'Secure dice roll persisted');
+const repeatedRoll = await request(`/api/campaigns/${id}/rolls`, { method: 'POST', cookie: second.cookie, body: rollRequest });
+expect(repeatedRoll.status === 200 && repeatedRoll.body.id === rolled.body.id, 'Dice request is idempotent');
+const gmRoll = await request(`/api/campaigns/${id}/rolls`, { method: 'POST', cookie: ownerCookie, body: { requestId: crypto.randomUUID(), expression: '1d100', visibility: 'gm' } });
+expect(gmRoll.status === 201, 'Master-only roll persisted');
+const blockedGmRoll = await request(`/api/campaigns/${id}/rolls`, { method: 'POST', cookie: second.cookie, body: { requestId: crypto.randomUUID(), expression: '1d6', visibility: 'gm' } });
+expect(blockedGmRoll.status === 403, 'Player cannot send master-only roll');
+const playerRolls = await request(`/api/campaigns/${id}/rolls`, { cookie: second.cookie });
+expect(playerRolls.status === 200 && playerRolls.body.length === 1 && playerRolls.body[0].id === rolled.body.id, 'Master roll hidden from player history');
 const spectator = await request('/api/auth/register', { method: 'POST', body: { displayName: 'Espectador', email: `espectador-${suffix}@example.test`, password: 'spectator-password-123' } });
 expect(spectator.status === 201 && spectator.cookie, 'Spectator registration');
 const spectatorInvite = await request(`/api/campaigns/${id}/invites`, { method: 'POST', cookie: ownerCookie, body: { role: 'spectator' } });
@@ -110,6 +123,8 @@ const spectatorAccepted = await request(`/api/invites/${spectatorInvite.body.tok
 expect(spectatorAccepted.status === 200, 'Spectator membership');
 const spectatorCharacter = await request(`/api/campaigns/${id}/characters`, { method: 'POST', cookie: spectator.cookie, body: characterInput });
 expect(spectatorCharacter.status === 403, 'Spectator cannot create characters');
+const spectatorRoll = await request(`/api/campaigns/${id}/rolls`, { method: 'POST', cookie: spectator.cookie, body: { requestId: crypto.randomUUID(), expression: '1d6', visibility: 'campaign' } });
+expect(spectatorRoll.status === 403, 'Spectator cannot roll dice');
 let currentCookie = ownerCookie;
 if (process.env.SMOKE_MAILPIT_URL) {
   const email = `mestre-${suffix}@example.test`;
@@ -142,4 +157,4 @@ const logout = await request('/api/auth/logout', { method: 'POST', cookie: curre
 expect(logout.status === 204, 'Logout');
 const afterLogout = await request('/api/dashboard', { cookie: currentCookie });
 expect(afterLogout.status === 401, 'Revogação da sessão');
-console.log('Smoke: contas, campanhas, personagens, convites, narrativa, overlay OBS, permissões e logout passaram.');
+console.log('Smoke: contas, campanhas, personagens, convites, narrativa, dados, overlay OBS, permissões e logout passaram.');

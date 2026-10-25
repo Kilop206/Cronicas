@@ -14,6 +14,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<RoomParticipant> RoomParticipants => Set<RoomParticipant>();
     public DbSet<CampaignInvite> CampaignInvites => Set<CampaignInvite>();
     public DbSet<NarrativeEntry> NarrativeEntries => Set<NarrativeEntry>();
+    public DbSet<DiceRoll> DiceRolls => Set<DiceRoll>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
@@ -113,6 +114,19 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(x => x.Visibility).HasMaxLength(20);
             entity.HasOne(x => x.Campaign).WithMany().HasForeignKey(x => x.CampaignId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(x => x.Author).WithMany().HasForeignKey(x => x.AuthorId).OnDelete(DeleteBehavior.Restrict);
+        });
+        model.Entity<DiceRoll>(entity =>
+        {
+            entity.ToTable("dice_rolls");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.CampaignId, x.CreatedAt });
+            entity.HasIndex(x => new { x.CampaignId, x.UserId, x.RequestId }).IsUnique();
+            entity.Property(x => x.Expression).HasMaxLength(40);
+            entity.Property(x => x.RollsJson).HasMaxLength(300);
+            entity.Property(x => x.KeptIndexesJson).HasMaxLength(300);
+            entity.Property(x => x.Visibility).HasMaxLength(20);
+            entity.HasOne(x => x.Campaign).WithMany().HasForeignKey(x => x.CampaignId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
         });
     }
 }

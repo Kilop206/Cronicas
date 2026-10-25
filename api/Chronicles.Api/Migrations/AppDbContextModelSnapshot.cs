@@ -202,6 +202,62 @@ namespace Chronicles.Api.Migrations
                     b.ToTable("characters", (string)null);
                 });
 
+            modelBuilder.Entity("Chronicles.Api.Models.DiceRoll", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CampaignId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Expression")
+                        .IsRequired()
+                        .HasMaxLength(40)
+                        .HasColumnType("character varying(40)");
+
+                    b.Property<string>("KeptIndexesJson")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<int>("Modifier")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("RequestId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("RollsJson")
+                        .IsRequired()
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<int>("Total")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid>("UserId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Visibility")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("UserId");
+
+                    b.HasIndex("CampaignId", "CreatedAt");
+
+                    b.HasIndex("CampaignId", "UserId", "RequestId")
+                        .IsUnique();
+
+                    b.ToTable("dice_rolls", (string)null);
+                });
+
             modelBuilder.Entity("Chronicles.Api.Models.NarrativeEntry", b =>
                 {
                     b.Property<Guid>("Id")
@@ -469,6 +525,25 @@ namespace Chronicles.Api.Migrations
                     b.Navigation("Campaign");
 
                     b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("Chronicles.Api.Models.DiceRoll", b =>
+                {
+                    b.HasOne("Chronicles.Api.Models.Campaign", "Campaign")
+                        .WithMany()
+                        .HasForeignKey("CampaignId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Chronicles.Api.Models.User", "User")
+                        .WithMany()
+                        .HasForeignKey("UserId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Campaign");
+
+                    b.Navigation("User");
                 });
 
             modelBuilder.Entity("Chronicles.Api.Models.NarrativeEntry", b =>
