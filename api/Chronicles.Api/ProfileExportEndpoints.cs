@@ -25,6 +25,10 @@ public static class ProfileExportEndpoints
             var characters = await db.Characters.AsNoTracking().Where(x => x.OwnerId == userId)
                 .Select(x => new { x.Id, x.CampaignId, x.Name, x.PortraitUrl, x.BackgroundUrl, x.Health, x.MaxHealth,
                     x.Sanity, x.MaxSanity, x.Mana, x.MaxMana, x.FieldsJson, x.Version, x.UpdatedAt }).ToListAsync();
+            var npcs = await db.Npcs.AsNoTracking().Where(x => x.Campaign.OwnerId == userId)
+                .Select(x => new { x.Id, x.CampaignId, x.Name, x.PortraitUrl, x.Appearance, x.Personality, x.Motivation,
+                    x.Relationships, x.Location, x.Secrets, x.Status, x.Visibility, x.Health, x.MaxHealth,
+                    x.Version, x.CreatedAt, x.UpdatedAt }).ToListAsync();
             var characterIds = characters.Select(x => x.Id).ToArray();
             var inventory = await db.CharacterInventoryItems.AsNoTracking().Where(x => characterIds.Contains(x.CharacterId))
                 .Select(x => new { x.Id, x.CharacterId, x.Name, x.Category, x.Quantity, x.Weight, x.Notes, x.Version, x.CreatedAt, x.UpdatedAt }).ToListAsync();
@@ -50,7 +54,7 @@ public static class ProfileExportEndpoints
             var messages = await db.ChatMessages.AsNoTracking().Where(x => x.UserId == userId)
                 .Select(x => new { x.Id, x.CampaignId, x.Body, x.Kind, x.CreatedAt }).ToListAsync();
 
-            var export = new { exportedAt = DateTime.UtcNow, profile, memberships, invites, campaigns, characters, inventory, abilities, favorites, revisions,
+            var export = new { exportedAt = DateTime.UtcNow, profile, memberships, invites, campaigns, characters, npcs, inventory, abilities, favorites, revisions,
                 worlds, articles, entries, systems, rolls, messages };
             http.Response.Headers.CacheControl = "no-store";
             return Results.File(JsonSerializer.SerializeToUtf8Bytes(export, new JsonSerializerOptions(JsonSerializerDefaults.Web)),

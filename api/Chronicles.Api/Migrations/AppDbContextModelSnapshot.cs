@@ -642,6 +642,94 @@ namespace Chronicles.Api.Migrations
                     b.ToTable("narrative_entries", (string)null);
                 });
 
+            modelBuilder.Entity("Chronicles.Api.Models.Npc", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Appearance")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<Guid>("CampaignId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Health")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Location")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<int>("MaxHealth")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Motivation")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<string>("Personality")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("PortraitUrl")
+                        .HasMaxLength(2048)
+                        .HasColumnType("character varying(2048)");
+
+                    b.Property<string>("Relationships")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("Secrets")
+                        .IsRequired()
+                        .HasMaxLength(10000)
+                        .HasColumnType("character varying(10000)");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Version")
+                        .IsConcurrencyToken()
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Visibility")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CampaignId", "Name");
+
+                    b.ToTable("npcs", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_npc_health", "\"Health\" >= 0 AND \"Health\" <= \"MaxHealth\" AND \"MaxHealth\" BETWEEN 1 AND 9999");
+
+                            t.HasCheckConstraint("CK_npc_status", "\"Status\" IN ('active','missing','deceased','unknown')");
+
+                            t.HasCheckConstraint("CK_npc_visibility", "\"Visibility\" IN ('gm','campaign')");
+                        });
+                });
+
             modelBuilder.Entity("Chronicles.Api.Models.PasswordResetCode", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1149,6 +1237,17 @@ namespace Chronicles.Api.Migrations
                         .IsRequired();
 
                     b.Navigation("Author");
+
+                    b.Navigation("Campaign");
+                });
+
+            modelBuilder.Entity("Chronicles.Api.Models.Npc", b =>
+                {
+                    b.HasOne("Chronicles.Api.Models.Campaign", "Campaign")
+                        .WithMany()
+                        .HasForeignKey("CampaignId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
 
                     b.Navigation("Campaign");
                 });

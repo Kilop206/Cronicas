@@ -12,6 +12,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<CampaignMembership> CampaignMemberships => Set<CampaignMembership>();
     public DbSet<Character> Characters => Set<Character>();
     public DbSet<CharacterSecret> CharacterSecrets => Set<CharacterSecret>();
+    public DbSet<Npc> Npcs => Set<Npc>();
     public DbSet<CharacterFavorite> CharacterFavorites => Set<CharacterFavorite>();
     public DbSet<CharacterInventoryItem> CharacterInventoryItems => Set<CharacterInventoryItem>();
     public DbSet<CharacterAbility> CharacterAbilities => Set<CharacterAbility>();
@@ -103,6 +104,29 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(x => x.Notes).HasMaxLength(10000);
             entity.Property(x => x.Revision).IsConcurrencyToken();
             entity.HasOne(x => x.Character).WithOne().HasForeignKey<CharacterSecret>(x => x.CharacterId).OnDelete(DeleteBehavior.Cascade);
+        });
+        model.Entity<Npc>(entity =>
+        {
+            entity.ToTable("npcs", table =>
+            {
+                table.HasCheckConstraint("CK_npc_health", "\"Health\" >= 0 AND \"Health\" <= \"MaxHealth\" AND \"MaxHealth\" BETWEEN 1 AND 9999");
+                table.HasCheckConstraint("CK_npc_visibility", "\"Visibility\" IN ('gm','campaign')");
+                table.HasCheckConstraint("CK_npc_status", "\"Status\" IN ('active','missing','deceased','unknown')");
+            });
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.CampaignId, x.Name });
+            entity.Property(x => x.Name).HasMaxLength(120);
+            entity.Property(x => x.PortraitUrl).HasMaxLength(2048);
+            entity.Property(x => x.Appearance).HasMaxLength(2000);
+            entity.Property(x => x.Personality).HasMaxLength(2000);
+            entity.Property(x => x.Motivation).HasMaxLength(2000);
+            entity.Property(x => x.Relationships).HasMaxLength(2000);
+            entity.Property(x => x.Location).HasMaxLength(160);
+            entity.Property(x => x.Secrets).HasMaxLength(10000);
+            entity.Property(x => x.Status).HasMaxLength(20);
+            entity.Property(x => x.Visibility).HasMaxLength(20);
+            entity.Property(x => x.Version).IsConcurrencyToken();
+            entity.HasOne(x => x.Campaign).WithMany().HasForeignKey(x => x.CampaignId).OnDelete(DeleteBehavior.Cascade);
         });
         model.Entity<CharacterFavorite>(entity =>
         {

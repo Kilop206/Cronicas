@@ -86,6 +86,7 @@ api.MapCampaignMembersEndpoints();
 api.MapWorldEndpoints();
 api.MapChatEndpoints();
 api.MapEncounterEndpoints();
+api.MapNpcEndpoints();
 api.MapSearchEndpoints();
 api.MapProfileExportEndpoints();
 var auth = api.MapGroup("/auth");

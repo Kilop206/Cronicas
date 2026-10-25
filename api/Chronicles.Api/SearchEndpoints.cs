@@ -27,6 +27,13 @@ public static class SearchEndpoints
                 .OrderByDescending(x => x.UpdatedAt).Take(10)
                 .Select(x => new { x.Id, x.Name, x.CampaignId, campaignName = x.Campaign.Name, x.UpdatedAt }).ToListAsync();
 
+            var npcs = await db.Npcs.AsNoTracking()
+                .Where(x => x.Campaign.Memberships.Any(m => m.UserId == userId) &&
+                    (x.Visibility == "campaign" || x.Campaign.Memberships.Any(m => m.UserId == userId &&
+                        (m.Role == "owner" || m.Role == "gm" || m.Role == "co-gm"))) && EF.Functions.ILike(x.Name, pattern, "\\"))
+                .OrderByDescending(x => x.UpdatedAt).Take(10)
+                .Select(x => new { x.Id, x.Name, x.CampaignId, campaignName = x.Campaign.Name, x.UpdatedAt }).ToListAsync();
+
             var worlds = await db.Worlds.AsNoTracking()
                 .Where(x => (x.OwnerId == userId || db.CampaignMemberships.Any(m => m.UserId == userId && m.Campaign.WorldId == x.Id)) &&
                     (EF.Functions.ILike(x.Name, pattern, "\\") || EF.Functions.ILike(x.Description, pattern, "\\")))
@@ -50,7 +57,7 @@ public static class SearchEndpoints
                 .OrderByDescending(x => x.UpdatedAt).Take(20)
                 .Select(x => new { x.Id, x.CampaignId, x.Kind, x.Title, x.Category, campaignName = x.Campaign.Name, x.UpdatedAt }).ToListAsync();
 
-            return Results.Ok(new { campaigns, characters, worlds, articles, entries });
+            return Results.Ok(new { campaigns, characters, npcs, worlds, articles, entries });
         });
     }
 }
