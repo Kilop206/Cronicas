@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Chronicles.Api.Data;
 using Chronicles.Api.Models;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Chronicles.Api;
 
@@ -74,7 +75,9 @@ public static class EncounterEndpoints
             var participant = new EncounterParticipant { EncounterId = id, CharacterId = character?.Id, NpcId = npc?.Id,
                 Initiative = input.Initiative, Health = character?.Health ?? npc!.Health, MaxHealth = character?.MaxHealth ?? npc!.MaxHealth };
             db.EncounterParticipants.Add(participant); encounter.UpdatedAt = DateTime.UtcNow;
-            await db.SaveChangesAsync();
+            try { await db.SaveChangesAsync(); }
+            catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+            { return Results.Conflict(new { message = "Participante já está neste encontro." }); }
             return Results.Created($"/api/encounters/{id}", new { participant.Id, participant.CharacterId, participant.NpcId,
                 name = character?.Name ?? npc!.Name, participant.Initiative, participant.Health, participant.MaxHealth, participant.Conditions });
         });

@@ -2,6 +2,7 @@ using System.Security.Claims;
 using Chronicles.Api.Data;
 using Chronicles.Api.Models;
 using Microsoft.EntityFrameworkCore;
+using Npgsql;
 
 namespace Chronicles.Api;
 
@@ -86,6 +87,8 @@ public static class NpcEndpoints
             db.Npcs.Remove(npc);
             try { await db.SaveChangesAsync(); }
             catch (DbUpdateConcurrencyException) { return Results.Conflict(new { message = "O NPC mudou. Atualize antes de excluir." }); }
+            catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.ForeignKeyViolation })
+            { return Results.Conflict(new { message = "Remova o NPC dos encontros antes de excluir." }); }
             return Results.NoContent();
         });
     }
