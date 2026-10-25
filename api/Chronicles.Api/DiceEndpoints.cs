@@ -23,7 +23,9 @@ public static class DiceEndpoints
                 var since = DateTimeOffset.FromUnixTimeMilliseconds(unix).UtcDateTime;
                 query = query.Where(x => x.CreatedAt > since);
             }
-            if (!Master(role)) query = query.Where(x => x.Visibility == "campaign" || x.Visibility == "private" && x.UserId == userId);
+            query = Master(role)
+                ? query.Where(x => x.Visibility == "campaign" || x.Visibility == "gm" || x.Visibility == "private" && x.UserId == userId)
+                : query.Where(x => x.Visibility == "campaign" || x.Visibility == "private" && x.UserId == userId);
             var rolls = await query.OrderByDescending(x => x.CreatedAt).Take(50).Include(x => x.User).ToListAsync();
             return Results.Ok(rolls.OrderBy(x => x.CreatedAt).Select(View));
         });
@@ -50,7 +52,7 @@ public static class DiceEndpoints
             }
             roll.User = await db.Users.SingleAsync(x => x.Id == userId);
             return Results.Created($"/api/campaigns/{campaignId}/rolls", View(roll));
-        });
+        }).RequireRateLimiting("rolls");
     }
 
     private static Guid? UserId(HttpContext http) => Guid.TryParse(http.User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : null;
