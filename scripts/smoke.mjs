@@ -147,6 +147,20 @@ const playerRolls = await request(`/api/campaigns/${id}/rolls`, { cookie: second
 expect(playerRolls.status === 200 && playerRolls.body.length === 2 && playerRolls.body.some(x => x.id === rolled.body.id) && playerRolls.body.some(x => x.id === privateRoll.body.id), 'Player sees public and own private rolls');
 const masterRolls = await request(`/api/campaigns/${id}/rolls`, { cookie: ownerCookie });
 expect(masterRolls.status === 200 && masterRolls.body.some(x => x.id === gmRoll.body.id) && !masterRolls.body.some(x => x.id === privateRoll.body.id), 'Private roll hidden from master');
+const members = await request(`/api/campaigns/${id}/members`, { cookie: ownerCookie });
+expect(members.status === 200 && members.body.length === 2, 'Campaign members listed');
+const gmOnly = await request(`/api/campaigns/${id}/entries/documents`, { method: 'POST', cookie: ownerCookie, body: { ...entryInput, title: 'Segredo da Maré' } });
+expect(gmOnly.status === 201, 'New master-only document');
+const promoted = await request(`/api/campaigns/${id}/members/${second.body.id}`, { method: 'PATCH', cookie: ownerCookie, body: { role: 'co-gm' } });
+expect(promoted.status === 204, 'Owner can promote member');
+const gmDocument = await request(`/api/entries/${gmOnly.body.id}`, { cookie: second.cookie });
+expect(gmDocument.status === 200, 'Co-master can read protected content');
+const demoted = await request(`/api/campaigns/${id}/members/${second.body.id}`, { method: 'PATCH', cookie: ownerCookie, body: { role: 'player' } });
+expect(demoted.status === 204, 'Owner can restore player role');
+const gmDocumentHidden = await request(`/api/entries/${gmOnly.body.id}`, { cookie: second.cookie });
+expect(gmDocumentHidden.status === 404, 'Demoted player loses protected content');
+const invalidRole = await request(`/api/campaigns/${id}/members/${second.body.id}`, { method: 'PATCH', cookie: ownerCookie, body: { role: 'owner' } });
+expect(invalidRole.status === 400, 'Owner role cannot be assigned');
 const spectator = await request('/api/auth/register', { method: 'POST', body: { displayName: 'Espectador', email: `espectador-${suffix}@example.test`, password: 'spectator-password-123' } });
 expect(spectator.status === 201 && spectator.cookie, 'Spectator registration');
 const spectatorInvite = await request(`/api/campaigns/${id}/invites`, { method: 'POST', cookie: ownerCookie, body: { role: 'spectator' } });
@@ -157,6 +171,10 @@ const spectatorCharacter = await request(`/api/campaigns/${id}/characters`, { me
 expect(spectatorCharacter.status === 403, 'Spectator cannot create characters');
 const spectatorRoll = await request(`/api/campaigns/${id}/rolls`, { method: 'POST', cookie: spectator.cookie, body: { requestId: crypto.randomUUID(), expression: '1d6', visibility: 'campaign' } });
 expect(spectatorRoll.status === 403, 'Spectator cannot roll dice');
+const spectatorLeft = await request(`/api/campaigns/${id}/members/${spectator.body.id}`, { method: 'DELETE', cookie: spectator.cookie });
+expect(spectatorLeft.status === 204, 'Member can leave campaign');
+const afterLeave = await request(`/api/campaigns/${id}`, { cookie: spectator.cookie });
+expect(afterLeave.status === 404, 'Former member loses campaign access');
 let currentCookie = ownerCookie;
 if (process.env.SMOKE_MAILPIT_URL) {
   const email = `mestre-${suffix}@example.test`;

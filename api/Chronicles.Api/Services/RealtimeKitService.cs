@@ -41,6 +41,17 @@ public sealed class RealtimeKitService(IHttpClientFactory clients, IConfiguratio
         return data.GetProperty("token").GetString() ?? throw new InvalidOperationException("RealtimeKit não retornou um token.");
     }
 
+    public async Task RevokeParticipantAsync(Guid meetingId, Guid participantId, Guid userId, CancellationToken cancellationToken)
+    {
+        using var kick = await SendAsync(HttpMethod.Post, $"meetings/{meetingId}/active-session/kick",
+            new { custom_participant_ids = new[] { userId.ToString() } }, cancellationToken);
+        if (!kick.IsSuccessStatusCode && kick.StatusCode != System.Net.HttpStatusCode.NotFound)
+            throw new HttpRequestException("Não foi possível remover o participante da sessão ativa.", null, kick.StatusCode);
+        using var delete = await SendAsync(HttpMethod.Delete, $"meetings/{meetingId}/participants/{participantId}", null, cancellationToken);
+        if (!delete.IsSuccessStatusCode && delete.StatusCode != System.Net.HttpStatusCode.NotFound)
+            throw new HttpRequestException("Não foi possível revogar os tokens do participante.", null, delete.StatusCode);
+    }
+
     private async Task<HttpResponseMessage> SendAsync(HttpMethod method, string path, object? body, CancellationToken cancellationToken)
     {
         using var request = new HttpRequestMessage(method, $"https://api.cloudflare.com/client/v4/accounts/{Account}/realtime/kit/{App}/{path}");
