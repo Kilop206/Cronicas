@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using Chronicles.Api.Data;
 using Chronicles.Api.Models;
 using Microsoft.EntityFrameworkCore;
@@ -11,8 +10,8 @@ public static class CharacterInventoryEndpoints
     {
         api.MapGet("/characters/{characterId:guid}/inventory", async Task<IResult> (Guid characterId, HttpContext http, AppDbContext db) =>
         {
-            if (UserId(http) is not { } userId) return Results.Unauthorized();
-            if (!await db.Characters.AnyAsync(x => x.Id == characterId && x.Campaign.Memberships.Any(m => m.UserId == userId))) return Results.NotFound();
+            if (CharacterResourceAccess.UserId(http) is not { } userId) return Results.Unauthorized();
+            if (!await CharacterResourceAccess.CanRead(db, characterId, userId)) return Results.NotFound();
             var items = await db.CharacterInventoryItems.AsNoTracking().Where(x => x.CharacterId == characterId)
                 .OrderBy(x => x.Category).ThenBy(x => x.Name).ToListAsync();
             return Results.Ok(items.Select(View));
@@ -20,8 +19,8 @@ public static class CharacterInventoryEndpoints
 
         api.MapPost("/characters/{characterId:guid}/inventory", async Task<IResult> (Guid characterId, InventoryInput input, HttpContext http, AppDbContext db) =>
         {
-            if (UserId(http) is not { } userId) return Results.Unauthorized();
-            var access = await Access(db, characterId, userId);
+            if (CharacterResourceAccess.UserId(http) is not { } userId) return Results.Unauthorized();
+            var access = await CharacterResourceAccess.CanEdit(db, characterId, userId);
             if (access is null) return Results.NotFound();
             if (!access.Value) return Results.Problem("Você não pode editar este inventário.", statusCode: 403);
             var errors = Validate(input);
@@ -37,8 +36,8 @@ public static class CharacterInventoryEndpoints
 
         api.MapPut("/characters/{characterId:guid}/inventory/{itemId:guid}", async Task<IResult> (Guid characterId, Guid itemId, InventoryInput input, HttpContext http, AppDbContext db) =>
         {
-            if (UserId(http) is not { } userId) return Results.Unauthorized();
-            var access = await Access(db, characterId, userId);
+            if (CharacterResourceAccess.UserId(http) is not { } userId) return Results.Unauthorized();
+            var access = await CharacterResourceAccess.CanEdit(db, characterId, userId);
             if (access is null) return Results.NotFound();
             if (!access.Value) return Results.Problem("Você não pode editar este inventário.", statusCode: 403);
             var item = await db.CharacterInventoryItems.SingleOrDefaultAsync(x => x.Id == itemId && x.CharacterId == characterId);
@@ -56,8 +55,8 @@ public static class CharacterInventoryEndpoints
 
         api.MapDelete("/characters/{characterId:guid}/inventory/{itemId:guid}", async Task<IResult> (Guid characterId, Guid itemId, int version, HttpContext http, AppDbContext db) =>
         {
-            if (UserId(http) is not { } userId) return Results.Unauthorized();
-            var access = await Access(db, characterId, userId);
+            if (CharacterResourceAccess.UserId(http) is not { } userId) return Results.Unauthorized();
+            var access = await CharacterResourceAccess.CanEdit(db, characterId, userId);
             if (access is null) return Results.NotFound();
             if (!access.Value) return Results.Problem("Você não pode editar este inventário.", statusCode: 403);
             var item = await db.CharacterInventoryItems.SingleOrDefaultAsync(x => x.Id == itemId && x.CharacterId == characterId);
@@ -68,16 +67,6 @@ public static class CharacterInventoryEndpoints
             catch (DbUpdateConcurrencyException) { return Results.Conflict(new { message = "O item mudou. Atualize antes de excluir." }); }
             return Results.NoContent();
         });
-    }
-
-    private static Guid? UserId(HttpContext http) => Guid.TryParse(http.User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : null;
-    private static async Task<bool?> Access(AppDbContext db, Guid characterId, Guid userId)
-    {
-        var member = await db.Characters.AsNoTracking()
-            .Where(x => x.Id == characterId && x.Campaign.Memberships.Any(m => m.UserId == userId))
-            .Select(x => new { x.OwnerId, Role = x.Campaign.Memberships.Where(m => m.UserId == userId).Select(m => m.Role).First() })
-            .SingleOrDefaultAsync();
-        return member is null ? null : member.OwnerId == userId || member.Role is "owner" or "gm" or "co-gm";
     }
 
     private static Dictionary<string, string[]>? Validate(InventoryInput input)

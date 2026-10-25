@@ -118,12 +118,20 @@ public static class CharacterEndpoints
                 FieldsJson = source.FieldsJson
             };
             var inventory = await db.CharacterInventoryItems.AsNoTracking().Where(x => x.CharacterId == id).ToListAsync();
+            var abilities = await db.CharacterAbilities.AsNoTracking().Where(x => x.CharacterId == id).ToListAsync();
             db.Characters.Add(copy);
             foreach (var item in inventory)
                 db.CharacterInventoryItems.Add(new CharacterInventoryItem
                 {
                     CharacterId = copy.Id, Name = item.Name, Category = item.Category,
                     Quantity = item.Quantity, Weight = item.Weight, Notes = item.Notes
+                });
+            foreach (var ability in abilities)
+                db.CharacterAbilities.Add(new CharacterAbility
+                {
+                    CharacterId = copy.Id, Name = ability.Name, Description = ability.Description, Cost = ability.Cost,
+                    Effect = ability.Effect, Duration = ability.Duration, Limitations = ability.Limitations,
+                    Recharge = ability.Recharge, RollExpression = ability.RollExpression
                 });
             await db.SaveChangesAsync();
             return Results.Created($"/api/characters/{copy.Id}", View(copy, true));

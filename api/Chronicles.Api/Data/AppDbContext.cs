@@ -14,6 +14,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<CharacterSecret> CharacterSecrets => Set<CharacterSecret>();
     public DbSet<CharacterFavorite> CharacterFavorites => Set<CharacterFavorite>();
     public DbSet<CharacterInventoryItem> CharacterInventoryItems => Set<CharacterInventoryItem>();
+    public DbSet<CharacterAbility> CharacterAbilities => Set<CharacterAbility>();
     public DbSet<RoomParticipant> RoomParticipants => Set<RoomParticipant>();
     public DbSet<CampaignInvite> CampaignInvites => Set<CampaignInvite>();
     public DbSet<NarrativeEntry> NarrativeEntries => Set<NarrativeEntry>();
@@ -125,6 +126,22 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(x => x.Category).HasMaxLength(20);
             entity.Property(x => x.Notes).HasMaxLength(1000);
             entity.Property(x => x.Weight).HasPrecision(10, 2);
+            entity.Property(x => x.Version).IsConcurrencyToken();
+            entity.HasOne(x => x.Character).WithMany().HasForeignKey(x => x.CharacterId).OnDelete(DeleteBehavior.Cascade);
+        });
+        model.Entity<CharacterAbility>(entity =>
+        {
+            entity.ToTable("character_abilities");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.CharacterId, x.Name });
+            entity.Property(x => x.Name).HasMaxLength(120);
+            entity.Property(x => x.Description).HasMaxLength(4000);
+            entity.Property(x => x.Cost).HasMaxLength(80);
+            entity.Property(x => x.Effect).HasMaxLength(4000);
+            entity.Property(x => x.Duration).HasMaxLength(80);
+            entity.Property(x => x.Limitations).HasMaxLength(1000);
+            entity.Property(x => x.Recharge).HasMaxLength(80);
+            entity.Property(x => x.RollExpression).HasMaxLength(40);
             entity.Property(x => x.Version).IsConcurrencyToken();
             entity.HasOne(x => x.Character).WithMany().HasForeignKey(x => x.CharacterId).OnDelete(DeleteBehavior.Cascade);
         });

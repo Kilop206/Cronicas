@@ -68,6 +68,7 @@ app.MapHealthChecks("/health");
 var api = app.MapGroup("/api");
 api.MapCharacterEndpoints();
 api.MapCharacterInventoryEndpoints();
+api.MapCharacterAbilityEndpoints();
 api.MapInviteEndpoints();
 api.MapNarrativeEndpoints();
 api.MapDiceEndpoints();
