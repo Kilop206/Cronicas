@@ -17,8 +17,8 @@ O deploy do Pages deve incluir a pasta `functions`; enviar somente os assets nã
 
 ## Serviços opcionais
 
-- Transmissão com câmeras e várias telas: configure no Render `CF_ACCOUNT_ID`, `CF_RTK_APP_ID`, `CF_RTK_API_TOKEN`, `CF_RTK_PRESET` e, conforme os papéis, `CF_RTK_PRESET_GM` e `CF_RTK_PRESET_SPECTATOR` após criar o aplicativo RealtimeKit.
+- Transmissão: WebRTC direto entre navegadores usa STUN público e sinalização SignalR pela API. Verifique WebSocket no proxy de Pages e Render. Não há serviço TURN nesta configuração gratuita; algumas redes podem falhar.
 - Recuperação de senha: configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_TLS`, `SMTP_FROM`, `SMTP_USERNAME` e `SMTP_PASSWORD` no Render. O Render Free bloqueia SMTP de saída nas portas 25, 465 e 587; escolha um provedor com API HTTPS ou uma porta permitida antes de ativar recuperação em produção.
 - Backup: antes de receber campanhas reais, implemente e teste exportação agendada de PostgreSQL para armazenamento durável separado. O projeto Neon atualmente tem janela de restauração de seis horas e nenhum snapshot programado. O Render Free não fornece disco persistente para os backups.
 
-Nenhuma credencial de Neon, Cloudflare ou RealtimeKit pertence ao frontend, ao Blueprint ou ao repositório.
+Nenhuma credencial de Neon ou Cloudflare pertence ao frontend, ao Blueprint ou ao repositório.

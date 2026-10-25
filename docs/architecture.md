@@ -10,25 +10,25 @@
 - A URL de OBS contém uma chave aleatória de 256 bits; seu hash é persistido. Ela revela somente nome, portrait, fundo e recursos, pode ser revogada e não dá acesso à campanha.
 - Universos podem ser associados a várias campanhas. Artigos possuem visibilidade de campanha, privada ou de mestre; relações persistidas oferecem backlinks e respeitam a visibilidade de ambas as pontas. Documentos, sessões e wiki da campanha possuem edição autorizada e revelação de pistas. Dados são analisados por parser restrito, rolados com geração criptográfica e guardados com idempotência; chat e encontros também são persistidos.
 - A pesquisa global consulta campanhas, personagens, universos, artigos e registros narrativos com filtros de autorização aplicados na consulta ao banco.
-- RealtimeKit provê WebRTC, compartilhamento de tela e câmera. O backend cria a reunião por campanha, verifica associação e solicita o token do participante com credenciais Cloudflare guardadas no servidor. O token de participante fica apenas na memória do cliente durante a sala. O participante é persistido para reutilização em reconexões. O preset RealtimeKit de jogadores deve permitir câmera e compartilhamento, com `max_screenshare_count` maior que 1 para telas simultâneas; espectadores exigem um preset separado. Não há tabletop, VTT, mapas táticos ou tokens de tabuleiro.
+- A sala usa SignalR para presença e sinalização WebRTC, com associação à campanha verificada no servidor. Cada navegador estabelece conexões diretas por participante usando STUN público. O registro de presença em memória atende à instância única do Render Free; revogação de associação ou papel remove as conexões do grupo. OBS entra como conexão somente de leitura e compõe câmera, portrait e recursos. Não há tabletop, VTT, mapas táticos ou tokens de tabuleiro.
 - Migrações aplicam o esquema no início da API; `/health` verifica PostgreSQL. Antes de ampliar o número de instâncias, migrar em etapa controlada.
 
 ## Publicação
 
 `web/wrangler.jsonc` configura Pages. `API_ORIGIN` aponta a Pages Function para uma origem HTTPS fixa do Render. `render.yaml` configura um Web Service Docker Free com deploy automático desligado; a conexão com Neon e a origem permitida são preenchidas como secrets no Render. O Render Free hiberna após inatividade, de modo que a primeira requisição pode demorar. A autorização permanece na API. Cloudflare Containers foram removidos do caminho ativo para evitar Workers Paid.
 
-O armazenamento de imagens ainda aceita URLs HTTPS externas. O próximo passo é upload autenticado em R2 com validação de formato, tamanho, ownership e URLs de leitura controladas. A configuração local continua em Docker Compose para desenvolvimento.
+O armazenamento de imagens ainda aceita URLs HTTPS externas. O próximo passo é armazenamento configurável de arquivos, com upload autenticado, validação de formato e tamanho, ownership e URLs de leitura controladas. A configuração local continua em Docker Compose para desenvolvimento.
 
 ## Fases seguintes
 
 | Fase | Entrega verificável |
 | --- | --- |
-| 2 | Campos secretos dinâmicos, inventário e habilidades estruturados, modelos e permissões mais granulares. |
+| 2 | Campos secretos dinâmicos, modelos de ficha e permissões mais granulares. |
 | 3 | Links internos no texto com autocompletar, anexos e mídia de documentos, pistas associadas a sessões. |
 | 4 | Validar mídia com participantes reais, reconexão, múltiplos compartilhamentos e cenas individuais para OBS; sincronização de eventos da campanha. |
-| 5 | Fórmulas tipadas e progressão para sistemas, upload R2, personalização de layouts, exportação dos dados da conta. Não há módulo de tabletop. |
+| 5 | Fórmulas tipadas e progressão para sistemas, upload configurável e personalização de layouts. Não há módulo de tabletop. |
 | 6 | Testes de integração e E2E completos, acessibilidade, auditoria, observabilidade e publicação. |
 
 ## Limites atuais
 
-A integração de mídia não foi exercitada sem app, token e preset RealtimeKit. O SDK e o UI Kit oficial têm versões fixadas no build Angular e a sala carrega seu bundle sob demanda. Ainda é preciso validar comportamento em Chrome, Firefox e OBS Browser Source. A URL pública de portrait consulta recursos a cada três segundos. A fonte autenticada de câmera + portrait entra na mesma reunião e seleciona o vídeo do dono da ficha; sua reconexão e apresentação em OBS precisam de teste com mídia real. A revogação de participantes de mídia em remoções e mudanças de papel foi implementada, mas não foi testada contra RealtimeKit real. Mapas táticos e tabletop estão fora do escopo por decisão do produto.
+A mídia WebRTC ainda precisa de teste real com dois navegadores, reconexão e OBS Browser Source. Sem TURN, algumas redes e firewalls impedem conexão direta. Cada participante envia um fluxo para cada outro, então o uso de CPU e banda cresce com o tamanho do grupo. O hub mantém presença em memória e exige uma única instância; escalar requer registro compartilhado. A fonte pública de portrait consulta recursos a cada três segundos. Mapas táticos e tabletop estão fora do escopo.
