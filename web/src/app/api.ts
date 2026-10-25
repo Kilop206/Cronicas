@@ -21,7 +21,7 @@ export interface InventoryItem { id: string; characterId: string; name: string; 
 export type InventoryInput = Pick<InventoryItem, 'name' | 'category' | 'quantity' | 'weight' | 'notes' | 'version'>;
 export interface CharacterAbility { id: string; characterId: string; name: string; description: string; cost: string; effect: string; duration: string; limitations: string; recharge: string; rollExpression: string | null; version: number; createdAt: string; updatedAt: string; }
 export type AbilityInput = Pick<CharacterAbility, 'name' | 'description' | 'cost' | 'effect' | 'duration' | 'limitations' | 'recharge' | 'rollExpression' | 'version'>;
-export interface SystemField { key: string; label: string; type: 'text' | 'longtext' | 'number' | 'boolean' | 'select'; section: string; min: number | null; max: number | null; options: string[] | null; }
+export interface SystemField { key: string; label: string; type: 'text' | 'longtext' | 'number' | 'boolean' | 'select'; section: string; min: number | null; max: number | null; options: string[] | null; span?: number | null; }
 export interface RpgSystem { id: string; ownerId: string | null; name: string; description: string; fields: SystemField[]; createdAt: string; updatedAt: string; }
 export interface CampaignMember { userId: string; displayName: string; role: string; joinedAt: string; }
 export interface World { id: string; ownerId: string; name: string; description: string; createdAt: string; updatedAt: string; }
@@ -79,7 +79,7 @@ export class ApiService {
   createCampaign(data: { name: string; description: string; accentColor: string }) { return this.http.post<Campaign>('/api/campaigns', data, { withCredentials: true }); }
   updateCampaign(id: string, data: { name: string; description: string; accentColor: string }) { return this.http.patch<Campaign>(`/api/campaigns/${id}`, data, { withCredentials: true }); }
   setCampaignStatus(id: string, status: string) { return this.http.patch<void>(`/api/campaigns/${id}/status`, { status }, { withCredentials: true }); }
-  setCampaignSystem(id: string, systemId: string) { return this.http.patch<void>(`/api/campaigns/${id}/system`, { systemId }, { withCredentials: true }); }
+  setCampaignSystem(id: string, systemId: string | null) { return this.http.patch<void>(`/api/campaigns/${id}/system`, { systemId }, { withCredentials: true }); }
   members(campaignId: string) { return this.http.get<CampaignMember[]>(`/api/campaigns/${campaignId}/members`, { withCredentials: true }); }
   changeMemberRole(campaignId: string, memberId: string, role: string) { return this.http.patch<void>(`/api/campaigns/${campaignId}/members/${memberId}`, { role }, { withCredentials: true }); }
   removeMember(campaignId: string, memberId: string) { return this.http.delete<void>(`/api/campaigns/${campaignId}/members/${memberId}`, { withCredentials: true }); }

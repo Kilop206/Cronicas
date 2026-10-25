@@ -247,7 +247,7 @@ api.MapPost("/campaigns", async Task<IResult> (CampaignRequest input, HttpContex
     var name = input.Name?.Trim() ?? "";
     if (name.Length is < 3 or > 120 || input.Description is null || input.Description.Length > 2000 || input.AccentColor is null || !System.Text.RegularExpressions.Regex.IsMatch(input.AccentColor, "^#[0-9a-fA-F]{6}$"))
         return Results.ValidationProblem(new Dictionary<string, string[]> { ["campaign"] = ["Verifique nome, descrição e cor."] });
-    var campaign = new Campaign { Name = name, Description = input.Description.Trim(), AccentColor = input.AccentColor, OwnerId = id, SystemId = SystemCatalog.GenericId };
+    var campaign = new Campaign { Name = name, Description = input.Description.Trim(), AccentColor = input.AccentColor, OwnerId = id };
     campaign.Memberships.Add(new CampaignMembership { UserId = id, Role = "owner" });
     db.Campaigns.Add(campaign);
     await db.SaveChangesAsync();
@@ -298,7 +298,6 @@ using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
     await db.Database.MigrateAsync();
-    await SystemCatalog.SeedAsync(db);
 }
 app.Run();
 

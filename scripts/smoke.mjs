@@ -16,7 +16,7 @@ const first = await request('/api/auth/register', { method: 'POST', body: { disp
 expect(first.status === 201 && first.cookie, 'Cadastro e cookie de sessão');
 const ownerCookie = first.cookie;
 const created = await request('/api/campaigns', { method: 'POST', cookie: ownerCookie, body: { name: 'O Farol das Sombras', description: 'Campanha de teste', accentColor: '#b39a69' } });
-expect(created.status === 201, 'Criação da campanha');
+expect(created.status === 201 && created.body.systemId === null, 'Campanha começa sem sistema padrão');
 const id = created.body.id;
 const dashboard = await request('/api/dashboard', { cookie: ownerCookie });
 expect(dashboard.status === 200 && dashboard.body.totalCampaigns === 1, 'Dashboard persistido');
@@ -132,13 +132,15 @@ expect(updatedCharacter.body.version === 2, 'Character version increments');
 const staleCharacter = await request(`/api/characters/${characterId}`, { method: 'PUT', cookie: ownerCookie, body: { ...characterInput, version: 1 } });
 expect(staleCharacter.status === 409, 'Stale character update is rejected');
 const systems = await request('/api/systems', { cookie: ownerCookie });
-expect(systems.status === 200 && systems.body.length >= 3, 'Original systems seeded');
+expect(systems.status === 200 && systems.body.length === 0, 'New account has no predefined systems');
 const systemInput = { name: 'Arquivo das Marés', description: 'Sistema autoral de teste', fields: [
-  { key: 'coragem', label: 'Coragem', type: 'number', section: 'Atributos', min: 0, max: 10, options: null },
-  { key: 'origem', label: 'Origem', type: 'text', section: 'Identidade', min: null, max: null, options: null }
+  { key: 'coragem', label: 'Coragem', type: 'number', section: 'Atributos', min: 0, max: 10, options: null, span: 4 },
+  { key: 'origem', label: 'Origem', type: 'text', section: 'Identidade', min: null, max: null, options: null, span: 12 }
 ] };
 const customSystem = await request('/api/systems', { method: 'POST', cookie: ownerCookie, body: systemInput });
-expect(customSystem.status === 201 && customSystem.body.fields.length === 2, 'Custom typed system persisted');
+expect(customSystem.status === 201 && customSystem.body.fields.length === 2 && customSystem.body.fields[0].span === 4, 'Custom typed system and layout persisted');
+const invalidLayout = await request('/api/systems', { method: 'POST', cookie: ownerCookie, body: { ...systemInput, fields: [{ ...systemInput.fields[0], span: 13 }] } });
+expect(invalidLayout.status === 400, 'System layout width is validated');
 const hiddenSystem = await request(`/api/systems/${customSystem.body.id}`, { cookie: second.cookie });
 expect(hiddenSystem.status === 404, 'Private system hidden from outsider');
 const campaignSystem = await request(`/api/campaigns/${id}/system`, { method: 'PATCH', cookie: ownerCookie, body: { systemId: customSystem.body.id } });
@@ -147,10 +149,16 @@ const invalidField = await request(`/api/characters/${characterId}`, { method: '
 expect(invalidField.status === 400, 'Dynamic numeric field range validated');
 const dynamicCharacter = await request(`/api/characters/${characterId}`, { method: 'PUT', cookie: ownerCookie, body: { ...characterInput, health: 6, fields: { coragem: 7, origem: 'Ilhas do Norte' } } });
 expect(dynamicCharacter.status === 200 && dynamicCharacter.body.fields.coragem === 7, 'Dynamic sheet fields persisted');
-const genericSystem = await request(`/api/campaigns/${id}/system`, { method: 'PATCH', cookie: ownerCookie, body: { systemId: 'a9e29682-c194-4aae-9c0e-7bbb3f6a72f1' } });
-expect(genericSystem.status === 204, 'Switch campaign system');
-const preservedFields = await request(`/api/characters/${characterId}`, { method: 'PUT', cookie: ownerCookie, body: { ...characterInput, health: 6, fields: { ...dynamicCharacter.body.fields, nivel: 2 } } });
-expect(preservedFields.status === 200 && preservedFields.body.fields.coragem === 7 && preservedFields.body.fields.nivel === 2, 'Old field values preserved after system switch');
+const freeSystem = await request('/api/systems', { method: 'POST', cookie: ownerCookie, body: { name: 'Caderno Livre', description: 'Ficha criada pelo jogador', fields: [] } });
+expect(freeSystem.status === 201 && freeSystem.body.fields.length === 0, 'Freeform system persists without preset fields');
+const manualSystem = await request(`/api/campaigns/${id}/system`, { method: 'PATCH', cookie: ownerCookie, body: { systemId: freeSystem.body.id } });
+expect(manualSystem.status === 204, 'Campaign switches to freeform system');
+const invalidManualField = await request(`/api/characters/${characterId}`, { method: 'PUT', cookie: ownerCookie, body: { ...characterInput, health: 6, fields: { 'campo inválido': 'x' } } });
+expect(invalidManualField.status === 400, 'Freeform field keys are validated');
+const preservedFields = await request(`/api/characters/${characterId}`, { method: 'PUT', cookie: ownerCookie, body: { ...characterInput, health: 6, fields: { ...dynamicCharacter.body.fields, objetivo: 'Encontrar a ilha' } } });
+expect(preservedFields.status === 200 && preservedFields.body.fields.coragem === 7 && preservedFields.body.fields.objetivo === 'Encontrar a ilha', 'Freeform sheet preserves existing values and adds manual fields');
+const detachedSystem = await request(`/api/campaigns/${id}/system`, { method: 'PATCH', cookie: ownerCookie, body: { systemId: null } });
+expect(detachedSystem.status === 204, 'Campaign may use no system');
 const restoredSystem = await request(`/api/campaigns/${id}/system`, { method: 'PATCH', cookie: ownerCookie, body: { systemId: customSystem.body.id } });
 expect(restoredSystem.status === 204, 'Restore custom campaign system');
 const duplicateCharacter = await request(`/api/characters/${characterId}/duplicate`, { method: 'POST', cookie: ownerCookie });
@@ -244,7 +252,7 @@ const usedWorldDelete = await request(`/api/worlds/${world.body.id}`, { method: 
 expect(usedWorldDelete.status === 409, 'Linked world cannot be deleted');
 const sharedSystem = await request(`/api/systems/${customSystem.body.id}`, { cookie: second.cookie });
 expect(sharedSystem.status === 200, 'Campaign member can read applied custom system');
-const playerSystemChange = await request(`/api/campaigns/${id}/system`, { method: 'PATCH', cookie: second.cookie, body: { systemId: systems.body[0].id } });
+const playerSystemChange = await request(`/api/campaigns/${id}/system`, { method: 'PATCH', cookie: second.cookie, body: { systemId: customSystem.body.id } });
 expect(playerSystemChange.status === 404, 'Only campaign owner changes system');
 const usedSystemDelete = await request(`/api/systems/${customSystem.body.id}`, { method: 'DELETE', cookie: ownerCookie });
 expect(usedSystemDelete.status === 409, 'System used by campaign cannot be deleted');

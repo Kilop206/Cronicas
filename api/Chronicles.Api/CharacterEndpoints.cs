@@ -1,6 +1,7 @@
 using System.Security.Claims;
 using System.Security.Cryptography;
 using System.Text.Json;
+using System.Text.RegularExpressions;
 using Chronicles.Api.Data;
 using Chronicles.Api.Models;
 using Microsoft.EntityFrameworkCore;
@@ -244,13 +245,22 @@ public static class CharacterEndpoints
     {
         if (values is null) return null;
         if (values.Count > 50 || JsonSerializer.Serialize(values).Length > 20000) return new() { ["fields"] = ["Campos excedem o limite."] };
-        var systemId = await db.Campaigns.Where(x => x.Id == campaignId).Select(x => x.SystemId).SingleAsync() ?? SystemCatalog.GenericId;
-        var schema = await db.RpgSystems.Where(x => x.Id == systemId).Select(x => x.SchemaJson).SingleAsync();
-        var fields = JsonSerializer.Deserialize<SystemField[]>(schema) ?? [];
+        var systemId = await db.Campaigns.Where(x => x.Id == campaignId).Select(x => x.SystemId).SingleAsync();
+        var schema = systemId is null ? null : await db.RpgSystems.Where(x => x.Id == systemId).Select(x => x.SchemaJson).SingleAsync();
+        SystemField[] fields = schema is null ? [] : JsonSerializer.Deserialize<SystemField[]>(schema) ?? [];
         var byKey = fields.ToDictionary(x => x.Key);
         var previous = previousJson is null ? new Dictionary<string, JsonElement>() : JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(previousJson) ?? [];
         foreach (var (key, value) in values)
         {
+            if (fields.Length == 0)
+            {
+                if (!Regex.IsMatch(key, "^[a-z][a-z0-9_]{1,39}$", RegexOptions.CultureInvariant)
+                    || value.ValueKind == JsonValueKind.String && value.GetString()?.Length > 10000
+                    || value.ValueKind == JsonValueKind.Number && !value.TryGetInt32(out _)
+                    || value.ValueKind is not (JsonValueKind.String or JsonValueKind.Number or JsonValueKind.True or JsonValueKind.False))
+                    return new() { ["fields"] = ["Campo livre inválido."] };
+                continue;
+            }
             if (!byKey.TryGetValue(key, out var field))
             {
                 if (previous.TryGetValue(key, out var oldValue) && JsonElement.DeepEquals(value, oldValue)) continue;

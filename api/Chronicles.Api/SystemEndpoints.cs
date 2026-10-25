@@ -16,7 +16,7 @@ public static class SystemEndpoints
         api.MapGet("/systems", async Task<IResult> (HttpContext http, AppDbContext db) =>
         {
             if (UserId(http) is not { } userId) return Results.Unauthorized();
-            var systems = await db.RpgSystems.AsNoTracking().Where(x => x.OwnerId == null || x.OwnerId == userId).OrderBy(x => x.Name).ToListAsync();
+            var systems = await db.RpgSystems.AsNoTracking().Where(x => x.OwnerId == userId).OrderBy(x => x.Name).ToListAsync();
             return Results.Ok(systems.Select(View));
         });
 
@@ -24,7 +24,7 @@ public static class SystemEndpoints
         {
             if (UserId(http) is not { } userId) return Results.Unauthorized();
             var system = await db.RpgSystems.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id);
-            if (system is null || system.OwnerId != null && system.OwnerId != userId && !await db.CampaignMemberships.AnyAsync(x => x.UserId == userId && x.Campaign.SystemId == id)) return Results.NotFound();
+            if (system is null || system.OwnerId != userId && !await db.CampaignMemberships.AnyAsync(x => x.UserId == userId && x.Campaign.SystemId == id)) return Results.NotFound();
             return Results.Ok(View(system));
         });
 
@@ -66,7 +66,7 @@ public static class SystemEndpoints
             if (UserId(http) is not { } userId) return Results.Unauthorized();
             var campaign = await db.Campaigns.SingleOrDefaultAsync(x => x.Id == campaignId && x.OwnerId == userId);
             if (campaign is null) return Results.NotFound();
-            var allowed = await db.RpgSystems.AnyAsync(x => x.Id == input.SystemId && (x.OwnerId == null || x.OwnerId == userId));
+            var allowed = input.SystemId is null || await db.RpgSystems.AnyAsync(x => x.Id == input.SystemId && x.OwnerId == userId);
             if (!allowed) return Results.ValidationProblem(new Dictionary<string, string[]> { ["systemId"] = ["Sistema indisponível."] });
             campaign.SystemId = input.SystemId; campaign.UpdatedAt = DateTime.UtcNow;
             await db.SaveChangesAsync();
@@ -80,12 +80,13 @@ public static class SystemEndpoints
     {
         var errors = new Dictionary<string, string[]>();
         if (input.Name?.Trim().Length is not (>= 3 and <= 120) || input.Description is null || input.Description.Length > 2000) errors["system"] = ["Nome ou descrição inválidos."];
-        if (input.Fields is null || input.Fields.Length is < 1 or > 50) { errors["fields"] = ["Defina de 1 a 50 campos."]; return errors; }
+        if (input.Fields is null || input.Fields.Length > 50) { errors["fields"] = ["Defina até 50 campos."]; return errors; }
         var keys = new HashSet<string>(StringComparer.Ordinal);
         foreach (var field in input.Fields)
         {
             if (field is null || field.Key is null || !KeyPattern.IsMatch(field.Key) || !keys.Add(field.Key) || field.Label?.Trim().Length is not (>= 2 and <= 80)
                 || field.Section?.Trim().Length is not (>= 2 and <= 60) || field.Type is not ("text" or "longtext" or "number" or "boolean" or "select")
+                || field.Span is < 1 or > 12
                 || field.Type == "number" && (field.Min is < -999999 or > 999999 || field.Max is < -999999 or > 999999 || field.Min > field.Max)
                 || field.Type == "select" && (field.Options is null || field.Options.Length is < 1 or > 30 || field.Options.Any(x => string.IsNullOrWhiteSpace(x) || x.Length > 80)))
             { errors["fields"] = ["Campo inválido, chave repetida ou limites fora do intervalo."]; break; }
@@ -93,5 +94,5 @@ public static class SystemEndpoints
         return errors;
     }
     public sealed record SystemInput(string Name, string Description, SystemField[] Fields);
-    public sealed record SetSystemInput(Guid SystemId);
+    public sealed record SetSystemInput(Guid? SystemId);
 }
