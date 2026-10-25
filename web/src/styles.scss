@@ -342,6 +342,17 @@ html:has(.obs-page), body:has(.obs-page), html:has(.obs-camera-page), body:has(.
 .world-campaigns { margin: 25px 0 40px; border-top: 1px solid var(--border); padding-top: 20px; }
 .world-campaigns .campaign-row { margin-top: 10px; }
 .world-settings, .campaign-world-panel { margin-top: 35px; }
+.world-links { margin-top: 28px; border-top: 1px solid var(--border); padding-top: 20px; }
+.world-links h3 { font-size: 18px; margin: 0 0 12px; }
+.world-link-row { display: flex; gap: 12px; align-items: center; padding: 10px 0; border-bottom: 1px solid var(--border); }
+.world-link-row span { color: var(--muted); font-size: 12px; flex: 1; }
+.world-link-create { margin-top: 20px; display: grid; gap: 10px; }
+.world-link-create label { margin: 0; }
+.world-link-create .button { justify-self: start; }
+.link-suggestions { display: grid; max-height: 210px; overflow-y: auto; border: 1px solid var(--border); background: var(--surface); }
+.link-suggestions button { display: flex; justify-content: space-between; gap: 10px; padding: 10px 12px; border: 0; border-bottom: 1px solid var(--border); background: transparent; color: var(--text); text-align: left; }
+.link-suggestions button:hover { background: #ffffff0c; }
+.link-suggestions small { color: var(--muted); }
 .world-settings label, .campaign-world-panel label { max-width: 620px; }
 .chat-panel { margin-top: 28px; padding: 25px; border: 1px solid var(--border); background: var(--surface); }
 .chat-history { display: grid; align-content: start; gap: 10px; min-height: 160px; max-height: 420px; overflow-y: auto; padding: 12px 0; margin-bottom: 22px; border-top: 1px solid var(--border); border-bottom: 1px solid var(--border); }

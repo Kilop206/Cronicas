@@ -185,6 +185,17 @@ public sealed class WorldArticle
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
 }
 
+public sealed class WorldArticleLink
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid SourceId { get; set; }
+    public WorldArticle Source { get; set; } = null!;
+    public Guid TargetId { get; set; }
+    public WorldArticle Target { get; set; } = null!;
+    public required string Label { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+}
+
 public sealed class ChatMessage
 {
     public Guid Id { get; set; } = Guid.NewGuid();

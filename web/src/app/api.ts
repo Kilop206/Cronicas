@@ -17,6 +17,7 @@ export interface CampaignMember { userId: string; displayName: string; role: str
 export interface World { id: string; ownerId: string; name: string; description: string; createdAt: string; updatedAt: string; }
 export interface WorldDetail extends World { campaigns: { campaignId: string; name: string; role: string }[]; }
 export interface WorldArticle { id: string; worldId: string; authorId: string; title: string; body: string; category: string; visibility: 'campaign' | 'private' | 'gm'; revision: number; createdAt: string; updatedAt: string; }
+export interface WorldArticleLink { id: string; label: string; direction: 'incoming' | 'outgoing'; article: Pick<WorldArticle, 'id' | 'title' | 'category' | 'visibility'>; }
 export interface ChatMessage { id: string; campaignId: string; userId: string; userName: string; body: string; kind: 'chat' | 'announcement'; createdAt: string; }
 export interface EncounterParticipant { id: string; characterId: string; name: string; initiative: number; health: number; maxHealth: number; conditions: string; }
 export interface Encounter { id: string; campaignId: string; title: string; status: 'planning' | 'active' | 'completed'; round: number; turnIndex: number; createdAt: string; updatedAt: string; participants: EncounterParticipant[]; }
@@ -67,9 +68,13 @@ export class ApiService {
   deleteWorld(id: string) { return this.http.delete<void>(`/api/worlds/${id}`, { withCredentials: true }); }
   setCampaignWorld(id: string, worldId: string | null) { return this.http.patch<void>(`/api/campaigns/${id}/world`, { worldId }, { withCredentials: true }); }
   worldArticles(worldId: string, page = 1, search = '') { return this.http.get<Page<WorldArticle>>(`/api/worlds/${worldId}/articles`, { params: { page, search }, withCredentials: true }); }
+  worldArticle(id: string) { return this.http.get<WorldArticle>(`/api/world-articles/${id}`, { withCredentials: true }); }
   createWorldArticle(worldId: string, input: WorldArticleInput) { return this.http.post<WorldArticle>(`/api/worlds/${worldId}/articles`, input, { withCredentials: true }); }
   updateWorldArticle(id: string, input: WorldArticleInput) { return this.http.put<WorldArticle>(`/api/world-articles/${id}`, input, { withCredentials: true }); }
   deleteWorldArticle(id: string) { return this.http.delete<void>(`/api/world-articles/${id}`, { withCredentials: true }); }
+  worldArticleLinks(id: string) { return this.http.get<WorldArticleLink[]>(`/api/world-articles/${id}/links`, { withCredentials: true }); }
+  createWorldArticleLink(id: string, targetId: string, label: string) { return this.http.post<WorldArticleLink>(`/api/world-articles/${id}/links`, { targetId, label }, { withCredentials: true }); }
+  deleteWorldArticleLink(id: string) { return this.http.delete<void>(`/api/world-article-links/${id}`, { withCredentials: true }); }
   messages(campaignId: string) { return this.http.get<ChatMessage[]>(`/api/campaigns/${campaignId}/messages`, { withCredentials: true }); }
   sendMessage(campaignId: string, body: string, kind: ChatMessage['kind'], clientId: string) { return this.http.post<ChatMessage>(`/api/campaigns/${campaignId}/messages`, { body, kind, clientId }, { withCredentials: true }); }
   encounters(campaignId: string) { return this.http.get<EncounterSummary[]>(`/api/campaigns/${campaignId}/encounters`, { withCredentials: true }); }

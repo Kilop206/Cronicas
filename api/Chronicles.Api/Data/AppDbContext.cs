@@ -18,6 +18,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<RpgSystem> RpgSystems => Set<RpgSystem>();
     public DbSet<World> Worlds => Set<World>();
     public DbSet<WorldArticle> WorldArticles => Set<WorldArticle>();
+    public DbSet<WorldArticleLink> WorldArticleLinks => Set<WorldArticleLink>();
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
     public DbSet<Encounter> Encounters => Set<Encounter>();
     public DbSet<EncounterParticipant> EncounterParticipants => Set<EncounterParticipant>();
@@ -170,6 +171,16 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(x => x.Visibility).HasMaxLength(20);
             entity.HasOne(x => x.World).WithMany().HasForeignKey(x => x.WorldId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(x => x.Author).WithMany().HasForeignKey(x => x.AuthorId).OnDelete(DeleteBehavior.Restrict);
+        });
+        model.Entity<WorldArticleLink>(entity =>
+        {
+            entity.ToTable("world_article_links", table => table.HasCheckConstraint("CK_world_article_links_distinct", "\"SourceId\" <> \"TargetId\""));
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.SourceId, x.TargetId, x.Label }).IsUnique();
+            entity.HasIndex(x => x.TargetId);
+            entity.Property(x => x.Label).HasMaxLength(80);
+            entity.HasOne(x => x.Source).WithMany().HasForeignKey(x => x.SourceId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.Target).WithMany().HasForeignKey(x => x.TargetId).OnDelete(DeleteBehavior.Cascade);
         });
         model.Entity<ChatMessage>(entity =>
         {

@@ -3,7 +3,7 @@ import { Component, OnInit, OnDestroy, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { Subscription, finalize } from 'rxjs';
-import { ApiService, Page, World, WorldArticle, WorldArticleInput, WorldDetail, apiError } from './api';
+import { ApiService, Page, World, WorldArticle, WorldArticleInput, WorldArticleLink, WorldDetail, apiError } from './api';
 
 @Component({ standalone: true, imports: [CommonModule, FormsModule, RouterLink], template: `
   <main class="page"><div class="page-heading"><div><span class="overline">ATLAS PESSOAL</span><h1>Universos</h1><p>Mundos que abrigam suas campanhas e histórias.</p></div></div>
@@ -33,7 +33,13 @@ const emptyArticle = (): WorldArticleInput => ({ title: '', body: '', category: 
       <div *ngIf="!articles()?.items?.length" class="empty-state small"><h3>Nenhum artigo encontrado</h3><p>Crie um lugar, pessoa ou acontecimento para iniciar a enciclopédia.</p></div>
       <button *ngFor="let article of articles()?.items" type="button" class="narrative-row" (click)="select(article)"><span class="overline">{{ article.category }} · {{ article.visibility }}</span><strong>{{ article.title }}</strong><small>Atualizado {{ article.updatedAt | date:'dd/MM/yyyy' }}</small></button>
       <div class="pagination" *ngIf="(articles()?.total || 0) > 20"><button [disabled]="pageNumber === 1" (click)="changePage(-1)">Anterior</button><span>Página {{ pageNumber }}</span><button [disabled]="pageNumber * 20 >= (articles()?.total || 0)" (click)="changePage(1)">Próxima</button></div></section>
-      <section *ngIf="selected() as article" class="editor-panel narrative-detail"><div class="panel-heading"><span>{{ article.category.toUpperCase() }}</span><h2>{{ article.title }}</h2></div><div class="narrative-meta">{{ article.visibility === 'campaign' ? 'Compartilhado' : article.visibility === 'gm' ? 'Mestres' : 'Privado' }}</div><div class="narrative-body">{{ article.body }}</div><button *ngIf="canEdit(article)" type="button" class="text-link" (click)="edit(article)">Editar artigo</button></section>
+      <section *ngIf="selected() as article" class="editor-panel narrative-detail"><div class="panel-heading"><span>{{ article.category.toUpperCase() }}</span><h2>{{ article.title }}</h2></div><div class="narrative-meta">{{ article.visibility === 'campaign' ? 'Compartilhado' : article.visibility === 'gm' ? 'Mestres' : 'Privado' }}</div><div class="narrative-body">{{ article.body }}</div><button *ngIf="canEdit(article)" type="button" class="text-link" (click)="edit(article)">Editar artigo</button>
+        <div class="world-links"><h3>Relações e referências</h3><p *ngIf="!links().length" class="room-note">Este artigo ainda não possui relações.</p>
+          <div *ngFor="let link of links()" class="world-link-row"><button type="button" class="text-link" (click)="openLinkedArticle(link.article.id)">{{ link.article.title }}</button><span>{{ link.direction === 'outgoing' ? '→' : '←' }} {{ link.label }}</span><button *ngIf="link.direction === 'outgoing' && canEdit(article) || canMaster()" type="button" class="text-link danger" (click)="removeLink(link)">Remover</button></div>
+          <div *ngIf="canEdit(article)" class="world-link-create"><label>Relacionar com artigo<input type="search" [(ngModel)]="targetSearch" (ngModelChange)="searchTargets()" placeholder="Buscar artigo do universo"></label>
+            <div *ngIf="targetResults().length" class="link-suggestions"><button *ngFor="let target of targetResults()" type="button" (click)="chooseTarget(target)">{{ target.title }} <small>{{ target.category }}</small></button></div>
+            <p *ngIf="targetId" class="room-note">Selecionado: {{ targetSearch }}</p><label>Relação<input [(ngModel)]="linkLabel" maxlength="80" placeholder="Ex.: pertence a, fica em"></label>
+            <button type="button" class="button button-small" [disabled]="!targetId || linkLabel.trim().length < 2 || busy()" (click)="addLink(article)">Adicionar relação</button></div></div></section>
       <form *ngIf="editing()" class="editor-panel narrative-detail" (ngSubmit)="saveArticle()" #form="ngForm"><div class="panel-heading"><span>ENCICLOPÉDIA</span><h2>{{ editingId ? 'Editar artigo' : 'Novo artigo' }}</h2></div>
         <label>Título<input name="title" [(ngModel)]="draft.title" required minlength="2" maxlength="160"></label>
         <label>Categoria<input name="category" [(ngModel)]="draft.category" required maxlength="40" pattern="[a-z][a-z0-9_-]*" placeholder="location"></label>
@@ -46,11 +52,12 @@ const emptyArticle = (): WorldArticleInput => ({ title: '', body: '', category: 
       <div class="form-actions"><button type="button" class="text-link danger" (click)="deleteWorld()">Excluir universo</button><button class="button" [disabled]="worldForm.invalid || busy()">Salvar universo</button></div></form>
   </main><main class="page" *ngIf="!world()"><div class="loading">Abrindo universo...</div><div *ngIf="error()" class="notice error">{{ error() }}</div></main>` })
 export class WorldDetailPage implements OnInit, OnDestroy {
-  api = inject(ApiService); private route = inject(ActivatedRoute); private router = inject(Router); private searchTimer?: ReturnType<typeof setTimeout>; private subscription?: Subscription;
+  api = inject(ApiService); private route = inject(ActivatedRoute); private router = inject(Router); private searchTimer?: ReturnType<typeof setTimeout>; private targetTimer?: ReturnType<typeof setTimeout>; private subscription?: Subscription;
   id = this.route.snapshot.paramMap.get('id')!; world = signal<WorldDetail | null>(null); articles = signal<Page<WorldArticle> | null>(null); selected = signal<WorldArticle | null>(null);
+  links = signal<WorldArticleLink[]>([]); targetResults = signal<WorldArticle[]>([]); targetSearch = ''; targetId = ''; linkLabel = '';
   editing = signal(false); editingId: string | null = null; draft = emptyArticle(); error = signal(''); busy = signal(false); name = ''; description = ''; search = ''; pageNumber = 1;
   ngOnInit() { this.subscription = this.route.paramMap.subscribe(params => { this.id = params.get('id')!; this.loadWorld(); this.loadArticles(); }); }
-  ngOnDestroy() { this.subscription?.unsubscribe(); clearTimeout(this.searchTimer); }
+  ngOnDestroy() { this.subscription?.unsubscribe(); clearTimeout(this.searchTimer); clearTimeout(this.targetTimer); }
   loadWorld() { this.api.world(this.id).subscribe({ next: value => { this.world.set(value); this.name = value.name; this.description = value.description; }, error: e => this.error.set(apiError(e)) }); }
   loadArticles() { this.api.worldArticles(this.id, this.pageNumber, this.search).subscribe({ next: value => this.articles.set(value), error: e => this.error.set(apiError(e)) }); }
   canMaster() { const item = this.world(); return item?.ownerId === this.api.user()?.id || !!item?.campaigns.some(c => ['owner', 'gm', 'co-gm'].includes(c.role)); }
@@ -58,10 +65,16 @@ export class WorldDetailPage implements OnInit, OnDestroy {
   canEdit(article: WorldArticle) { return this.canMaster() || this.canWrite() && article.authorId === this.api.user()?.id; }
   searchChanged() { clearTimeout(this.searchTimer); this.searchTimer = setTimeout(() => { this.pageNumber = 1; this.loadArticles(); }, 250); }
   changePage(step: number) { this.pageNumber += step; this.loadArticles(); }
-  select(article: WorldArticle) { this.selected.set(article); this.editing.set(false); }
+  select(article: WorldArticle) { this.selected.set(article); this.editing.set(false); this.links.set([]); this.targetId = ''; this.targetSearch = ''; this.targetResults.set([]); this.loadLinks(article.id); }
+  loadLinks(articleId: string) { this.api.worldArticleLinks(articleId).subscribe({ next: links => { if (this.selected()?.id === articleId) this.links.set(links); }, error: e => this.error.set(apiError(e)) }); }
+  openLinkedArticle(id: string) { this.api.worldArticle(id).subscribe({ next: article => this.select(article), error: e => this.error.set(apiError(e)) }); }
+  searchTargets() { this.targetId = ''; clearTimeout(this.targetTimer); if (this.targetSearch.trim().length < 2) { this.targetResults.set([]); return; } this.targetTimer = setTimeout(() => this.api.worldArticles(this.id, 1, this.targetSearch).subscribe({ next: page => this.targetResults.set(page.items.filter(x => x.id !== this.selected()?.id)), error: e => this.error.set(apiError(e)) }), 250); }
+  chooseTarget(article: WorldArticle) { this.targetId = article.id; this.targetSearch = article.title; this.targetResults.set([]); }
+  addLink(article: WorldArticle) { if (!this.targetId) return; this.busy.set(true); this.error.set(''); this.api.createWorldArticleLink(article.id, this.targetId, this.linkLabel.trim()).pipe(finalize(() => this.busy.set(false))).subscribe({ next: () => { this.targetId = ''; this.targetSearch = ''; this.linkLabel = ''; this.loadLinks(article.id); }, error: e => this.error.set(apiError(e)) }); }
+  removeLink(link: WorldArticleLink) { this.busy.set(true); this.error.set(''); this.api.deleteWorldArticleLink(link.id).pipe(finalize(() => this.busy.set(false))).subscribe({ next: () => { const article = this.selected(); if (article) this.loadLinks(article.id); }, error: e => this.error.set(apiError(e)) }); }
   newArticle() { this.selected.set(null); this.editingId = null; this.draft = emptyArticle(); this.editing.set(true); this.error.set(''); }
   edit(article: WorldArticle) { this.selected.set(null); this.editingId = article.id; this.draft = { title: article.title, body: article.body, category: article.category, visibility: article.visibility, revision: article.revision }; this.editing.set(true); this.error.set(''); }
-  saveArticle() { this.busy.set(true); this.error.set(''); const request = this.editingId ? this.api.updateWorldArticle(this.editingId, this.draft) : this.api.createWorldArticle(this.id, this.draft); request.pipe(finalize(() => this.busy.set(false))).subscribe({ next: value => { this.editing.set(false); this.selected.set(value); this.loadArticles(); }, error: e => this.error.set(apiError(e)) }); }
+  saveArticle() { this.busy.set(true); this.error.set(''); const request = this.editingId ? this.api.updateWorldArticle(this.editingId, this.draft) : this.api.createWorldArticle(this.id, this.draft); request.pipe(finalize(() => this.busy.set(false))).subscribe({ next: value => { this.editing.set(false); this.select(value); this.loadArticles(); }, error: e => this.error.set(apiError(e)) }); }
   deleteArticle() { if (!this.editingId || !confirm('Excluir este artigo?')) return; this.busy.set(true); this.api.deleteWorldArticle(this.editingId).pipe(finalize(() => this.busy.set(false))).subscribe({ next: () => { this.editing.set(false); this.loadArticles(); }, error: e => this.error.set(apiError(e)) }); }
   saveWorld() { this.busy.set(true); this.error.set(''); this.api.updateWorld(this.id, this.name, this.description).pipe(finalize(() => this.busy.set(false))).subscribe({ next: () => this.loadWorld(), error: e => this.error.set(apiError(e)) }); }
   deleteWorld() { if (!confirm('Excluir este universo e seus artigos?')) return; this.busy.set(true); this.api.deleteWorld(this.id).pipe(finalize(() => this.busy.set(false))).subscribe({ next: () => void this.router.navigateByUrl('/worlds'), error: e => this.error.set(apiError(e)) }); }

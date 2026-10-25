@@ -133,11 +133,62 @@ public static class WorldEndpoints
             if (!CanEdit(article, access, userId)) return Results.Problem("Sem permissão para excluir artigo.", statusCode: 403);
             db.WorldArticles.Remove(article); await db.SaveChangesAsync(); return Results.NoContent();
         });
+
+        api.MapGet("/world-articles/{id:guid}/links", async Task<IResult> (Guid id, HttpContext http, AppDbContext db) =>
+        {
+            if (UserId(http) is not { } userId) return Results.Unauthorized();
+            var article = await db.WorldArticles.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id);
+            if (article is null) return Results.NotFound();
+            var access = await Access(db, article.WorldId, userId);
+            if (!access.Member || !CanSee(article, access, userId)) return Results.NotFound();
+            var visibleIds = Visible(db.WorldArticles.AsNoTracking().Where(x => x.WorldId == article.WorldId), access, userId).Select(x => x.Id);
+            var links = await db.WorldArticleLinks.AsNoTracking().Include(x => x.Source).Include(x => x.Target)
+                .Where(x => (x.SourceId == id || x.TargetId == id) && visibleIds.Contains(x.SourceId) && visibleIds.Contains(x.TargetId))
+                .OrderBy(x => x.CreatedAt).Take(200).ToListAsync();
+            return Results.Ok(links.Select(x => LinkView(x, id)));
+        });
+
+        api.MapPost("/world-articles/{id:guid}/links", async Task<IResult> (Guid id, LinkInput input, HttpContext http, AppDbContext db) =>
+        {
+            if (UserId(http) is not { } userId) return Results.Unauthorized();
+            var source = await db.WorldArticles.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id);
+            if (source is null) return Results.NotFound();
+            var access = await Access(db, source.WorldId, userId);
+            if (!access.Member || !CanSee(source, access, userId)) return Results.NotFound();
+            if (!CanEdit(source, access, userId)) return Results.Problem("Sem permissão para ligar este artigo.", statusCode: 403);
+            if (input.TargetId == id || input.Label?.Trim().Length is not (>= 2 and <= 80))
+                return Results.ValidationProblem(new Dictionary<string, string[]> { ["link"] = ["Selecione outro artigo e informe uma relação de 2 a 80 caracteres."] });
+            var target = await db.WorldArticles.AsNoTracking().SingleOrDefaultAsync(x => x.Id == input.TargetId && x.WorldId == source.WorldId);
+            if (target is null || !CanSee(target, access, userId)) return Results.NotFound();
+            var label = input.Label.Trim();
+            if (await db.WorldArticleLinks.AnyAsync(x => x.SourceId == id && x.TargetId == input.TargetId && x.Label == label))
+                return Results.Conflict(new { message = "Esta relação já existe." });
+            var link = new WorldArticleLink { SourceId = id, TargetId = input.TargetId, Label = label };
+            db.WorldArticleLinks.Add(link); await db.SaveChangesAsync();
+            link.Source = source; link.Target = target;
+            return Results.Created($"/api/world-articles/{id}/links", LinkView(link, id));
+        });
+
+        api.MapDelete("/world-article-links/{linkId:guid}", async Task<IResult> (Guid linkId, HttpContext http, AppDbContext db) =>
+        {
+            if (UserId(http) is not { } userId) return Results.Unauthorized();
+            var link = await db.WorldArticleLinks.Include(x => x.Source).Include(x => x.Target).SingleOrDefaultAsync(x => x.Id == linkId);
+            if (link is null) return Results.NotFound();
+            var access = await Access(db, link.Source.WorldId, userId);
+            if (!access.Member || !CanSee(link.Source, access, userId) || !CanSee(link.Target, access, userId)) return Results.NotFound();
+            if (!CanEdit(link.Source, access, userId)) return Results.Problem("Sem permissão para remover esta relação.", statusCode: 403);
+            db.WorldArticleLinks.Remove(link); await db.SaveChangesAsync(); return Results.NoContent();
+        });
     }
 
     private static Guid? UserId(HttpContext http) => Guid.TryParse(http.User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : null;
     private static object View(World x) => new { x.Id, x.OwnerId, x.Name, x.Description, x.CreatedAt, x.UpdatedAt };
     private static object ArticleView(WorldArticle x) => new { x.Id, x.WorldId, x.AuthorId, x.Title, x.Body, x.Category, x.Visibility, x.Revision, x.CreatedAt, x.UpdatedAt };
+    private static object LinkView(WorldArticleLink x, Guid currentId)
+    {
+        var other = x.SourceId == currentId ? x.Target : x.Source;
+        return new { x.Id, x.Label, direction = x.SourceId == currentId ? "outgoing" : "incoming", article = new { other.Id, other.Title, other.Category, other.Visibility } };
+    }
     private static async Task<WorldAccess> Access(AppDbContext db, Guid worldId, Guid userId)
     {
         var owner = await db.Worlds.AnyAsync(x => x.Id == worldId && x.OwnerId == userId);
@@ -167,4 +218,5 @@ public static class WorldEndpoints
     public sealed record WorldInput(string Name, string Description);
     public sealed record WorldLinkInput(Guid? WorldId);
     public sealed record ArticleInput(string Title, string Body, string Category, string Visibility, int Revision);
+    public sealed record LinkInput(Guid TargetId, string Label);
 }

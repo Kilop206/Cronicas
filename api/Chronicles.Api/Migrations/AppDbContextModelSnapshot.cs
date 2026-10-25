@@ -738,6 +738,39 @@ namespace Chronicles.Api.Migrations
                     b.ToTable("world_articles", (string)null);
                 });
 
+            modelBuilder.Entity("Chronicles.Api.Models.WorldArticleLink", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("Label")
+                        .IsRequired()
+                        .HasMaxLength(80)
+                        .HasColumnType("character varying(80)");
+
+                    b.Property<Guid>("SourceId")
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("TargetId")
+                        .HasColumnType("uuid");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("TargetId");
+
+                    b.HasIndex("SourceId", "TargetId", "Label")
+                        .IsUnique();
+
+                    b.ToTable("world_article_links", null, t =>
+                        {
+                            t.HasCheckConstraint("CK_world_article_links_distinct", "\"SourceId\" <> \"TargetId\"");
+                        });
+                });
+
             modelBuilder.Entity("Chronicles.Api.Models.Campaign", b =>
                 {
                     b.HasOne("Chronicles.Api.Models.User", "Owner")
@@ -1010,6 +1043,25 @@ namespace Chronicles.Api.Migrations
                     b.Navigation("Author");
 
                     b.Navigation("World");
+                });
+
+            modelBuilder.Entity("Chronicles.Api.Models.WorldArticleLink", b =>
+                {
+                    b.HasOne("Chronicles.Api.Models.WorldArticle", "Source")
+                        .WithMany()
+                        .HasForeignKey("SourceId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("Chronicles.Api.Models.WorldArticle", "Target")
+                        .WithMany()
+                        .HasForeignKey("TargetId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Source");
+
+                    b.Navigation("Target");
                 });
 
             modelBuilder.Entity("Chronicles.Api.Models.Campaign", b =>
