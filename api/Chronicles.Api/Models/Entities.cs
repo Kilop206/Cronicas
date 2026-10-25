@@ -196,3 +196,30 @@ public sealed class ChatMessage
     public string Kind { get; set; } = "chat";
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
 }
+
+public sealed class Encounter
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid CampaignId { get; set; }
+    public Campaign Campaign { get; set; } = null!;
+    public required string Title { get; set; }
+    public string Status { get; set; } = "planning";
+    public int Round { get; set; } = 1;
+    public int TurnIndex { get; set; }
+    public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
+    public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;
+    public List<EncounterParticipant> Participants { get; set; } = [];
+}
+
+public sealed class EncounterParticipant
+{
+    public Guid Id { get; set; } = Guid.NewGuid();
+    public Guid EncounterId { get; set; }
+    public Encounter Encounter { get; set; } = null!;
+    public Guid CharacterId { get; set; }
+    public Character Character { get; set; } = null!;
+    public int Initiative { get; set; }
+    public int Health { get; set; }
+    public int MaxHealth { get; set; }
+    public string Conditions { get; set; } = "";
+}

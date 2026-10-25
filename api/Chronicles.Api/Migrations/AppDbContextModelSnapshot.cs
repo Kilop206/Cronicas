@@ -312,6 +312,80 @@ namespace Chronicles.Api.Migrations
                     b.ToTable("dice_rolls", (string)null);
                 });
 
+            modelBuilder.Entity("Chronicles.Api.Models.Encounter", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CampaignId")
+                        .HasColumnType("uuid");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<int>("Round")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Status")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<string>("Title")
+                        .IsRequired()
+                        .HasMaxLength(160)
+                        .HasColumnType("character varying(160)");
+
+                    b.Property<int>("TurnIndex")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("UpdatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CampaignId", "UpdatedAt");
+
+                    b.ToTable("encounters", (string)null);
+                });
+
+            modelBuilder.Entity("Chronicles.Api.Models.EncounterParticipant", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<Guid>("CharacterId")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Conditions")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<Guid>("EncounterId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Health")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Initiative")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("MaxHealth")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CharacterId");
+
+                    b.HasIndex("EncounterId", "CharacterId")
+                        .IsUnique();
+
+                    b.ToTable("encounter_participants", (string)null);
+                });
+
             modelBuilder.Entity("Chronicles.Api.Models.NarrativeEntry", b =>
                 {
                     b.Property<Guid>("Id")
@@ -753,6 +827,36 @@ namespace Chronicles.Api.Migrations
                     b.Navigation("User");
                 });
 
+            modelBuilder.Entity("Chronicles.Api.Models.Encounter", b =>
+                {
+                    b.HasOne("Chronicles.Api.Models.Campaign", "Campaign")
+                        .WithMany()
+                        .HasForeignKey("CampaignId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Campaign");
+                });
+
+            modelBuilder.Entity("Chronicles.Api.Models.EncounterParticipant", b =>
+                {
+                    b.HasOne("Chronicles.Api.Models.Character", "Character")
+                        .WithMany()
+                        .HasForeignKey("CharacterId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("Chronicles.Api.Models.Encounter", "Encounter")
+                        .WithMany("Participants")
+                        .HasForeignKey("EncounterId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Character");
+
+                    b.Navigation("Encounter");
+                });
+
             modelBuilder.Entity("Chronicles.Api.Models.NarrativeEntry", b =>
                 {
                     b.HasOne("Chronicles.Api.Models.User", "Author")
@@ -856,6 +960,11 @@ namespace Chronicles.Api.Migrations
             modelBuilder.Entity("Chronicles.Api.Models.Campaign", b =>
                 {
                     b.Navigation("Memberships");
+                });
+
+            modelBuilder.Entity("Chronicles.Api.Models.Encounter", b =>
+                {
+                    b.Navigation("Participants");
                 });
 
             modelBuilder.Entity("Chronicles.Api.Models.User", b =>

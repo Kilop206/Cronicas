@@ -19,6 +19,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<World> Worlds => Set<World>();
     public DbSet<WorldArticle> WorldArticles => Set<WorldArticle>();
     public DbSet<ChatMessage> ChatMessages => Set<ChatMessage>();
+    public DbSet<Encounter> Encounters => Set<Encounter>();
+    public DbSet<EncounterParticipant> EncounterParticipants => Set<EncounterParticipant>();
 
     protected override void OnModelCreating(ModelBuilder model)
     {
@@ -177,6 +179,24 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(x => x.Kind).HasMaxLength(20);
             entity.HasOne(x => x.Campaign).WithMany().HasForeignKey(x => x.CampaignId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(x => x.User).WithMany().HasForeignKey(x => x.UserId).OnDelete(DeleteBehavior.Restrict);
+        });
+        model.Entity<Encounter>(entity =>
+        {
+            entity.ToTable("encounters");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.CampaignId, x.UpdatedAt });
+            entity.Property(x => x.Title).HasMaxLength(160);
+            entity.Property(x => x.Status).HasMaxLength(20);
+            entity.HasOne(x => x.Campaign).WithMany().HasForeignKey(x => x.CampaignId).OnDelete(DeleteBehavior.Cascade);
+        });
+        model.Entity<EncounterParticipant>(entity =>
+        {
+            entity.ToTable("encounter_participants");
+            entity.HasKey(x => x.Id);
+            entity.HasIndex(x => new { x.EncounterId, x.CharacterId }).IsUnique();
+            entity.Property(x => x.Conditions).HasMaxLength(1000);
+            entity.HasOne(x => x.Encounter).WithMany(x => x.Participants).HasForeignKey(x => x.EncounterId).OnDelete(DeleteBehavior.Cascade);
+            entity.HasOne(x => x.Character).WithMany().HasForeignKey(x => x.CharacterId).OnDelete(DeleteBehavior.Restrict);
         });
     }
 }
