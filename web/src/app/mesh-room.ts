@@ -14,6 +14,7 @@ interface RemoteConnection { info: RoomPeer; connection: RTCPeerConnection; send
 export class MeshRoom {
   private hub: HubConnection;
   private peers = new Map<string, RemoteConnection>();
+  private pendingSignals = new Map<string, { kind: string; payload: string }[]>();
   private tracks: Partial<Record<MediaKind, MediaStreamTrack>> = {};
   private closed = false;
   private selfId = '';
@@ -70,6 +71,8 @@ export class MeshRoom {
     };
     for (const kind of ['audio', 'camera', 'screen'] as const) await remote.senders[kind].replaceTrack(this.tracks[kind] ?? null);
     this.emitPeers();
+    for (const signal of this.pendingSignals.get(info.connectionId) ?? []) await this.receive(info.connectionId, signal.kind, signal.payload);
+    this.pendingSignals.delete(info.connectionId);
     if (this.selfId && this.selfId.localeCompare(info.connectionId) < 0) {
       try { await connection.setLocalDescription(await connection.createOffer()); await this.signal(info.connectionId, 'offer', JSON.stringify(connection.localDescription)); }
       catch { this.callbacks.status(`Não foi possível negociar mídia com ${info.displayName}.`); }
@@ -77,8 +80,13 @@ export class MeshRoom {
   }
 
   private async receive(from: string, kind: string, payload: string) {
+    if (this.closed) return;
     const peer = this.peers.get(from);
-    if (!peer || this.closed) return;
+    if (!peer) {
+      const pending = this.pendingSignals.get(from) ?? [];
+      if (pending.length < 64) { pending.push({ kind, payload }); this.pendingSignals.set(from, pending); }
+      return;
+    }
     try {
       if (kind === 'ice') {
         const candidate = JSON.parse(payload) as RTCIceCandidateInit;
@@ -109,13 +117,14 @@ export class MeshRoom {
   }
 
   private removePeer(id: string) {
+    this.pendingSignals.delete(id);
     const peer = this.peers.get(id);
     if (!peer) return;
     peer.connection.close(); this.peers.delete(id);
     for (const kind of ['audio', 'camera', 'screen'] as const) this.callbacks.track(id, kind, null);
     this.emitPeers();
   }
-  private clearPeers() { for (const id of this.peers.keys()) this.removePeer(id); }
+  private clearPeers() { for (const id of this.peers.keys()) this.removePeer(id); this.pendingSignals.clear(); }
   private emitPeers() { this.callbacks.peers([...this.peers.values()].map(x => x.info)); }
   async close() { this.closed = true; this.clearPeers(); for (const track of Object.values(this.tracks)) track.stop(); await this.hub.stop(); }
 }

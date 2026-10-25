@@ -53,10 +53,10 @@ export class MediaRoomPage implements OnDestroy {
       peers: peers => { this.peers = peers; this.syncFeeds(); },
       track: (id, kind, stream) => { const current = this.streams.get(id) ?? {}; if (stream) current[kind] = stream; else delete current[kind]; this.streams.set(id, current); this.syncFeeds(); },
       status: message => this.status.set(message),
-      revoked: () => { this.joined.set(false); this.error.set('Seu acesso à sala mudou. Recarregue a página para entrar novamente.'); }
+      revoked: () => { this.joined.set(false); this.role.set(null); this.error.set('Seu acesso à sala mudou. Recarregue a página para entrar novamente.'); }
     });
     try { await this.room.connect(); if (!this.destroyed) this.joined.set(true); }
-    catch { if (!this.destroyed) this.error.set('Não foi possível entrar na sala.'); }
+    catch { if (!this.destroyed) this.error.set('Não foi possível entrar na sala.'); await this.room.close(); this.room = undefined; }
     finally { this.connecting.set(false); }
   }
   private syncFeeds() { this.feeds.set(this.peers.filter(peer => peer.mode === 'room').map(peer => {
