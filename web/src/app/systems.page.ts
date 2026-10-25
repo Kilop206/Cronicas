@@ -13,7 +13,7 @@ import { ApiService, RpgSystem, SystemField, apiError } from './api';
   </main>` })
 export class SystemsPage implements OnInit {
   private api = inject(ApiService); systems = signal<RpgSystem[]>([]); loading = signal(true); error = signal('');
-  ngOnInit() { this.api.systems().pipe(finalize(() => this.loading.set(false))).subscribe({ next: items => this.systems.set(items), error: e => this.error.set(apiError(e)) }); }
+  ngOnInit() { this.api.systems().pipe(finalize(() => this.loading.set(false))).subscribe({ next: items => this.systems.set(items.filter(item => item.ownerId === this.api.user()?.id)), error: e => this.error.set(apiError(e)) }); }
 }
 
 @Component({ standalone: true, imports: [CommonModule, FormsModule, RouterLink], template: `

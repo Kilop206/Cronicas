@@ -19,7 +19,7 @@ export class CampaignSystemPanelComponent implements OnInit {
   ngOnInit() {
     this.selectedSystemId = this.systemId || '';
     if (this.selectedSystemId) this.api.system(this.selectedSystemId).subscribe({ next: item => this.current.set(item), error: e => this.error.set(apiError(e)) });
-    if (this.role === 'owner') this.api.systems().subscribe({ next: items => this.systems.set(items), error: e => this.error.set(apiError(e)) });
+    if (this.role === 'owner') this.api.systems().subscribe({ next: items => this.systems.set(items.filter(item => item.ownerId === this.api.user()?.id)), error: e => this.error.set(apiError(e)) });
   }
   save() { this.busy.set(true); this.error.set(''); this.saved.set(false); this.api.setCampaignSystem(this.campaignId, this.selectedSystemId || null).subscribe({ next: () => { this.systemId = this.selectedSystemId || null; this.current.set(this.systems().find(x => x.id === this.systemId) || null); this.saved.set(true); this.busy.set(false); }, error: e => { this.error.set(apiError(e)); this.busy.set(false); } }); }
 }
