@@ -2,6 +2,8 @@
 
 Workspace de campanhas de RPG de mesa com contas e controle de sessões, convites, fichas, NPCs, sistemas editáveis, universos, wiki, documentos, sessões, dados, chat e encontros. A sala usa WebRTC direto entre navegadores para câmeras e múltiplas telas; portraits e recursos têm fontes para OBS.
 
+Campanhas novas começam sem sistema pronto. O proprietário pode criar uma ficha livre, cujos campos cada jogador preenche manualmente, ou um sistema estruturado com campos tipados, seções, ordem e larguras. O editor oferece montagem visual e edição da definição JSON validada pelo servidor. A ficha reúne recursos no topo e organiza inventário, habilidades e histórico em abas. A organização privilegia acesso rápido inspirado no fluxo do [C.R.I.S.](https://crisordemparanormal.com/sobre-o-cris), sem incorporar regras ou artes daquele produto.
+
 O produto não inclui tabletop/VTT. A produção usa Cloudflare Pages, API .NET no Render Free e PostgreSQL no Neon. A transmissão ainda precisa de validação com navegadores e OBS reais.
 
 ## Desenvolvimento local
@@ -17,6 +19,8 @@ O PostgreSQL usa o volume `postgres_data`; a API aplica migrações ao iniciar. 
 ## Transmissão e OBS
 
 Entre na sala da campanha para ligar câmera, microfone ou compartilhar a tela. A API autoriza o participante e encaminha a sinalização SignalR; o áudio e vídeo trafegam diretamente entre navegadores usando STUN público. Várias pessoas podem compartilhar telas simultaneamente. Espectadores e fontes OBS não publicam mídia pela interface.
+
+Escolha a qualidade da câmera na sala (360p, 480p ou 720p). A tela compartilhada usa até 15 quadros por segundo. Cada fonte OBS se conecta apenas ao dono do personagem selecionado e recebe somente a câmera, poupando conexões e o envio de áudio e tela para cada Browser Source.
 
 O proprietário gera convites individuais na campanha. Na ficha, edite portrait, fundo e recursos. Gere uma URL de portrait para **Browser Source** no OBS Studio (sugestão: 980 × 360); gerar outra revoga a anterior. Trate a URL como segredo de leitura visual.
 
