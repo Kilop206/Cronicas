@@ -15,6 +15,8 @@ export interface Character { id: string; campaignId: string; ownerId: string; ca
 export type CharacterInput = Pick<Character, 'name' | 'portraitUrl' | 'backgroundUrl' | 'health' | 'maxHealth' | 'sanity' | 'maxSanity' | 'mana' | 'maxMana' | 'fields' | 'version'>;
 export interface CharacterRevision { id: string; version: number; createdAt: string; editedBy: string; }
 export interface CharacterSecret { notes: string; revision: number; updatedAt: string | null; }
+export interface Npc { id: string; campaignId: string; name: string; portraitUrl: string | null; appearance: string; personality: string; motivation: string; relationships: string; location: string; secrets?: string; status: 'active' | 'missing' | 'deceased' | 'unknown'; visibility: 'gm' | 'campaign'; health: number; maxHealth: number; version: number; createdAt: string; updatedAt: string; }
+export type NpcInput = Omit<Npc, 'id' | 'campaignId' | 'createdAt' | 'updatedAt' | 'secrets'> & { secrets: string };
 export interface InventoryItem { id: string; characterId: string; name: string; category: 'item' | 'equipment' | 'weapon' | 'consumable' | 'other'; quantity: number; weight: number; notes: string; version: number; createdAt: string; updatedAt: string; }
 export type InventoryInput = Pick<InventoryItem, 'name' | 'category' | 'quantity' | 'weight' | 'notes' | 'version'>;
 export interface CharacterAbility { id: string; characterId: string; name: string; description: string; cost: string; effect: string; duration: string; limitations: string; recharge: string; rollExpression: string | null; version: number; createdAt: string; updatedAt: string; }
@@ -39,6 +41,7 @@ export interface DiceRoll { id: string; campaignId: string; userId: string; user
 export interface SearchResults {
   campaigns: { id: string; name: string; status: string; updatedAt: string }[];
   characters: { id: string; name: string; campaignId: string; campaignName: string; updatedAt: string }[];
+  npcs: { id: string; name: string; campaignId: string; campaignName: string; updatedAt: string }[];
   worlds: { id: string; name: string; updatedAt: string }[];
   articles: { id: string; worldId: string; title: string; category: string; worldName: string; updatedAt: string }[];
   entries: { id: string; campaignId: string; kind: NarrativeKind; title: string; category: string; campaignName: string; updatedAt: string }[];
@@ -111,6 +114,11 @@ export class ApiService {
   updateSystem(id: string, data: Pick<RpgSystem, 'name' | 'description' | 'fields'>) { return this.http.put<RpgSystem>(`/api/systems/${id}`, data, { withCredentials: true }); }
   deleteSystem(id: string) { return this.http.delete<void>(`/api/systems/${id}`, { withCredentials: true }); }
   characters(campaignId: string) { return this.http.get<Character[]>(`/api/campaigns/${campaignId}/characters`, { withCredentials: true }); }
+  npcs(campaignId: string, page = 1, search = '') { return this.http.get<Page<Npc>>(`/api/campaigns/${campaignId}/npcs`, { params: { page, search }, withCredentials: true }); }
+  npc(id: string) { return this.http.get<Npc>(`/api/npcs/${id}`, { withCredentials: true }); }
+  createNpc(campaignId: string, input: NpcInput) { return this.http.post<Npc>(`/api/campaigns/${campaignId}/npcs`, input, { withCredentials: true }); }
+  updateNpc(id: string, input: NpcInput) { return this.http.put<Npc>(`/api/npcs/${id}`, input, { withCredentials: true }); }
+  deleteNpc(id: string, version: number) { return this.http.delete<void>(`/api/npcs/${id}`, { params: { version }, withCredentials: true }); }
   character(id: string) { return this.http.get<Character>(`/api/characters/${id}`, { withCredentials: true }); }
   inventory(id: string) { return this.http.get<InventoryItem[]>(`/api/characters/${id}/inventory`, { withCredentials: true }); }
   createInventoryItem(id: string, input: InventoryInput) { return this.http.post<InventoryItem>(`/api/characters/${id}/inventory`, input, { withCredentials: true }); }

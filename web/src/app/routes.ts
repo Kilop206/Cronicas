@@ -11,6 +11,7 @@ import { SystemsPage, SystemEditorPage } from './systems.page';
 import { WorldsPage, WorldDetailPage } from './worlds.page';
 import { SearchPage } from './search.page';
 import { EncountersPage } from './encounters.page';
+import { NpcsPage } from './npcs.page';
 
 const protectedRoute: CanActivateFn = (_route, state: RouterStateSnapshot) => {
   const api = inject(ApiService), router = inject(Router);
@@ -36,6 +37,7 @@ export const routes: Routes = [
     { path: 'campaigns/new', component: CampaignFormPage },
     { path: 'campaigns/:id', component: CampaignDetailPage },
     { path: 'campaigns/:id/characters', component: CharactersPage },
+    { path: 'campaigns/:id/npcs', component: NpcsPage },
     { path: 'campaigns/:id/sessions', component: NarrativePage, data: { section: 'sessions' } },
     { path: 'campaigns/:id/documents', component: NarrativePage, data: { section: 'documents' } },
     { path: 'campaigns/:id/wiki', component: NarrativePage, data: { section: 'wiki' } },
