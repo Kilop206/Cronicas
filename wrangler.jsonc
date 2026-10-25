@@ -1,0 +1,14 @@
+{
+  "$schema": "./node_modules/wrangler/config-schema.json",
+  "name": "cronicas-api",
+  "main": "./cloudflare/worker.js",
+  "compatibility_date": "2026-10-24",
+  "observability": { "enabled": true },
+  "containers": [{
+    "class_name": "ApiContainer",
+    "scheduling_policy": "durable_object",
+    "images": { "base": { "dockerfile": "./api/Chronicles.Api/Dockerfile", "build_context": "./api/Chronicles.Api" } }
+  }],
+  "durable_objects": { "bindings": [{ "name": "API", "class_name": "ApiContainer" }] },
+  "exports": { "ApiContainer": { "type": "durable-object", "storage": "sqlite" } }
+}

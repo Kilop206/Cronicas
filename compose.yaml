@@ -36,6 +36,12 @@ services:
       SMTP_FROM: ${SMTP_FROM:-cronicas@local.test}
       SMTP_USERNAME: ${SMTP_USERNAME:-}
       SMTP_PASSWORD: ${SMTP_PASSWORD:-}
+      CF_ACCOUNT_ID: ${CF_ACCOUNT_ID:-}
+      CF_RTK_APP_ID: ${CF_RTK_APP_ID:-}
+      CF_RTK_API_TOKEN: ${CF_RTK_API_TOKEN:-}
+      CF_RTK_PRESET: ${CF_RTK_PRESET:-}
+      CF_RTK_PRESET_GM: ${CF_RTK_PRESET_GM:-}
+      CF_RTK_PRESET_SPECTATOR: ${CF_RTK_PRESET_SPECTATOR:-}
     depends_on:
       db:
         condition: service_healthy

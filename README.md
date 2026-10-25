@@ -1,40 +1,44 @@
 # Crônicas
 
-Workspace para campanhas de RPG de mesa. A fundação entrega cadastro, login, recuperação de senha por email, sessões persistidas, perfil, cor de destaque pessoal, campanhas básicas e dashboard. Os demais módulos estão identificados como planejados.
+Workspace de campanhas de RPG de mesa. Já existem cadastro, login, recuperação de senha, sessões persistidas, perfil, dashboard, campanhas, convites por link de uso único, fichas visuais iniciais e uma fonte de portrait/recursos para OBS. A sala de transmissão usa Cloudflare RealtimeKit quando configurada. As demais rotas planejadas são identificadas como tal.
 
-## Iniciar com Docker
+O produto não inclui módulo de tabletop/VTT. A mesa visual será formada por compartilhamentos de tela, câmeras e fontes para OBS.
+
+## Desenvolvimento local
+
+Requer Docker, .NET SDK 10 e Node compatível com Angular 21.
 
 1. Copie `.env.example` para `.env` e altere `POSTGRES_PASSWORD`.
 2. Execute `docker compose up --build`.
-3. Acesse `http://localhost:8081`.
+3. Acesse `http://localhost:8081`. O Mailpit fica em `http://127.0.0.1:8025`.
 
-O PostgreSQL usa o volume `postgres_data`. A API aplica as migrações automaticamente ao iniciar. O health check está em `http://localhost:8081/health`. Os emails de recuperação locais ficam no Mailpit em `http://127.0.0.1:8025`.
+O PostgreSQL usa o volume `postgres_data`; a API aplica migrações ao iniciar. `/health` verifica o banco. Para executar sem os contêineres de API/frontend, inicie `docker compose up -d db mailpit`, configure `ConnectionStrings__Default` e `ALLOWED_ORIGINS=http://127.0.0.1:4200`, execute `dotnet run --urls http://127.0.0.1:5099` em `api/Chronicles.Api` e `npm ci && npm start` em `web`.
 
-## Desenvolvimento sem Docker
+## Transmissão e OBS
 
-Requer .NET SDK 10, Node 24 (ou versão compatível com Angular 21) e PostgreSQL 17.
+Configure no backend `CF_ACCOUNT_ID`, `CF_RTK_APP_ID`, `CF_RTK_API_TOKEN` e `CF_RTK_PRESET`. Crie o app e um preset RealtimeKit que permita câmera, microfone e compartilhamento de tela. Configure `max_screenshare_count` maior que 1 para participantes compartilharem telas ao mesmo tempo. `CF_RTK_PRESET_GM` é opcional para proprietários e mestres; `CF_RTK_PRESET_SPECTATOR` é necessário para espectadores e deve limitar a publicação de mídia. A API cria uma reunião quando o primeiro membro entra na sala. Sem essas variáveis, a sala informa que a mídia ainda não foi configurada.
 
-1. Configure `ConnectionStrings__Default` com a string PostgreSQL e `ALLOWED_ORIGINS=http://127.0.0.1:4200`. Para recuperação de senha, configure `SMTP_HOST`, `SMTP_PORT`, `SMTP_FROM` e, se necessário, `SMTP_TLS`, `SMTP_USERNAME` e `SMTP_PASSWORD`.
-2. Em `api/Chronicles.Api`, rode `dotnet run --urls http://127.0.0.1:5099`.
-3. Em `web`, rode `npm ci` e `npm start`.
-4. Acesse `http://127.0.0.1:4200`.
+O proprietário gera um link individual na página da campanha e escolhe o papel do participante. O convite expira em sete dias e é consumido no aceite; quem recebe pode entrar ou criar conta antes de aceitar. Na campanha, crie um personagem, edite portrait, fundo e recursos, salve e gere uma URL de OBS. Adicione essa URL como **Browser Source** no OBS Studio; sugestão de tamanho: 980 × 360. A fonte consulta os recursos a cada três segundos. Gerar outra URL revoga a anterior. Trate a URL como segredo de leitura da ficha visual e não a publique.
 
-Para usar banco e caixa de email do Compose no desenvolvimento, rode `docker compose up -d db mailpit`; eles ficam disponíveis em `127.0.0.1:5433` e `127.0.0.1:8025`.
+A ficha também oferece uma URL de câmera + portrait, recomendada como Browser Source de 1920 × 1080. Essa fonte exige login no OBS pelo botão **Interagir** e mostra a câmera do dono do personagem quando ele estiver na sala com vídeo ligado. O OBS entra como outra conexão sem publicar câmera nem microfone. O comportamento com vídeo real ainda depende de um teste com RealtimeKit configurado e duas sessões de navegador.
 
-Para conferir: `dotnet build api/Chronicles.Api/Chronicles.Api.csproj`, `npm run lint` e `npm run build` em `web`, `docker compose config` e `node scripts/smoke.mjs` com o stack em execução. Para incluir recuperação de senha no smoke test, defina `SMOKE_MAILPIT_URL=http://127.0.0.1:8025`.
+## Cloudflare Pages
 
-## Publicação
+O Angular é publicado em **Cloudflare Pages**. Uma Pages Function em `/api/*` chama o Worker `cronicas-api` por service binding; esse Worker executa a API .NET em Cloudflare Containers. O navegador usa sempre a origem de Pages, inclusive para os cookies de sessão. O PostgreSQL persistente fica fora do Container e precisa aceitar conexões TLS, com backup definido. Consulte [o guia de implantação](docs/cloudflare-pages.md) para a configuração e a ordem de publicação.
 
-O frontend está preparado para Cloudflare Pages com raiz `web`, build `npm run build` e diretório `dist/cronicas/browser`. Configure `API_ORIGIN` com a origem HTTPS do backend; a Pages Function encaminha `/api` ao Render. Configure `ALLOWED_ORIGINS` no backend com a origem pública do frontend. O backend usa `api/Chronicles.Api/Dockerfile` e `ConnectionStrings__Default` para PostgreSQL persistente. Em produção, configure um servidor SMTP real com TLS; Mailpit é apenas para desenvolvimento.
+O frontend inclui SDK e UI Kit RealtimeKit em versões fixadas e carrega a sala sob demanda. O teste com mídia real requer conta Cloudflare, aplicativo RealtimeKit e participantes simultâneos.
 
-Não publique o banco sem backups. Não inclua `.env` em controle de versão.
+## Verificação
+
+- `dotnet build api/Chronicles.Api/Chronicles.Api.csproj`
+- `npm run lint`, `npx tsc --noEmit -p tsconfig.app.json` e `npm run build` em `web`
+- `node scripts/smoke.mjs` com o stack em execução (`SMOKE_BASE_URL` define a origem). O smoke cobre contas, campanhas, convites, autorização, personagens e revogação de URL OBS. `SMOKE_MAILPIT_URL` ativa a verificação de recuperação de senha.
 
 ## Estrutura
 
-- `api/Chronicles.Api`: API, domínio inicial, EF Core e migração.
+- `api/Chronicles.Api`: API, EF Core e migrações.
 - `web`: Angular e design system.
-- `docs/architecture.md`: decisões, fluxos e fases seguintes.
+- `cloudflare/worker.js`, `wrangler.jsonc`: publicação serverless.
+- `docs/architecture.md`: decisões e próximos módulos.
 
-## Segurança e escopo
-
-As sessões são cookies HttpOnly. As senhas são armazenadas com hash; a recuperação usa códigos de uso único e revoga sessões antigas. As campanhas são isoladas por participação no servidor. Convites, personagens e conteúdo narrativo pertencem às fases seguintes; consulte o plano em `docs/architecture.md`.
+Não inclua `.env` ou credenciais no repositório. Consulte `docs/architecture.md` para limites atuais e próximos passos.
