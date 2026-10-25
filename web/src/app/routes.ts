@@ -7,6 +7,7 @@ import { AuthPage, CampaignDetailPage, CampaignFormPage, CampaignsPage, Dashboar
 import { CharacterEditorPage, CharactersPage, ObsOverlayPage } from './studio-pages';
 import { InvitePage } from './invite.page';
 import { NarrativePage } from './narrative.page';
+import { SystemsPage, SystemEditorPage } from './systems.page';
 
 const protectedRoute: CanActivateFn = (_route, state: RouterStateSnapshot) => {
   const api = inject(ApiService), router = inject(Router);
@@ -40,8 +41,8 @@ export const routes: Routes = [
     { path: 'characters/:id', component: CharacterEditorPage },
     { path: 'worlds', component: PlannedPage },
     { path: 'worlds/:id', component: PlannedPage },
-    { path: 'systems', component: PlannedPage },
-    { path: 'systems/:id', component: PlannedPage },
+    { path: 'systems', component: SystemsPage },
+    { path: 'systems/:id', component: SystemEditorPage },
     { path: 'profile', component: ProfilePage },
     { path: 'settings', component: PreferencesPage }
   ] },

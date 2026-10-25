@@ -5,11 +5,13 @@ import { catchError, map, Observable, of, tap } from 'rxjs';
 
 export type Accent = 'gold' | 'violet' | 'wine' | 'azure';
 export interface User { id: string; email: string; displayName: string; bio: string | null; accent: Accent; createdAt: string; }
-export interface Campaign { id: string; name: string; description: string; status: string; accentColor: string; role: string; updatedAt: string; }
+export interface Campaign { id: string; name: string; description: string; status: string; accentColor: string; role: string; updatedAt: string; systemId: string | null; }
 export interface Dashboard { totalCampaigns: number; activeCampaigns: number; recentCampaigns: Campaign[]; }
 export interface Page<T> { items: T[]; total: number; page: number; }
-export interface Character { id: string; campaignId: string; ownerId: string; canEdit: boolean; name: string; portraitUrl: string | null; backgroundUrl: string | null; health: number; maxHealth: number; sanity: number; maxSanity: number; mana: number; maxMana: number; updatedAt: string; }
-export type CharacterInput = Pick<Character, 'name' | 'portraitUrl' | 'backgroundUrl' | 'health' | 'maxHealth' | 'sanity' | 'maxSanity' | 'mana' | 'maxMana'>;
+export interface Character { id: string; campaignId: string; ownerId: string; canEdit: boolean; name: string; portraitUrl: string | null; backgroundUrl: string | null; health: number; maxHealth: number; sanity: number; maxSanity: number; mana: number; maxMana: number; fields: Record<string, string | number | boolean>; updatedAt: string; }
+export type CharacterInput = Pick<Character, 'name' | 'portraitUrl' | 'backgroundUrl' | 'health' | 'maxHealth' | 'sanity' | 'maxSanity' | 'mana' | 'maxMana' | 'fields'>;
+export interface SystemField { key: string; label: string; type: 'text' | 'longtext' | 'number' | 'boolean' | 'select'; section: string; min: number | null; max: number | null; options: string[] | null; }
+export interface RpgSystem { id: string; ownerId: string | null; name: string; description: string; fields: SystemField[]; createdAt: string; updatedAt: string; }
 export interface InvitePreview { campaignId: string; campaignName: string; role: string; expiresAt: string; }
 export type NarrativeKind = 'sessions' | 'documents' | 'wiki';
 export interface NarrativeEntry { id: string; campaignId: string; authorId: string; kind: NarrativeKind; title: string; body: string; category: string; visibility: 'campaign' | 'private' | 'gm'; eventAt: string | null; revealedAt: string | null; createdAt: string; updatedAt: string; revision: number; }
@@ -44,6 +46,12 @@ export class ApiService {
   createCampaign(data: { name: string; description: string; accentColor: string }) { return this.http.post<Campaign>('/api/campaigns', data, { withCredentials: true }); }
   updateCampaign(id: string, data: { name: string; description: string; accentColor: string }) { return this.http.patch<Campaign>(`/api/campaigns/${id}`, data, { withCredentials: true }); }
   setCampaignStatus(id: string, status: string) { return this.http.patch<void>(`/api/campaigns/${id}/status`, { status }, { withCredentials: true }); }
+  setCampaignSystem(id: string, systemId: string) { return this.http.patch<void>(`/api/campaigns/${id}/system`, { systemId }, { withCredentials: true }); }
+  systems() { return this.http.get<RpgSystem[]>('/api/systems', { withCredentials: true }); }
+  system(id: string) { return this.http.get<RpgSystem>(`/api/systems/${id}`, { withCredentials: true }); }
+  createSystem(data: Pick<RpgSystem, 'name' | 'description' | 'fields'>) { return this.http.post<RpgSystem>('/api/systems', data, { withCredentials: true }); }
+  updateSystem(id: string, data: Pick<RpgSystem, 'name' | 'description' | 'fields'>) { return this.http.put<RpgSystem>(`/api/systems/${id}`, data, { withCredentials: true }); }
+  deleteSystem(id: string) { return this.http.delete<void>(`/api/systems/${id}`, { withCredentials: true }); }
   characters(campaignId: string) { return this.http.get<Character[]>(`/api/campaigns/${campaignId}/characters`, { withCredentials: true }); }
   character(id: string) { return this.http.get<Character>(`/api/characters/${id}`, { withCredentials: true }); }
   createCharacter(campaignId: string, data: CharacterInput) { return this.http.post<Character>(`/api/campaigns/${campaignId}/characters`, data, { withCredentials: true }); }
