@@ -1,6 +1,6 @@
 # Crônicas
 
-Workspace de campanhas de RPG de mesa com contas, convites, fichas, sistemas editáveis, universos, wiki, documentos, sessões, dados, chat e encontros. A sala usa WebRTC direto entre navegadores para câmeras e múltiplas telas; portraits e recursos têm fontes para OBS.
+Workspace de campanhas de RPG de mesa com contas e controle de sessões, convites, fichas, sistemas editáveis, universos, wiki, documentos, sessões, dados, chat e encontros. A sala usa WebRTC direto entre navegadores para câmeras e múltiplas telas; portraits e recursos têm fontes para OBS.
 
 O produto não inclui tabletop/VTT. A produção usa Cloudflare Pages, API .NET no Render Free e PostgreSQL no Neon. A transmissão ainda precisa de validação com navegadores e OBS reais.
 

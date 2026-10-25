@@ -19,6 +19,7 @@ builder.Services.AddScoped<PasswordRecoveryService>();
 builder.Services.AddSingleton<SmtpEmailSender>();
 builder.Services.AddSignalR(options => options.MaximumReceiveMessageSize = 128 * 1024);
 builder.Services.AddSingleton<RoomRegistry>();
+builder.Services.AddSingleton<RoomAccessService>();
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks().AddDbContextCheck<AppDbContext>();
 builder.Services.AddRateLimiter(options =>
@@ -121,6 +122,29 @@ auth.MapGet("/me", async Task<IResult> (HttpContext http, AppDbContext db) =>
     var user = await db.Users.FindAsync(id);
     return user is null ? Results.Unauthorized() : Results.Ok(ToUser(user));
 });
+
+auth.MapGet("/sessions", async Task<IResult> (HttpContext http, AppDbContext db) =>
+{
+    if (CurrentUserId(http) is not { } userId) return Results.Unauthorized();
+    var currentId = http.Items["sessionId"] is Guid sessionId ? sessionId : Guid.Empty;
+    var sessions = await db.UserSessions.AsNoTracking()
+        .Where(x => x.UserId == userId && x.RevokedAt == null && x.ExpiresAt > DateTime.UtcNow)
+        .OrderByDescending(x => x.CreatedAt).Take(50)
+        .Select(x => new { x.Id, x.CreatedAt, x.ExpiresAt, current = x.Id == currentId }).ToListAsync();
+    return Results.Ok(sessions);
+});
+
+auth.MapDelete("/sessions/{sessionId:guid}", async Task<IResult> (Guid sessionId, HttpContext http, AppDbContext db, RoomAccessService rooms) =>
+{
+    if (CurrentUserId(http) is not { } userId) return Results.Unauthorized();
+    if (http.Items["sessionId"] is Guid currentId && currentId == sessionId)
+        return Results.ValidationProblem(new Dictionary<string, string[]> { ["session"] = ["Use Sair da conta para encerrar a sessão atual."] });
+    var changed = await db.UserSessions.Where(x => x.Id == sessionId && x.UserId == userId && x.RevokedAt == null)
+        .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.RevokedAt, DateTime.UtcNow));
+    if (changed == 0) return Results.NotFound();
+    await rooms.RevokeSession(sessionId);
+    return Results.NoContent();
+}).RequireRateLimiting("auth");
 
 auth.MapPost("/logout", async Task<IResult> (HttpContext http, SessionService sessions) =>
 {

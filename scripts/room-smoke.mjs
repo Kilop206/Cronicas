@@ -87,6 +87,22 @@ try {
   const refreshed = await hubs[2].invoke('JoinCampaign', id, 'room');
   assert(refreshed.some(x => x.connectionId === hubs[0].connectionId), 'Changed role rejoins room');
   await hubs[2].invoke('SetMediaState', true, false);
+  const extraLogin = await request('/api/auth/login', { method: 'POST', body: {
+    email: `spectator-${suffix}@example.test`, password: 'room-smoke-password-123',
+  } });
+  assert(extraLogin.status === 200 && extraLogin.cookie, 'Extra session created');
+  const extraHub = connection(extraLogin.cookie);
+  hubs.push(extraHub);
+  await extraHub.start();
+  await extraHub.invoke('JoinCampaign', id, 'obs');
+  const accountSessions = await request('/api/auth/sessions', { cookie: spectator.cookie });
+  const extraSession = accountSessions.body?.find(x => !x.current);
+  assert(accountSessions.status === 200 && extraSession, 'Extra session listed');
+  const accessRevoked = event(extraHub, 'MembershipChanged');
+  const ended = await request(`/api/auth/sessions/${extraSession.id}`, { method: 'DELETE', cookie: spectator.cookie });
+  assert(ended.status === 204, 'Session revoked');
+  await accessRevoked;
+  await rejects(extraHub.invoke('JoinCampaign', id, 'obs'), /negado|denied/i);
   console.log('Room signaling, authorization, spectator and revocation passed');
 } finally {
   await Promise.allSettled(hubs.map(hub => hub.stop()));

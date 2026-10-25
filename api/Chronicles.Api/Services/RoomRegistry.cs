@@ -6,17 +6,20 @@ public sealed record RoomPeer(string ConnectionId, Guid CampaignId, Guid UserId,
 public sealed class RoomRegistry
 {
     private readonly Dictionary<string, RoomPeer> peers = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, Guid> sessions = new(StringComparer.Ordinal);
     private readonly Dictionary<string, (DateTime Started, int Count)> signalWindows = new(StringComparer.Ordinal);
     private readonly object gate = new();
 
-    public IReadOnlyList<RoomPeer> Join(RoomPeer peer)
+    public IReadOnlyList<RoomPeer> Join(RoomPeer peer, Guid sessionId)
     {
         lock (gate)
         {
             peers.Remove(peer.ConnectionId);
+            sessions.Remove(peer.ConnectionId);
             signalWindows.Remove(peer.ConnectionId);
             var existing = peers.Values.Where(x => x.CampaignId == peer.CampaignId).ToArray();
             peers.Add(peer.ConnectionId, peer);
+            sessions.Add(peer.ConnectionId, sessionId);
             return existing;
         }
     }
@@ -24,6 +27,11 @@ public sealed class RoomRegistry
     public RoomPeer? Get(string connectionId)
     {
         lock (gate) return peers.GetValueOrDefault(connectionId);
+    }
+
+    public Guid? SessionFor(string connectionId)
+    {
+        lock (gate) return sessions.TryGetValue(connectionId, out var id) ? id : null;
     }
 
     public bool SameCampaign(string sourceId, string targetId, Guid campaignId)
@@ -48,6 +56,7 @@ public sealed class RoomRegistry
         lock (gate)
         {
             signalWindows.Remove(connectionId);
+            sessions.Remove(connectionId);
             return peers.Remove(connectionId, out var peer) ? peer : null;
         }
     }
@@ -71,8 +80,35 @@ public sealed class RoomRegistry
         lock (gate)
         {
             var removed = peers.Values.Where(x => x.CampaignId == campaignId && x.UserId == userId).ToArray();
-            foreach (var peer in removed) { peers.Remove(peer.ConnectionId); signalWindows.Remove(peer.ConnectionId); }
+            foreach (var peer in removed) RemoveCore(peer.ConnectionId);
             return removed;
         }
+    }
+
+    public IReadOnlyList<RoomPeer> RemoveSession(Guid sessionId)
+    {
+        lock (gate)
+        {
+            var removed = peers.Values.Where(x => sessions.GetValueOrDefault(x.ConnectionId) == sessionId).ToArray();
+            foreach (var peer in removed) RemoveCore(peer.ConnectionId);
+            return removed;
+        }
+    }
+
+    public IReadOnlyList<RoomPeer> RemoveAllUser(Guid userId)
+    {
+        lock (gate)
+        {
+            var removed = peers.Values.Where(x => x.UserId == userId).ToArray();
+            foreach (var peer in removed) RemoveCore(peer.ConnectionId);
+            return removed;
+        }
+    }
+
+    private void RemoveCore(string connectionId)
+    {
+        peers.Remove(connectionId);
+        sessions.Remove(connectionId);
+        signalWindows.Remove(connectionId);
     }
 }

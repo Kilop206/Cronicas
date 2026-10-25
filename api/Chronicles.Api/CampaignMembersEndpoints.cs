@@ -1,7 +1,6 @@
 using System.Security.Claims;
 using Chronicles.Api.Data;
 using Chronicles.Api.Services;
-using Microsoft.AspNetCore.SignalR;
 using Microsoft.EntityFrameworkCore;
 
 namespace Chronicles.Api;
@@ -19,7 +18,7 @@ public static class CampaignMembersEndpoints
             return Results.Ok(members);
         });
 
-        api.MapPatch("/campaigns/{campaignId:guid}/members/{memberId:guid}", async Task<IResult> (Guid campaignId, Guid memberId, RoleInput input, HttpContext http, AppDbContext db, RoomRegistry rooms, IHubContext<CampaignRoomHub> hub) =>
+        api.MapPatch("/campaigns/{campaignId:guid}/members/{memberId:guid}", async Task<IResult> (Guid campaignId, Guid memberId, RoleInput input, HttpContext http, AppDbContext db, RoomAccessService rooms) =>
         {
             if (UserId(http) is not { } userId) return Results.Unauthorized();
             if (!await db.Campaigns.AnyAsync(x => x.Id == campaignId && x.OwnerId == userId)) return Results.NotFound();
@@ -30,11 +29,11 @@ public static class CampaignMembersEndpoints
             if (member.Role == input.Role) return Results.NoContent();
             member.Role = input.Role;
             await db.SaveChangesAsync();
-            await RevokeRoomAccess(rooms, hub, campaignId, memberId);
+            await rooms.RevokeCampaignMember(campaignId, memberId);
             return Results.NoContent();
         });
 
-        api.MapDelete("/campaigns/{campaignId:guid}/members/{memberId:guid}", async Task<IResult> (Guid campaignId, Guid memberId, HttpContext http, AppDbContext db, RoomRegistry rooms, IHubContext<CampaignRoomHub> hub) =>
+        api.MapDelete("/campaigns/{campaignId:guid}/members/{memberId:guid}", async Task<IResult> (Guid campaignId, Guid memberId, HttpContext http, AppDbContext db, RoomAccessService rooms) =>
         {
             if (UserId(http) is not { } userId) return Results.Unauthorized();
             var campaign = await db.Campaigns.AsNoTracking().SingleOrDefaultAsync(x => x.Id == campaignId);
@@ -45,19 +44,9 @@ public static class CampaignMembersEndpoints
             if (member is null) return Results.NotFound();
             db.CampaignMemberships.Remove(member);
             await db.SaveChangesAsync();
-            await RevokeRoomAccess(rooms, hub, campaignId, memberId);
+            await rooms.RevokeCampaignMember(campaignId, memberId);
             return Results.NoContent();
         });
-    }
-
-    private static async Task RevokeRoomAccess(RoomRegistry rooms, IHubContext<CampaignRoomHub> hub, Guid campaignId, Guid memberId)
-    {
-        foreach (var peer in rooms.RemoveUser(campaignId, memberId))
-        {
-            await hub.Groups.RemoveFromGroupAsync(peer.ConnectionId, CampaignRoomHub.Group(campaignId));
-            await hub.Clients.Client(peer.ConnectionId).SendAsync("MembershipChanged");
-            await hub.Clients.Group(CampaignRoomHub.Group(campaignId)).SendAsync("PeerLeft", peer.ConnectionId);
-        }
     }
 
     private static Guid? UserId(HttpContext http) => Guid.TryParse(http.User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : null;

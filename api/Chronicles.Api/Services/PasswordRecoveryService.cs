@@ -36,7 +36,7 @@ public sealed class SmtpEmailSender(IConfiguration configuration)
 }
 
 public sealed class PasswordRecoveryService(
-    AppDbContext db, IPasswordHasher<User> hasher, SmtpEmailSender emailSender, ILogger<PasswordRecoveryService> logger)
+    AppDbContext db, IPasswordHasher<User> hasher, SmtpEmailSender emailSender, ILogger<PasswordRecoveryService> logger, RoomAccessService rooms)
 {
     public bool IsConfigured => emailSender.IsConfigured;
 
@@ -82,6 +82,7 @@ public sealed class PasswordRecoveryService(
             .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.RevokedAt, DateTime.UtcNow));
         await db.SaveChangesAsync();
         await transaction.CommitAsync();
+        await rooms.RevokeUser(user.Id);
         return true;
     }
 

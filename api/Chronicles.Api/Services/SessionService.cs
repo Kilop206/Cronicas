@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Chronicles.Api.Services;
 
-public sealed class SessionService(AppDbContext db, IHostEnvironment environment)
+public sealed class SessionService(AppDbContext db, IHostEnvironment environment, RoomAccessService rooms)
 {
     private const string CookieName = "chronicles_session";
 
@@ -43,6 +43,7 @@ public sealed class SessionService(AppDbContext db, IHostEnvironment environment
             {
                 session.RevokedAt = DateTime.UtcNow;
                 await db.SaveChangesAsync();
+                await rooms.RevokeSession(id);
             }
         }
         context.Response.Cookies.Delete(CookieName, CookieOptions());

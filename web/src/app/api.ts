@@ -5,6 +5,7 @@ import { catchError, map, Observable, of, tap } from 'rxjs';
 
 export type Accent = 'gold' | 'violet' | 'wine' | 'azure';
 export interface User { id: string; email: string; displayName: string; bio: string | null; accent: Accent; createdAt: string; }
+export interface AccountSession { id: string; createdAt: string; expiresAt: string; current: boolean; }
 export interface Campaign { id: string; name: string; description: string; status: string; accentColor: string; role: string; updatedAt: string; systemId: string | null; worldId: string | null; }
 export interface Dashboard { totalCampaigns: number; activeCampaigns: number; recentCampaigns: Campaign[]; favoriteCharacters: FavoriteCharacter[]; upcomingSessions: UpcomingSession[]; }
 export interface UpcomingSession { id: string; campaignId: string; title: string; eventAt: string; campaignName: string; }
@@ -61,6 +62,8 @@ export class ApiService {
   login(email: string, password: string) { return this.http.post<User>('/api/auth/login', { email, password }, { withCredentials: true }).pipe(tap(user => { this.setUser(user); this.loaded = true; })); }
   register(displayName: string, email: string, password: string) { return this.http.post<User>('/api/auth/register', { displayName, email, password }, { withCredentials: true }).pipe(tap(user => { this.setUser(user); this.loaded = true; })); }
   logout() { return this.http.post<void>('/api/auth/logout', {}, { withCredentials: true }).pipe(tap(() => { this.setUser(null); this.loaded = true; })); }
+  sessions() { return this.http.get<AccountSession[]>('/api/auth/sessions', { withCredentials: true }); }
+  revokeSession(id: string) { return this.http.delete<void>(`/api/auth/sessions/${id}`, { withCredentials: true }); }
   updateProfile(displayName: string, bio: string) { return this.http.patch<User>('/api/profile', { displayName, bio }, { withCredentials: true }).pipe(tap(user => this.setUser(user))); }
   exportProfile() { return this.http.get('/api/profile/export', { withCredentials: true, responseType: 'blob' }); }
   updatePreferences(accent: Accent) { return this.http.patch<User>('/api/profile/preferences', { accent }, { withCredentials: true }).pipe(tap(user => this.setUser(user))); }
