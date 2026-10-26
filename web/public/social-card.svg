@@ -1,0 +1,22 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="630" viewBox="0 0 1200 630">
+  <rect width="1200" height="630" fill="#101419"/>
+  <path d="M36 36h1128v558H36z" fill="none" stroke="#303740" stroke-width="2"/>
+  <path d="M766 36v558" stroke="#303740" stroke-width="2"/>
+  <path d="M72 82h36v36H72z" fill="none" stroke="#b8a079" stroke-width="2"/>
+  <text x="80" y="109" fill="#d5bd91" font-family="Georgia,serif" font-size="29">C</text>
+  <text x="126" y="111" fill="#eeeae0" font-family="Georgia,serif" font-size="32" letter-spacing="-1">crônicas</text>
+  <text x="72" y="203" fill="#b8a079" font-family="Arial,sans-serif" font-size="16" font-weight="bold" letter-spacing="5">SEU PRÓXIMO CAPÍTULO</text>
+  <text x="68" y="296" fill="#eeeae0" font-family="Georgia,serif" font-size="62">Histórias que</text>
+  <text x="68" y="371" fill="#d5bd91" font-family="Georgia,serif" font-style="italic" font-size="62">continuam vivas.</text>
+  <text x="72" y="427" fill="#a9afb4" font-family="Arial,sans-serif" font-size="22">Campanhas, fichas e mundos para RPG de mesa.</text>
+  <path d="M72 490h620" stroke="#303740"/>
+  <text x="72" y="535" fill="#b8a079" font-family="Arial,sans-serif" font-size="16" letter-spacing="2">CRIE  ·  REÚNA  ·  CONTINUE</text>
+  <circle cx="966" cy="315" r="198" fill="none" stroke="#b8a079" stroke-opacity=".22" stroke-width="2"/>
+  <circle cx="966" cy="315" r="151" fill="none" stroke="#b8a079" stroke-opacity=".35" stroke-width="2"/>
+  <circle cx="966" cy="315" r="108" fill="#1d232a" stroke="#b8a079" stroke-width="2"/>
+  <text x="914" y="382" fill="#d5bd91" font-family="Georgia,serif" font-size="184">C</text>
+  <path d="M966 101v44M966 485v44M752 315h44M1136 315h44" stroke="#b8a079" stroke-width="2"/>
+  <circle cx="966" cy="101" r="5" fill="#b8a079"/>
+  <circle cx="966" cy="529" r="5" fill="#b8a079"/>
+  <text x="843" y="562" fill="#7e878e" font-family="Arial,sans-serif" font-size="14" letter-spacing="3">ARQUIVO DE MUNDOS</text>
+</svg>

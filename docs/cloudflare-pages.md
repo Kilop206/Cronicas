@@ -2,6 +2,8 @@
 
 O frontend Angular fica no Cloudflare Pages. A API ASP.NET Core roda como Web Service Docker no plano Free do Render. O banco PostgreSQL usa o projeto Neon dedicado `cronicas-production` em São Paulo. O navegador chama `/api/*` na origem de Pages; a Pages Function encaminha para a URL HTTPS fixa do Render definida por `API_ORIGIN`, inclusive os cookies de sessão. Credenciais ficam apenas no Render.
 
+Instância atual: [Crônicas](https://cronicas-bsy.pages.dev/) e [saúde da API](https://cronicas-api-r4nx.onrender.com/health). A origem Pages precisa constar em `ALLOWED_ORIGINS` no Render. O proxy usa `API_ORIGIN` como secret de produção do Pages.
+
 Cloudflare Containers exigem Workers Paid e não são usados neste projeto. O Render Free hiberna após 15 minutos sem tráfego; a primeira requisição pode demorar cerca de um minuto. O disco local do serviço é efêmero. Essa configuração serve a um grupo pequeno que aceite partidas ocasionais com início lento, sem garantia de disponibilidade contínua.
 
 ## Antes de publicar
@@ -14,6 +16,12 @@ Cloudflare Containers exigem Workers Paid e não são usados neste projeto. O Re
 6. Verifique cadastro, sessão, campanha e permissões pela URL publicada. `/api/auth/me` sem sessão deve responder 401.
 
 O deploy do Pages deve incluir a pasta `functions`; enviar somente os assets não publica o encaminhamento `/api/*`.
+
+## Indexação
+
+Apenas `/` é uma página pública indexável. `web/src/index.html` contém título, descrição, URL canônica, Open Graph, JSON-LD e conteúdo inicial legível sem JavaScript. `web/public/robots.txt` aponta para `sitemap.xml`, que contém somente a página inicial. A Function `web/functions/_middleware.ts` entrega o HTML da SPA em links diretos e marca rotas de conta, campanhas, convites, OBS e domínios de prévia com `X-Robots-Tag: noindex, nofollow, noarchive`. A API é excluída do rastreamento por `robots.txt`; autorização real permanece no backend.
+
+Ao adotar domínio próprio, atualize juntos a URL canônica, as tags sociais, o JSON-LD, o sitemap, o domínio de produção na Function e `ALLOWED_ORIGINS`. Para acompanhar a descoberta da página, verifique a propriedade no Google Search Console e envie `https://cronicas-bsy.pages.dev/sitemap.xml`; o sitemap facilita a descoberta, mas não garante inclusão nos resultados.
 
 ## Serviços opcionais
 
