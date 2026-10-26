@@ -65,5 +65,7 @@ var canvas = new SheetLayout("#8d6c9e", [new SheetPage("principal", "Principal",
 Check(SystemDefinition.ValidateLayout(canvas, []) is null, "Pagina livre com fundo HTTPS valida");
 Check(SystemDefinition.ValidateLayout(canvas with { Pages = [canvas.Pages[0] with { Blocks = [canvas.Pages[0].Blocks[0] with { X = 70 }] }] }, []) is not null, "Bloco fora da pagina livre rejeitado");
 Check(SystemDefinition.ValidateLayout(canvas with { Pages = [canvas.Pages[0] with { BackgroundUrl = "javascript:alert(1)" }] }, []) is not null, "URL de fundo insegura rejeitada");
+Check(SystemDefinition.ValidateLayout(canvas with { Skin = "investigation" }, []) is null, "Aparencia de investigacao valida");
+Check(SystemDefinition.ValidateLayout(canvas with { Skin = "script" }, []) is not null, "Aparencia desconhecida rejeitada");
 
 Console.WriteLine("Regras de dados: expressões válidas/inválidas, kh1, kl1, modificadores e d100 passaram.");

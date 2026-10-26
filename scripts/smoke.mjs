@@ -133,7 +133,7 @@ const staleCharacter = await request(`/api/characters/${characterId}`, { method:
 expect(staleCharacter.status === 409, 'Stale character update is rejected');
 const systems = await request('/api/systems', { cookie: ownerCookie });
 expect(systems.status === 200 && systems.body.length === 0, 'New account has no predefined systems');
-const sheetLayout = { accentColor: '#8d6c9e', pages: [{ id: 'principal', title: 'Principal', blocks: [
+const sheetLayout = { accentColor: '#8d6c9e', skin: 'investigation', pages: [{ id: 'principal', title: 'Principal', blocks: [
   { id: 'identidade', kind: 'identity', span: 8, title: 'Identidade', key: null, text: null, style: 'plain' },
   { id: 'coragem', kind: 'resource', span: 4, title: 'Coragem', key: 'coragem', maxKey: 'maxHealth', text: null, style: 'accent' }
 ] }] };
@@ -142,7 +142,7 @@ const systemInput = { name: 'Arquivo das Marés', description: 'Sistema autoral 
   { key: 'origem', label: 'Origem', type: 'text', section: 'Identidade', min: null, max: null, options: null, span: 12 }
 ] };
 const customSystem = await request('/api/systems', { method: 'POST', cookie: ownerCookie, body: systemInput });
-expect(customSystem.status === 201 && customSystem.body.fields.length === 2 && customSystem.body.fields[0].span === 4 && customSystem.body.layout.pages[0].blocks[1].key === 'coragem', 'Custom typed system and layout persisted');
+expect(customSystem.status === 201 && customSystem.body.fields.length === 2 && customSystem.body.fields[0].span === 4 && customSystem.body.layout.pages[0].blocks[1].key === 'coragem' && customSystem.body.layout.skin === 'investigation', 'Custom typed system and layout persisted');
 const invalidLayout = await request('/api/systems', { method: 'POST', cookie: ownerCookie, body: { ...systemInput, fields: [{ ...systemInput.fields[0], span: 13 }] } });
 expect(invalidLayout.status === 400, 'System layout width is validated');
 const invalidBlock = await request('/api/systems', { method: 'POST', cookie: ownerCookie, body: { ...systemInput, layout: { ...sheetLayout, pages: [{ ...sheetLayout.pages[0], blocks: [{ id: 'ruim', kind: 'resource', span: 6, key: 'coragem', maxKey: 'ausente' }] }] } } });
@@ -151,8 +151,8 @@ const canvasPage = { id: 'principal', title: 'Principal', layoutMode: 'canvas', 
   { id: 'identidade', kind: 'identity', span: 12, x: 5, y: 8, width: 60, height: 20, style: 'plain' },
   { id: 'coragem', kind: 'resource', span: 6, key: 'coragem', maxKey: 'maxHealth', x: 5, y: 32, width: 40, height: 18, style: 'accent' }
 ] };
-const canvasSystem = await request(`/api/systems/${customSystem.body.id}`, { method: 'PUT', cookie: ownerCookie, body: { ...systemInput, layout: { accentColor: '#8d6c9e', pages: [canvasPage] } } });
-expect(canvasSystem.status === 200 && canvasSystem.body.layout.pages[0].layoutMode === 'canvas', 'Free canvas layout persisted');
+const canvasSystem = await request(`/api/systems/${customSystem.body.id}`, { method: 'PUT', cookie: ownerCookie, body: { ...systemInput, layout: { accentColor: '#8d6c9e', skin: 'fantasy', pages: [canvasPage] } } });
+expect(canvasSystem.status === 200 && canvasSystem.body.layout.pages[0].layoutMode === 'canvas' && canvasSystem.body.layout.skin === 'fantasy', 'Free canvas layout and visual style persisted');
 const invalidCanvas = await request('/api/systems', { method: 'POST', cookie: ownerCookie, body: { ...systemInput, layout: { accentColor: '#8d6c9e', pages: [{ ...canvasPage, blocks: [{ ...canvasPage.blocks[0], x: 95, width: 60 }] }] } } });
 expect(invalidCanvas.status === 400, 'Free canvas rejects blocks outside page');
 const hiddenSystem = await request(`/api/systems/${customSystem.body.id}`, { cookie: second.cookie });
