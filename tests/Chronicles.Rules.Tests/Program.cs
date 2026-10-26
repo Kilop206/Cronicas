@@ -59,5 +59,11 @@ var maximum = field with { Key = "energia_maxima", Label = "Energia máxima" };
 var customResource = new SheetLayout("#8d6c9e", [new SheetPage("principal", "Principal", [new SheetBlock("energia", "resource", 6, Key: "energia", MaxKey: "energia_maxima")])]);
 Check(SystemDefinition.ValidateLayout(customResource, [current, maximum]) is null, "Recurso com campos numericos proprios valido");
 Check(SystemDefinition.ValidateLayout(customResource with { Pages = [new SheetPage("principal", "Principal", [new SheetBlock("energia", "resource", 6, Key: "energia", MaxKey: "inexistente")])] }, [current, maximum]) is not null, "Recurso com maximo inexistente rejeitado");
+var canvas = new SheetLayout("#8d6c9e", [new SheetPage("principal", "Principal", [
+    new SheetBlock("identidade", "identity", 12, X: 5, Y: 8, Width: 60, Height: 20)
+], "canvas", "https://example.org/fundo.png", 0.75)]);
+Check(SystemDefinition.ValidateLayout(canvas, []) is null, "Pagina livre com fundo HTTPS valida");
+Check(SystemDefinition.ValidateLayout(canvas with { Pages = [canvas.Pages[0] with { Blocks = [canvas.Pages[0].Blocks[0] with { X = 70 }] }] }, []) is not null, "Bloco fora da pagina livre rejeitado");
+Check(SystemDefinition.ValidateLayout(canvas with { Pages = [canvas.Pages[0] with { BackgroundUrl = "javascript:alert(1)" }] }, []) is not null, "URL de fundo insegura rejeitada");
 
 Console.WriteLine("Regras de dados: expressões válidas/inválidas, kh1, kl1, modificadores e d100 passaram.");

@@ -4,8 +4,10 @@ using System.Text.RegularExpressions;
 namespace Chronicles.Api;
 
 public sealed record SheetBlock(string Id, string Kind, int Span, string? Title = null, string? Key = null,
-    string? Text = null, string? Style = null, string? MaxKey = null);
-public sealed record SheetPage(string Id, string Title, SheetBlock[] Blocks);
+    string? Text = null, string? Style = null, string? MaxKey = null,
+    double? X = null, double? Y = null, double? Width = null, double? Height = null);
+public sealed record SheetPage(string Id, string Title, SheetBlock[] Blocks, string? LayoutMode = null,
+    string? BackgroundUrl = null, double? AspectRatio = null);
 public sealed record SheetLayout(string AccentColor, SheetPage[] Pages);
 public sealed record SystemDefinition(SystemField[] Fields, SheetLayout? Layout)
 {
@@ -35,6 +37,12 @@ public sealed record SystemDefinition(SystemField[] Fields, SheetLayout? Layout)
             if (page is null || page.Id is null || !IdPattern.IsMatch(page.Id) || !pageIds.Add(page.Id)
                 || page.Title?.Trim().Length is not (>= 2 and <= 60) || page.Blocks is null || page.Blocks.Length is < 1 or > 40)
                 return "Página da ficha inválida ou repetida.";
+            if (page.LayoutMode is not (null or "grid" or "canvas")
+                || page.AspectRatio is < 0.5 or > 2
+                || page.BackgroundUrl is not null && (page.BackgroundUrl.Length > 2048
+                    || !Uri.TryCreate(page.BackgroundUrl, UriKind.Absolute, out var background)
+                    || background.Scheme != Uri.UriSchemeHttps))
+                return "Modo, proporção ou imagem de fundo da página inválidos.";
             total += page.Blocks.Length;
             if (total > 100) return "A ficha aceita até 100 blocos.";
             foreach (var block in page.Blocks)
@@ -58,6 +66,11 @@ public sealed record SystemDefinition(SystemField[] Fields, SheetLayout? Layout)
                     return "Bloco de texto vazio.";
                 if ((block.Kind is "inventory" or "abilities" or "history") && block.Span < 6)
                     return "Blocos de coleção precisam de pelo menos metade da largura.";
+                if (page.LayoutMode == "canvas" && (block.X is null or < 0 or > 95
+                    || block.Y is null or < 0 or > 95 || block.Width is null or < 5 or > 100
+                    || block.Height is null or < 5 or > 100 || block.X + block.Width > 100
+                    || block.Y + block.Height > 100))
+                    return "Posição de bloco fora dos limites da página livre.";
             }
         }
         return null;

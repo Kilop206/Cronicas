@@ -147,6 +147,14 @@ const invalidLayout = await request('/api/systems', { method: 'POST', cookie: ow
 expect(invalidLayout.status === 400, 'System layout width is validated');
 const invalidBlock = await request('/api/systems', { method: 'POST', cookie: ownerCookie, body: { ...systemInput, layout: { ...sheetLayout, pages: [{ ...sheetLayout.pages[0], blocks: [{ id: 'ruim', kind: 'resource', span: 6, key: 'coragem', maxKey: 'ausente' }] }] } } });
 expect(invalidBlock.status === 400, 'Custom resource cannot refer to missing maximum field');
+const canvasPage = { id: 'principal', title: 'Principal', layoutMode: 'canvas', aspectRatio: 0.75, backgroundUrl: 'https://example.org/fundo.png', blocks: [
+  { id: 'identidade', kind: 'identity', span: 12, x: 5, y: 8, width: 60, height: 20, style: 'plain' },
+  { id: 'coragem', kind: 'resource', span: 6, key: 'coragem', maxKey: 'maxHealth', x: 5, y: 32, width: 40, height: 18, style: 'accent' }
+] };
+const canvasSystem = await request(`/api/systems/${customSystem.body.id}`, { method: 'PUT', cookie: ownerCookie, body: { ...systemInput, layout: { accentColor: '#8d6c9e', pages: [canvasPage] } } });
+expect(canvasSystem.status === 200 && canvasSystem.body.layout.pages[0].layoutMode === 'canvas', 'Free canvas layout persisted');
+const invalidCanvas = await request('/api/systems', { method: 'POST', cookie: ownerCookie, body: { ...systemInput, layout: { accentColor: '#8d6c9e', pages: [{ ...canvasPage, blocks: [{ ...canvasPage.blocks[0], x: 95, width: 60 }] }] } } });
+expect(invalidCanvas.status === 400, 'Free canvas rejects blocks outside page');
 const hiddenSystem = await request(`/api/systems/${customSystem.body.id}`, { cookie: second.cookie });
 expect(hiddenSystem.status === 404, 'Private system hidden from outsider');
 const campaignSystem = await request(`/api/campaigns/${id}/system`, { method: 'PATCH', cookie: ownerCookie, body: { systemId: customSystem.body.id } });
