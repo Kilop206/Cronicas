@@ -46,7 +46,7 @@ export class SystemsPage implements OnInit {
           <label [class.selected]="mode === 'free'"><input type="radio" name="mode" [checked]="mode === 'free'" (change)="mode = 'free'"><span><strong>Livre</strong><small>Jogadores adicionam campos manualmente à própria ficha.</small></span></label>
           <label [class.selected]="mode === 'structured'"><input type="radio" name="mode" [checked]="mode === 'structured'" (change)="mode = 'structured'"><span><strong>Diagramada</strong><small>Você define páginas, blocos, campos e recursos da ficha.</small></span></label>
         </fieldset>
-        <div *ngIf="mode === 'structured'" class="designer-fields"><div class="section-heading"><h2>Diagrama da ficha</h2><button *ngIf="!readonly()" type="button" class="text-link" [disabled]="fields.length >= 50" (click)="addField()">Adicionar campo</button></div>
+        <div *ngIf="mode === 'structured'" class="designer-fields"><div class="section-heading designer-field-heading"><h2>Diagrama da ficha</h2><button *ngIf="!readonly()" type="button" class="button button-small secondary" [disabled]="fields.length >= 50" (click)="addField()"><span aria-hidden="true">+</span> Adicionar campo</button></div>
           <p class="muted">Defina os dados aqui e posicione cada campo no compositor de páginas abaixo.</p>
           <div class="editor-switch" role="group" aria-label="Modo de edição"><button type="button" [class.active]="editorMode === 'visual'" (click)="setEditorMode('visual')">Editor visual</button><button type="button" [class.active]="editorMode === 'json'" (click)="setEditorMode('json')">Definição JSON</button></div>
           <div *ngIf="editorMode === 'visual'"><div *ngFor="let field of fields; let i = index" class="system-field-editor">
@@ -76,6 +76,9 @@ export class SystemsPage implements OnInit {
     .designer-layout { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(320px, .85fr); align-items: start; gap: 22px; }
     .designer-controls, .designer-preview { min-width: 0; }
     .designer-preview { position: sticky; top: 20px; }
+    .designer-field-heading { align-items: center; flex-wrap: wrap; gap: 12px; }
+    .designer-field-heading h2 { margin: 0; }
+    .designer-field-heading .button { flex: 0 0 auto; }
     .mode-choice { border: 0; margin: 20px 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
     .mode-choice legend { color: var(--muted); font-size: 12px; }
     .mode-choice label { display: flex; align-items: flex-start; gap: 12px; margin: 8px 0 0; padding: 14px; border: 1px solid var(--border); border-radius: 5px; cursor: pointer; }
