@@ -247,7 +247,7 @@ public static class CharacterEndpoints
         if (values.Count > 50 || JsonSerializer.Serialize(values).Length > 20000) return new() { ["fields"] = ["Campos excedem o limite."] };
         var systemId = await db.Campaigns.Where(x => x.Id == campaignId).Select(x => x.SystemId).SingleAsync();
         var schema = systemId is null ? null : await db.RpgSystems.Where(x => x.Id == systemId).Select(x => x.SchemaJson).SingleAsync();
-        SystemField[] fields = schema is null ? [] : JsonSerializer.Deserialize<SystemField[]>(schema) ?? [];
+        SystemField[] fields = schema is null ? [] : SystemDefinition.Read(schema).Fields;
         var byKey = fields.ToDictionary(x => x.Key);
         var previous = previousJson is null ? new Dictionary<string, JsonElement>() : JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(previousJson) ?? [];
         foreach (var (key, value) in values)

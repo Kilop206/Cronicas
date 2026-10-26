@@ -33,7 +33,7 @@ public static class SystemEndpoints
             if (UserId(http) is not { } userId) return Results.Unauthorized();
             var errors = Validate(input);
             if (errors.Count > 0) return Results.ValidationProblem(errors);
-            var system = new RpgSystem { OwnerId = userId, Name = input.Name.Trim(), Description = input.Description.Trim(), SchemaJson = JsonSerializer.Serialize(input.Fields) };
+            var system = new RpgSystem { OwnerId = userId, Name = input.Name.Trim(), Description = input.Description.Trim(), SchemaJson = JsonSerializer.Serialize(new SystemDefinition(input.Fields, input.Layout)) };
             db.RpgSystems.Add(system);
             await db.SaveChangesAsync();
             return Results.Created($"/api/systems/{system.Id}", View(system));
@@ -46,7 +46,7 @@ public static class SystemEndpoints
             if (system is null) return Results.NotFound();
             var errors = Validate(input);
             if (errors.Count > 0) return Results.ValidationProblem(errors);
-            system.Name = input.Name.Trim(); system.Description = input.Description.Trim(); system.SchemaJson = JsonSerializer.Serialize(input.Fields); system.UpdatedAt = DateTime.UtcNow;
+            system.Name = input.Name.Trim(); system.Description = input.Description.Trim(); system.SchemaJson = JsonSerializer.Serialize(new SystemDefinition(input.Fields, input.Layout)); system.UpdatedAt = DateTime.UtcNow;
             await db.SaveChangesAsync();
             return Results.Ok(View(system));
         });
@@ -75,7 +75,11 @@ public static class SystemEndpoints
     }
 
     private static Guid? UserId(HttpContext http) => Guid.TryParse(http.User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : null;
-    private static object View(RpgSystem system) => new { system.Id, system.OwnerId, system.Name, system.Description, fields = JsonSerializer.Deserialize<SystemField[]>(system.SchemaJson), system.CreatedAt, system.UpdatedAt };
+    private static object View(RpgSystem system)
+    {
+        var definition = SystemDefinition.Read(system.SchemaJson);
+        return new { system.Id, system.OwnerId, system.Name, system.Description, fields = definition.Fields, layout = definition.Layout, system.CreatedAt, system.UpdatedAt };
+    }
     private static Dictionary<string, string[]> Validate(SystemInput input)
     {
         var errors = new Dictionary<string, string[]>();
@@ -91,8 +95,10 @@ public static class SystemEndpoints
                 || field.Type == "select" && (field.Options is null || field.Options.Length is < 1 or > 30 || field.Options.Any(x => string.IsNullOrWhiteSpace(x) || x.Length > 80)))
             { errors["fields"] = ["Campo inválido, chave repetida ou limites fora do intervalo."]; break; }
         }
+        var layoutError = SystemDefinition.ValidateLayout(input.Layout, input.Fields);
+        if (layoutError is not null) errors["layout"] = [layoutError];
         return errors;
     }
-    public sealed record SystemInput(string Name, string Description, SystemField[] Fields);
+    public sealed record SystemInput(string Name, string Description, SystemField[] Fields, SheetLayout? Layout = null);
     public sealed record SetSystemInput(Guid? SystemId);
 }

@@ -43,4 +43,16 @@ Check(!rooms.SameCampaign("other", "obs", campaign), "Outro participante nao pod
 Check(!rooms.SameCampaign("obs", "other", campaign), "OBS nao pode sinalizar a outro participante");
 Check(!rooms.SameCampaign("owner", "obs", Guid.NewGuid()), "Sinalizacao bloqueada entre campanhas");
 
+var field = new SystemField("forca", "Força", "number", "Atributos", 0, 20, null, 4);
+var layout = new SheetLayout("#8d6c9e", [new SheetPage("principal", "Principal", [
+    new SheetBlock("identidade", "identity", 8),
+    new SheetBlock("atributo", "field", 4, Key: "forca"),
+    new SheetBlock("vida", "resource", 6, Key: "health")
+])]);
+Check(SystemDefinition.ValidateLayout(layout, [field]) is null, "Layout de ficha valido");
+var stored = System.Text.Json.JsonSerializer.Serialize(new SystemDefinition([field], layout));
+Check(SystemDefinition.Read(stored).Layout?.Pages[0].Blocks.Length == 3, "Layout persiste no esquema");
+Check(SystemDefinition.Read(System.Text.Json.JsonSerializer.Serialize(new[] { field })).Layout is null, "Esquema antigo permanece legivel");
+Check(SystemDefinition.ValidateLayout(layout with { Pages = [new SheetPage("principal", "Principal", [new SheetBlock("invalido", "field", 6, Key: "ausente")])] }, [field]) is not null, "Referencia de campo invalida rejeitada");
+
 Console.WriteLine("Regras de dados: expressões válidas/inválidas, kh1, kl1, modificadores e d100 passaram.");
