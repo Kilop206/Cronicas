@@ -22,7 +22,10 @@ export type InventoryInput = Pick<InventoryItem, 'name' | 'category' | 'quantity
 export interface CharacterAbility { id: string; characterId: string; name: string; description: string; cost: string; effect: string; duration: string; limitations: string; recharge: string; rollExpression: string | null; version: number; createdAt: string; updatedAt: string; }
 export type AbilityInput = Pick<CharacterAbility, 'name' | 'description' | 'cost' | 'effect' | 'duration' | 'limitations' | 'recharge' | 'rollExpression' | 'version'>;
 export interface SystemField { key: string; label: string; type: 'text' | 'longtext' | 'number' | 'boolean' | 'select'; section: string; min: number | null; max: number | null; options: string[] | null; span?: number | null; }
-export interface RpgSystem { id: string; ownerId: string | null; name: string; description: string; fields: SystemField[]; createdAt: string; updatedAt: string; }
+export interface SheetBlock { id: string; kind: 'identity' | 'portrait' | 'resource' | 'field' | 'note' | 'inventory' | 'abilities' | 'history'; span: number; title: string | null; key: string | null; maxKey?: string | null; text: string | null; style: 'panel' | 'plain' | 'accent' | null; }
+export interface SheetPage { id: string; title: string; blocks: SheetBlock[]; }
+export interface SheetLayout { accentColor: string; pages: SheetPage[]; }
+export interface RpgSystem { id: string; ownerId: string | null; name: string; description: string; fields: SystemField[]; layout: SheetLayout | null; createdAt: string; updatedAt: string; }
 export interface CampaignMember { userId: string; displayName: string; role: string; joinedAt: string; }
 export interface World { id: string; ownerId: string; name: string; description: string; createdAt: string; updatedAt: string; }
 export interface WorldDetail extends World { campaigns: { campaignId: string; name: string; role: string }[]; }
@@ -110,8 +113,8 @@ export class ApiService {
   deleteEncounter(id: string) { return this.http.delete<void>(`/api/encounters/${id}`, { withCredentials: true }); }
   systems() { return this.http.get<RpgSystem[]>('/api/systems', { withCredentials: true }); }
   system(id: string) { return this.http.get<RpgSystem>(`/api/systems/${id}`, { withCredentials: true }); }
-  createSystem(data: Pick<RpgSystem, 'name' | 'description' | 'fields'>) { return this.http.post<RpgSystem>('/api/systems', data, { withCredentials: true }); }
-  updateSystem(id: string, data: Pick<RpgSystem, 'name' | 'description' | 'fields'>) { return this.http.put<RpgSystem>(`/api/systems/${id}`, data, { withCredentials: true }); }
+  createSystem(data: Pick<RpgSystem, 'name' | 'description' | 'fields' | 'layout'>) { return this.http.post<RpgSystem>('/api/systems', data, { withCredentials: true }); }
+  updateSystem(id: string, data: Pick<RpgSystem, 'name' | 'description' | 'fields' | 'layout'>) { return this.http.put<RpgSystem>(`/api/systems/${id}`, data, { withCredentials: true }); }
   deleteSystem(id: string) { return this.http.delete<void>(`/api/systems/${id}`, { withCredentials: true }); }
   characters(campaignId: string) { return this.http.get<Character[]>(`/api/campaigns/${campaignId}/characters`, { withCredentials: true }); }
   npcs(campaignId: string, page = 1, search = '') { return this.http.get<Page<Npc>>(`/api/campaigns/${campaignId}/npcs`, { params: { page, search }, withCredentials: true }); }
