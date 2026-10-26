@@ -15,8 +15,8 @@ const resources: Record<ResourceKey, { label: string; max: MaxResourceKey }> = {
 @Component({ selector: 'app-sheet-layout', standalone: true, imports: [CommonModule, FormsModule, CharacterInventoryComponent, CharacterAbilitiesComponent, CharacterHistoryPanelComponent], template: `
   <div class="sheet-canvas" [style.--sheet-accent]="layout.accentColor">
     <nav *ngIf="mode !== 'print'" class="custom-sheet-tabs" aria-label="Páginas da ficha"><button *ngFor="let page of layout.pages" type="button" [class.active]="activePage().id === page.id" (click)="selectedPageId.set(page.id)">{{ page.title }}</button></nav>
-    <section *ngFor="let page of visiblePages()" class="sheet-canvas-page"><h3>{{ page.title }}</h3><div class="sheet-canvas-grid">
-      <div *ngFor="let block of page.blocks" class="sheet-canvas-block" [class.plain]="block.style === 'plain'" [class.accent]="block.style === 'accent'" [style.grid-column]="'span ' + block.span">
+    <section *ngFor="let page of visiblePages()" class="sheet-canvas-page"><h3>{{ page.title }}</h3><div class="sheet-canvas-grid" [class.free-canvas]="page.layoutMode === 'canvas'" [style.aspect-ratio]="page.layoutMode === 'canvas' ? page.aspectRatio || 0.75 : null" [style.background-image]="page.layoutMode === 'canvas' && page.backgroundUrl ? 'url(' + page.backgroundUrl + ')' : null">
+      <div *ngFor="let block of page.blocks" class="sheet-canvas-block" [class.plain]="block.style === 'plain'" [class.accent]="block.style === 'accent'" [style.grid-column]="'span ' + block.span" [style.left.%]="page.layoutMode === 'canvas' ? block.x : null" [style.top.%]="page.layoutMode === 'canvas' ? block.y : null" [style.width.%]="page.layoutMode === 'canvas' ? block.width : null" [style.height.%]="page.layoutMode === 'canvas' ? block.height : null">
         <small>{{ block.title || blockLabel(block) }}</small>
         <ng-container *ngIf="block.kind === 'identity'">
           <label *ngIf="mode === 'edit'">Nome<input [ngModel]="draft.name" (ngModelChange)="draft.name = $event; changed.emit()" [ngModelOptions]="{standalone: true}" required minlength="2" maxlength="120"></label>

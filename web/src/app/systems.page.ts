@@ -69,7 +69,7 @@ export class SystemsPage implements OnInit {
       </section>
       <aside class="editor-panel designer-preview"><div class="panel-heading"><span>PRÉVIA</span><h2>Ficha montada</h2></div>
         <p *ngIf="mode === 'free'" class="room-note">Ficha livre: cada jogador adiciona seus próprios campos.</p>
-        <app-sheet-layout-preview *ngIf="mode === 'structured'" [layout]="layout" [fields]="fields" />
+        <app-sheet-layout-preview *ngIf="mode === 'structured'" [layout]="layout" [fields]="fields" [readOnly]="readonly()" />
       </aside>
     </form>
   </main>`, styles: [`
@@ -97,7 +97,7 @@ export class SystemEditorPage implements OnInit {
   fields: SystemField[] = []; loading = signal(!this.isNew); busy = signal(false); saved = signal(false); error = signal('');
   ngOnInit() { if (!this.isNew) this.api.system(this.id).pipe(finalize(() => this.loading.set(false))).subscribe({ next: system => { this.name = system.name; this.description = system.description; this.fields = system.fields.map(f => ({ ...f, span: f.span || 6, options: f.options?.slice() || null })); this.layout = system.layout || layoutFromFields(this.fields); this.mode = (system.layout || this.fields.length) ? 'structured' : 'free'; this.ownerId = system.ownerId; }, error: e => this.error.set(apiError(e)) }); }
   readonly() { return !this.isNew && this.ownerId !== this.api.user()?.id; }
-  addField() { if (this.fields.length >= 50) return; let number = 1; while (this.fields.some(field => field.key === `campo_${number}`)) number++; const key = `campo_${number}`; this.fields.push({ key, label: '', section: 'Geral', type: 'text', min: null, max: null, options: null, span: 6 }); const page = this.layout.pages.find(item => item.blocks.length < 40); if (page && this.layout.pages.reduce((count, item) => count + item.blocks.length, 0) < 100) page.blocks.push({ id: `bloco_${key}`, kind: 'field', span: 6, title: null, key, text: null, style: 'panel' }); }
+  addField() { if (this.fields.length >= 50) return; let number = 1; while (this.fields.some(field => field.key === `campo_${number}`)) number++; const key = `campo_${number}`; this.fields.push({ key, label: '', section: 'Geral', type: 'text', min: null, max: null, options: null, span: 6 }); const page = this.layout.pages.find(item => item.blocks.length < 40); if (page && this.layout.pages.reduce((count, item) => count + item.blocks.length, 0) < 100) { const index = page.blocks.length; page.blocks.push({ id: `bloco_${key}`, kind: 'field', span: 6, title: null, key, text: null, style: 'panel', ...(page.layoutMode === 'canvas' ? { x: (index % 2) * 51, y: Math.min(Math.floor(index / 2) * 20, 80), width: 49, height: 18 } : {}) }); } }
   renameField(field: SystemField, key: string) { const previous = field.key; field.key = key; for (const page of this.layout.pages) for (const block of page.blocks) if (block.kind === 'field' && block.key === previous) block.key = key; }
   removeField(index: number) { const [field] = this.fields.splice(index, 1); for (const page of this.layout.pages) page.blocks = page.blocks.filter(block => block.kind !== 'field' || block.key !== field.key); }
   moveField(index: number, step: number) { const [item] = this.fields.splice(index, 1); this.fields.splice(index + step, 0, item); }
