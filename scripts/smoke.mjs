@@ -133,14 +133,20 @@ const staleCharacter = await request(`/api/characters/${characterId}`, { method:
 expect(staleCharacter.status === 409, 'Stale character update is rejected');
 const systems = await request('/api/systems', { cookie: ownerCookie });
 expect(systems.status === 200 && systems.body.length === 0, 'New account has no predefined systems');
-const systemInput = { name: 'Arquivo das Marés', description: 'Sistema autoral de teste', fields: [
+const sheetLayout = { accentColor: '#8d6c9e', pages: [{ id: 'principal', title: 'Principal', blocks: [
+  { id: 'identidade', kind: 'identity', span: 8, title: 'Identidade', key: null, text: null, style: 'plain' },
+  { id: 'coragem', kind: 'resource', span: 4, title: 'Coragem', key: 'coragem', maxKey: 'maxHealth', text: null, style: 'accent' }
+] }] };
+const systemInput = { name: 'Arquivo das Marés', description: 'Sistema autoral de teste', layout: sheetLayout, fields: [
   { key: 'coragem', label: 'Coragem', type: 'number', section: 'Atributos', min: 0, max: 10, options: null, span: 4 },
   { key: 'origem', label: 'Origem', type: 'text', section: 'Identidade', min: null, max: null, options: null, span: 12 }
 ] };
 const customSystem = await request('/api/systems', { method: 'POST', cookie: ownerCookie, body: systemInput });
-expect(customSystem.status === 201 && customSystem.body.fields.length === 2 && customSystem.body.fields[0].span === 4, 'Custom typed system and layout persisted');
+expect(customSystem.status === 201 && customSystem.body.fields.length === 2 && customSystem.body.fields[0].span === 4 && customSystem.body.layout.pages[0].blocks[1].key === 'coragem', 'Custom typed system and layout persisted');
 const invalidLayout = await request('/api/systems', { method: 'POST', cookie: ownerCookie, body: { ...systemInput, fields: [{ ...systemInput.fields[0], span: 13 }] } });
 expect(invalidLayout.status === 400, 'System layout width is validated');
+const invalidBlock = await request('/api/systems', { method: 'POST', cookie: ownerCookie, body: { ...systemInput, layout: { ...sheetLayout, pages: [{ ...sheetLayout.pages[0], blocks: [{ id: 'ruim', kind: 'resource', span: 6, key: 'coragem', maxKey: 'ausente' }] }] } } });
+expect(invalidBlock.status === 400, 'Custom resource cannot refer to missing maximum field');
 const hiddenSystem = await request(`/api/systems/${customSystem.body.id}`, { cookie: second.cookie });
 expect(hiddenSystem.status === 404, 'Private system hidden from outsider');
 const campaignSystem = await request(`/api/campaigns/${id}/system`, { method: 'PATCH', cookie: ownerCookie, body: { systemId: customSystem.body.id } });

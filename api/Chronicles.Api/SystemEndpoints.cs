@@ -95,6 +95,7 @@ public static class SystemEndpoints
                 || field.Type == "select" && (field.Options is null || field.Options.Length is < 1 or > 30 || field.Options.Any(x => string.IsNullOrWhiteSpace(x) || x.Length > 80)))
             { errors["fields"] = ["Campo inválido, chave repetida ou limites fora do intervalo."]; break; }
         }
+        if (errors.ContainsKey("fields")) return errors;
         var layoutError = SystemDefinition.ValidateLayout(input.Layout, input.Fields);
         if (layoutError is not null) errors["layout"] = [layoutError];
         return errors;

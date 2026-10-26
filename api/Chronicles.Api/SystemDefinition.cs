@@ -4,7 +4,7 @@ using System.Text.RegularExpressions;
 namespace Chronicles.Api;
 
 public sealed record SheetBlock(string Id, string Kind, int Span, string? Title = null, string? Key = null,
-    string? Text = null, string? Style = null);
+    string? Text = null, string? Style = null, string? MaxKey = null);
 public sealed record SheetPage(string Id, string Title, SheetBlock[] Blocks);
 public sealed record SheetLayout(string AccentColor, SheetPage[] Pages);
 public sealed record SystemDefinition(SystemField[] Fields, SheetLayout? Layout)
@@ -28,6 +28,7 @@ public sealed record SystemDefinition(SystemField[] Fields, SheetLayout? Layout)
         var pageIds = new HashSet<string>(StringComparer.Ordinal);
         var blockIds = new HashSet<string>(StringComparer.Ordinal);
         var fieldKeys = fields.Select(x => x.Key).ToHashSet(StringComparer.Ordinal);
+        var numericKeys = fields.Where(x => x.Type == "number").Select(x => x.Key).ToHashSet(StringComparer.Ordinal);
         var total = 0;
         foreach (var page in layout.Pages)
         {
@@ -44,8 +45,15 @@ public sealed record SystemDefinition(SystemField[] Fields, SheetLayout? Layout)
                     return "Bloco da ficha inválido ou repetido.";
                 if (block.Kind == "field" && (block.Key is null || !fieldKeys.Contains(block.Key)))
                     return "Um bloco aponta para um campo inexistente.";
-                if (block.Kind == "resource" && block.Key is not ("health" or "sanity" or "mana"))
-                    return "Recurso da ficha inválido.";
+                if (block.Kind == "resource")
+                {
+                    var builtIn = block.Key is "health" or "sanity" or "mana";
+                    if ((!builtIn && (block.Key is null || !numericKeys.Contains(block.Key)))
+                        || (!builtIn && block.MaxKey is null)
+                        || (block.MaxKey is not null && block.MaxKey is not ("maxHealth" or "maxSanity" or "maxMana") && !numericKeys.Contains(block.MaxKey))
+                        || block.Key == block.MaxKey)
+                        return "Recurso da ficha precisa de campos numéricos válidos para valor atual e máximo.";
+                }
                 if (block.Kind == "note" && string.IsNullOrWhiteSpace(block.Text))
                     return "Bloco de texto vazio.";
                 if ((block.Kind is "inventory" or "abilities" or "history") && block.Span < 6)

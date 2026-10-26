@@ -54,5 +54,10 @@ var stored = System.Text.Json.JsonSerializer.Serialize(new SystemDefinition([fie
 Check(SystemDefinition.Read(stored).Layout?.Pages[0].Blocks.Length == 3, "Layout persiste no esquema");
 Check(SystemDefinition.Read(System.Text.Json.JsonSerializer.Serialize(new[] { field })).Layout is null, "Esquema antigo permanece legivel");
 Check(SystemDefinition.ValidateLayout(layout with { Pages = [new SheetPage("principal", "Principal", [new SheetBlock("invalido", "field", 6, Key: "ausente")])] }, [field]) is not null, "Referencia de campo invalida rejeitada");
+var current = field with { Key = "energia", Label = "Energia" };
+var maximum = field with { Key = "energia_maxima", Label = "Energia máxima" };
+var customResource = new SheetLayout("#8d6c9e", [new SheetPage("principal", "Principal", [new SheetBlock("energia", "resource", 6, Key: "energia", MaxKey: "energia_maxima")])]);
+Check(SystemDefinition.ValidateLayout(customResource, [current, maximum]) is null, "Recurso com campos numericos proprios valido");
+Check(SystemDefinition.ValidateLayout(customResource with { Pages = [new SheetPage("principal", "Principal", [new SheetBlock("energia", "resource", 6, Key: "energia", MaxKey: "inexistente")])] }, [current, maximum]) is not null, "Recurso com maximo inexistente rejeitado");
 
 Console.WriteLine("Regras de dados: expressões válidas/inválidas, kh1, kl1, modificadores e d100 passaram.");
