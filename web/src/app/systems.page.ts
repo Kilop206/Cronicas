@@ -6,7 +6,7 @@ import { finalize } from 'rxjs';
 import { ApiService, RpgSystem, SheetLayout, SystemField, apiError } from './api';
 import { SheetLayoutDesignerComponent, SheetLayoutPreviewComponent } from './sheet-layout-designer.component';
 
-const newSheetLayout = (): SheetLayout => ({ accentColor: '#b8a079', pages: [
+const newSheetLayout = (): SheetLayout => ({ accentColor: '#aa9acd', skin: 'investigation', pages: [
   { id: 'principal', title: 'Principal', blocks: [
     { id: 'identidade', kind: 'identity', span: 8, title: 'Identidade', key: null, text: null, style: 'plain' },
     { id: 'retrato', kind: 'portrait', span: 4, title: 'Retrato', key: null, text: null, style: 'panel' },
@@ -43,8 +43,8 @@ export class SystemsPage implements OnInit {
         <label>Nome<input name="name" [(ngModel)]="name" required minlength="3" maxlength="120" [disabled]="readonly()"></label>
         <label>Descrição<textarea name="description" [(ngModel)]="description" maxlength="2000" rows="3" [disabled]="readonly()"></textarea></label>
         <fieldset class="mode-choice" [disabled]="readonly()"><legend>Como criar a ficha</legend>
-          <label><input type="radio" name="mode" [checked]="mode === 'free'" (change)="mode = 'free'"> Livre <small>Jogadores adicionam campos manualmente à própria ficha.</small></label>
-          <label><input type="radio" name="mode" [checked]="mode === 'structured'" (change)="mode = 'structured'"> Diagramada <small>Você define páginas, blocos, campos e recursos da ficha.</small></label>
+          <label [class.selected]="mode === 'free'"><input type="radio" name="mode" [checked]="mode === 'free'" (change)="mode = 'free'"><span><strong>Livre</strong><small>Jogadores adicionam campos manualmente à própria ficha.</small></span></label>
+          <label [class.selected]="mode === 'structured'"><input type="radio" name="mode" [checked]="mode === 'structured'" (change)="mode = 'structured'"><span><strong>Diagramada</strong><small>Você define páginas, blocos, campos e recursos da ficha.</small></span></label>
         </fieldset>
         <div *ngIf="mode === 'structured'" class="designer-fields"><div class="section-heading"><h2>Diagrama da ficha</h2><button *ngIf="!readonly()" type="button" class="text-link" [disabled]="fields.length >= 50" (click)="addField()">Adicionar campo</button></div>
           <p class="muted">Defina os dados aqui e posicione cada campo no compositor de páginas abaixo.</p>
@@ -61,7 +61,7 @@ export class SystemsPage implements OnInit {
               <label *ngIf="field.type === 'select'" class="wide">Opções separadas por vírgula<input [name]="'options' + i" [ngModel]="field.options?.join(', ') || ''" (ngModelChange)="field.options = parseOptions($event)" [disabled]="readonly()"></label></div>
           </div></div>
           <label *ngIf="editorMode === 'json'">Campos em JSON<textarea name="json" [(ngModel)]="jsonDraft" rows="18" spellcheck="false" [disabled]="readonly()"></textarea><small>Use um array de campos com key, label, type, section, span, min, max e options. Nenhum script é executado.</small></label>
-          <app-sheet-layout-designer [layout]="layout" [fields]="fields" [readOnly]="readonly()" (layoutChange)="layout = $event" />
+          <app-sheet-layout-designer [layout]="layout" [fields]="fields" [readOnly]="readonly()" (layoutChange)="layout = $event" (pageSelected)="selectedPreviewPage = $event" />
         </div>
         <p *ngIf="readonly()" class="room-note">Você pode consultar este sistema porque participa de uma campanha que o usa.</p>
         <div *ngIf="!readonly()" class="form-actions"><button *ngIf="!isNew" type="button" class="text-link danger" (click)="remove()" [disabled]="busy()">Excluir sistema</button><button class="button" [disabled]="form.invalid || busy()">{{ busy() ? 'Salvando...' : 'Salvar sistema' }}</button></div>
@@ -69,33 +69,37 @@ export class SystemsPage implements OnInit {
       </section>
       <aside class="editor-panel designer-preview"><div class="panel-heading"><span>PRÉVIA</span><h2>Ficha montada</h2></div>
         <p *ngIf="mode === 'free'" class="room-note">Ficha livre: cada jogador adiciona seus próprios campos.</p>
-        <app-sheet-layout-preview *ngIf="mode === 'structured'" [layout]="layout" [fields]="fields" [readOnly]="readonly()" />
+        <app-sheet-layout-preview *ngIf="mode === 'structured'" [layout]="layout" [fields]="fields" [readOnly]="readonly()" [pageId]="selectedPreviewPage" />
       </aside>
     </form>
   </main>`, styles: [`
-    .designer-layout { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(360px, .9fr); align-items: start; gap: 22px; }
+    .designer-layout { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(320px, .85fr); align-items: start; gap: 22px; }
     .designer-controls, .designer-preview { min-width: 0; }
     .designer-preview { position: sticky; top: 20px; }
-    .mode-choice { border: 1px solid var(--border); margin: 20px 0; padding: 16px; }
+    .mode-choice { border: 0; margin: 20px 0; padding: 0; display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; }
     .mode-choice legend { color: var(--muted); font-size: 12px; }
-    .mode-choice label { display: flex; align-items: flex-start; gap: 9px; margin: 8px 0; }
-    .mode-choice label small { display: block; color: var(--muted); }
-    .mode-choice input { width: auto; margin: 3px 0; }
+    .mode-choice label { display: flex; align-items: flex-start; gap: 12px; margin: 8px 0 0; padding: 14px; border: 1px solid var(--border); border-radius: 5px; cursor: pointer; }
+    .mode-choice label.selected { border-color: var(--gold); background: color-mix(in srgb, var(--gold) 8%, var(--surface)); }
+    .mode-choice label span { display: grid; gap: 5px; }
+    .mode-choice label small { display: block; color: var(--muted); font-weight: 400; line-height: 1.4; }
+    .mode-choice input { margin-top: 1px; }
     .editor-switch { display: flex; gap: 8px; margin: 14px 0; }
     .editor-switch button { border: 1px solid var(--border); background: transparent; color: var(--muted); padding: 8px 12px; cursor: pointer; }
     .editor-switch button.active { color: var(--gold-bright); border-color: var(--gold); }
     .field-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
     .system-field-head { gap: 12px; }
     .system-field-head strong { min-width: 0; overflow-wrap: anywhere; }
-    @media (max-width: 1480px) { .designer-layout { grid-template-columns: 1fr; } .designer-preview { position: static; } }
+    @media (max-width: 1320px) { .designer-layout { grid-template-columns: 1fr; } .designer-preview { position: static; } }
+    @media (max-width: 620px) { .mode-choice { grid-template-columns: 1fr; } }
   `] })
 export class SystemEditorPage implements OnInit {
   private api = inject(ApiService); private route = inject(ActivatedRoute); private router = inject(Router);
   id = this.route.snapshot.paramMap.get('id') || 'new'; isNew = this.id === 'new'; ownerId: string | null = null;
   name = ''; description = ''; mode: 'free' | 'structured' = 'structured'; editorMode: 'visual' | 'json' = 'visual'; jsonDraft = '[]';
   layout = newSheetLayout();
+  selectedPreviewPage = 'principal';
   fields: SystemField[] = []; loading = signal(!this.isNew); busy = signal(false); saved = signal(false); error = signal('');
-  ngOnInit() { if (!this.isNew) this.api.system(this.id).pipe(finalize(() => this.loading.set(false))).subscribe({ next: system => { this.name = system.name; this.description = system.description; this.fields = system.fields.map(f => ({ ...f, span: f.span || 6, options: f.options?.slice() || null })); this.layout = system.layout || layoutFromFields(this.fields); this.mode = (system.layout || this.fields.length) ? 'structured' : 'free'; this.ownerId = system.ownerId; }, error: e => this.error.set(apiError(e)) }); }
+  ngOnInit() { if (!this.isNew) this.api.system(this.id).pipe(finalize(() => this.loading.set(false))).subscribe({ next: system => { this.name = system.name; this.description = system.description; this.fields = system.fields.map(f => ({ ...f, span: f.span || 6, options: f.options?.slice() || null })); this.layout = system.layout || layoutFromFields(this.fields); this.selectedPreviewPage = this.layout.pages[0].id; this.mode = (system.layout || this.fields.length) ? 'structured' : 'free'; this.ownerId = system.ownerId; }, error: e => this.error.set(apiError(e)) }); }
   readonly() { return !this.isNew && this.ownerId !== this.api.user()?.id; }
   addField() { if (this.fields.length >= 50) return; let number = 1; while (this.fields.some(field => field.key === `campo_${number}`)) number++; const key = `campo_${number}`; this.fields.push({ key, label: '', section: 'Geral', type: 'text', min: null, max: null, options: null, span: 6 }); const page = this.layout.pages.find(item => item.blocks.length < 40); if (page && this.layout.pages.reduce((count, item) => count + item.blocks.length, 0) < 100) { const index = page.blocks.length; page.blocks.push({ id: `bloco_${key}`, kind: 'field', span: 6, title: null, key, text: null, style: 'panel', ...(page.layoutMode === 'canvas' ? { x: (index % 2) * 51, y: Math.min(Math.floor(index / 2) * 20, 80), width: 49, height: 18 } : {}) }); } }
   renameField(field: SystemField, key: string) { const previous = field.key; field.key = key; for (const page of this.layout.pages) for (const block of page.blocks) if (block.kind === 'field' && block.key === previous) block.key = key; }

@@ -24,7 +24,7 @@ export type AbilityInput = Pick<CharacterAbility, 'name' | 'description' | 'cost
 export interface SystemField { key: string; label: string; type: 'text' | 'longtext' | 'number' | 'boolean' | 'select'; section: string; min: number | null; max: number | null; options: string[] | null; span?: number | null; }
 export interface SheetBlock { id: string; kind: 'identity' | 'portrait' | 'resource' | 'field' | 'note' | 'inventory' | 'abilities' | 'history'; span: number; title: string | null; key: string | null; maxKey?: string | null; text: string | null; style: 'panel' | 'plain' | 'accent' | null; x?: number | null; y?: number | null; width?: number | null; height?: number | null; }
 export interface SheetPage { id: string; title: string; blocks: SheetBlock[]; layoutMode?: 'grid' | 'canvas' | null; backgroundUrl?: string | null; aspectRatio?: number | null; }
-export interface SheetLayout { accentColor: string; pages: SheetPage[]; }
+export interface SheetLayout { accentColor: string; pages: SheetPage[]; skin?: 'archive' | 'investigation' | 'fantasy' | null; }
 export interface RpgSystem { id: string; ownerId: string | null; name: string; description: string; fields: SystemField[]; layout: SheetLayout | null; createdAt: string; updatedAt: string; }
 export interface CampaignMember { userId: string; displayName: string; role: string; joinedAt: string; }
 export interface World { id: string; ownerId: string; name: string; description: string; createdAt: string; updatedAt: string; }

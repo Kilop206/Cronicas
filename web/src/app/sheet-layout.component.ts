@@ -13,11 +13,12 @@ const resources: Record<ResourceKey, { label: string; max: MaxResourceKey }> = {
 };
 
 @Component({ selector: 'app-sheet-layout', standalone: true, imports: [CommonModule, FormsModule, CharacterInventoryComponent, CharacterAbilitiesComponent, CharacterHistoryPanelComponent], template: `
-  <div class="sheet-canvas" [style.--sheet-accent]="layout.accentColor">
+  <div class="sheet-canvas" [class.sheet-skin-investigation]="layout.skin === 'investigation'" [class.sheet-skin-fantasy]="layout.skin === 'fantasy'" [style.--sheet-accent]="layout.accentColor">
+    <header class="sheet-masthead"><div><span>CRÔNICAS / FICHA DE PERSONAGEM</span><strong>{{ draft.name || 'Personagem' }}</strong></div><small>{{ layout.pages.length }} {{ layout.pages.length === 1 ? 'PÁGINA' : 'PÁGINAS' }}</small></header>
     <nav *ngIf="mode !== 'print'" class="custom-sheet-tabs" aria-label="Páginas da ficha"><button *ngFor="let page of layout.pages" type="button" [class.active]="activePage().id === page.id" (click)="selectedPageId.set(page.id)">{{ page.title }}</button></nav>
-    <section *ngFor="let page of visiblePages()" class="sheet-canvas-page"><h3>{{ page.title }}</h3><div class="sheet-canvas-grid" [class.free-canvas]="page.layoutMode === 'canvas'" [style.aspect-ratio]="page.layoutMode === 'canvas' ? page.aspectRatio || 0.75 : null" [style.background-image]="page.layoutMode === 'canvas' && page.backgroundUrl ? 'url(' + page.backgroundUrl + ')' : null">
-      <div *ngFor="let block of page.blocks" class="sheet-canvas-block" [class.plain]="block.style === 'plain'" [class.accent]="block.style === 'accent'" [style.grid-column]="'span ' + block.span" [style.left.%]="page.layoutMode === 'canvas' ? block.x : null" [style.top.%]="page.layoutMode === 'canvas' ? block.y : null" [style.width.%]="page.layoutMode === 'canvas' ? block.width : null" [style.height.%]="page.layoutMode === 'canvas' ? block.height : null">
-        <small>{{ block.title || blockLabel(block) }}</small>
+    <section *ngFor="let page of visiblePages()" class="sheet-canvas-page"><div class="sheet-page-heading"><span>CAPÍTULO {{ pageNumber(page) }}</span><h3>{{ page.title }}</h3></div><div class="sheet-canvas-grid" [class.free-canvas]="page.layoutMode === 'canvas'" [style.aspect-ratio]="page.layoutMode === 'canvas' ? page.aspectRatio || 0.75 : null" [style.background-image]="page.layoutMode === 'canvas' && page.backgroundUrl ? 'url(' + page.backgroundUrl + ')' : null">
+      <div *ngFor="let block of page.blocks" class="sheet-canvas-block" [class.plain]="block.style === 'plain'" [class.accent]="block.style === 'accent'" [class.kind-identity]="block.kind === 'identity'" [class.kind-portrait]="block.kind === 'portrait'" [class.kind-resource]="block.kind === 'resource'" [class.kind-field]="block.kind === 'field'" [class.kind-collection]="block.kind === 'inventory' || block.kind === 'abilities' || block.kind === 'history'" [class.is-numeric]="block.kind === 'field' && fieldFor(block)?.type === 'number'" [style.grid-column]="'span ' + block.span" [style.left.%]="page.layoutMode === 'canvas' ? block.x : null" [style.top.%]="page.layoutMode === 'canvas' ? block.y : null" [style.width.%]="page.layoutMode === 'canvas' ? block.width : null" [style.height.%]="page.layoutMode === 'canvas' ? block.height : null">
+        <small>{{ block.title || (block.kind === 'field' ? fieldFor(block)?.label : blockLabel(block)) }}</small>
         <ng-container *ngIf="block.kind === 'identity'">
           <label *ngIf="mode === 'edit'">Nome<input [ngModel]="draft.name" (ngModelChange)="draft.name = $event; changed.emit()" [ngModelOptions]="{standalone: true}" required minlength="2" maxlength="120"></label>
           <strong *ngIf="mode !== 'edit'">{{ draft.name }}</strong>
@@ -36,7 +37,7 @@ const resources: Record<ResourceKey, { label: string; max: MaxResourceKey }> = {
           <label *ngIf="mode === 'edit' && field.type === 'longtext'">{{ field.label }}<textarea [ngModel]="fieldValue(field)" (ngModelChange)="setField(field, $event)" [ngModelOptions]="{standalone: true}" rows="5" maxlength="10000"></textarea></label>
           <label *ngIf="mode === 'edit' && field.type === 'select'">{{ field.label }}<select [ngModel]="fieldValue(field)" (ngModelChange)="setField(field, $event)" [ngModelOptions]="{standalone: true}"><option value="">Selecione</option><option *ngFor="let option of field.options" [value]="option">{{ option }}</option></select></label>
           <label *ngIf="mode === 'edit' && field.type === 'boolean'" class="checkbox-field"><input type="checkbox" [ngModel]="fieldValue(field) === true" (ngModelChange)="setField(field, $event)" [ngModelOptions]="{standalone: true}"> {{ field.label }}</label>
-          <strong *ngIf="mode !== 'edit'" class="sheet-value">{{ field.label }}: {{ displayField(field) }}</strong>
+          <strong *ngIf="mode !== 'edit'" class="sheet-value"><span class="sheet-field-caption">{{ field.label }}</span>{{ displayField(field) }}</strong>
         </ng-container></ng-container>
         <p *ngIf="block.kind === 'note'">{{ block.text }}</p>
         <app-character-inventory *ngIf="block.kind === 'inventory'" [character]="character" />
@@ -52,9 +53,9 @@ const resources: Record<ResourceKey, { label: string; max: MaxResourceKey }> = {
       <strong *ngIf="mode !== 'edit'">{{ field.label }}: {{ displayField(field) }}</strong>
     </div></div></section>
   </div>`, styles: [`
-    .custom-sheet-tabs { display: flex; gap: 5px; overflow-x: auto; border-bottom: 1px solid var(--border); margin-bottom: 18px; }
-    .custom-sheet-tabs button { flex: 0 0 auto; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); padding: 12px 14px; }
-    .custom-sheet-tabs button.active { border-color: var(--sheet-accent); color: var(--text); }
+    .custom-sheet-tabs { display: flex; gap: 4px; max-width: 100%; overflow-x: auto; border-bottom: 1px solid var(--border); margin: 0 0 18px; scrollbar-width: thin; }
+    .custom-sheet-tabs button { flex: 0 0 auto; min-height: 44px; padding: 11px 15px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); font-weight: 600; white-space: nowrap; }
+    .custom-sheet-tabs button:hover, .custom-sheet-tabs button.active { border-color: var(--sheet-accent); color: var(--text); background: color-mix(in srgb, var(--sheet-accent) 9%, transparent); }
     .sheet-canvas-block label { display: block; min-width: 0; margin: 12px 0 0; }
     .sheet-resource-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
     .sheet-resource-track { height: 5px; margin: 13px 0 5px; background: var(--border); }
@@ -72,6 +73,7 @@ export class SheetLayoutComponent {
   @Output() restored = new EventEmitter<Character>();
   selectedPageId = signal('');
   activePage(): SheetPage { return this.layout.pages.find(page => page.id === this.selectedPageId()) || this.layout.pages[0]; }
+  pageNumber(page: SheetPage) { return String(this.layout.pages.indexOf(page) + 1).padStart(2, '0'); }
   visiblePages() { return this.mode === 'print' ? this.layout.pages : [this.activePage()]; }
   blockLabel(block: SheetBlock) { return block.kind === 'field' ? 'Campo' : block.kind === 'resource' ? 'Recurso' : block.kind === 'note' ? 'Nota' : block.kind === 'identity' ? 'Identidade' : block.kind === 'portrait' ? 'Retrato' : block.kind === 'inventory' ? 'Inventário' : block.kind === 'abilities' ? 'Habilidades' : 'Histórico'; }
   resourceMaxKey(block: SheetBlock): string | null { return block.maxKey || (block.key === 'health' || block.key === 'sanity' || block.key === 'mana' ? resources[block.key].max : null); }

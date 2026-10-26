@@ -13,9 +13,9 @@ const kinds: { value: SheetBlock['kind']; label: string }[] = [
   <section class="layout-designer">
     <div class="section-heading"><div><span class="overline">COMPOSIÇÃO</span><h2>Páginas e blocos</h2></div></div>
     <p class="room-note">Monte a ficha como um arquivo de páginas. Na grade, escolha a largura; na página livre, arraste os blocos na prévia ou ajuste as posições abaixo.</p>
-    <label>Cor da ficha<input type="color" [value]="layout.accentColor" (input)="layout.accentColor = $any($event.target).value" [disabled]="readOnly"></label>
+    <div class="sheet-appearance-controls"><label>Estilo da ficha<select [value]="layout.skin || 'archive'" (change)="setSkin($any($event.target).value)" [disabled]="readOnly"><option value="investigation">Investigação</option><option value="fantasy">Fantasia</option><option value="archive">Arquivo clássico</option></select></label><label>Cor de destaque<input type="color" [value]="layout.accentColor" (input)="layout.accentColor = $any($event.target).value" [disabled]="readOnly"></label></div>
     <div class="layout-page-tabs" role="tablist" aria-label="Páginas da ficha">
-      <button *ngFor="let page of layout.pages" type="button" role="tab" [attr.aria-selected]="selectedPageId() === page.id" [class.active]="selectedPageId() === page.id" (click)="selectedPageId.set(page.id)">{{ page.title || 'Página' }}</button>
+      <button *ngFor="let page of layout.pages" type="button" role="tab" [attr.aria-selected]="selectedPage().id === page.id" [class.active]="selectedPage().id === page.id" (click)="selectPage(page.id)">{{ page.title || 'Página' }}</button>
       <button *ngIf="!readOnly" type="button" class="text-link" [disabled]="layout.pages.length >= 8" (click)="addPage()">Adicionar página</button>
     </div>
     <ng-container *ngIf="selectedPage() as page"><div class="layout-page-controls"><label>Título da página<input [value]="page.title" (input)="page.title = $any($event.target).value" maxlength="60" [disabled]="readOnly"></label><div *ngIf="!readOnly" class="field-actions"><button type="button" class="text-link" [disabled]="pageIndex(page) === 0" (click)="movePage(page, -1)" aria-label="Mover página para a esquerda">←</button><button type="button" class="text-link" [disabled]="pageIndex(page) === layout.pages.length - 1" (click)="movePage(page, 1)" aria-label="Mover página para a direita">→</button><button type="button" class="text-link danger" [disabled]="layout.pages.length === 1" (click)="removePage(page)">Excluir página</button></div></div>
@@ -37,11 +37,12 @@ const kinds: { value: SheetBlock['kind']; label: string }[] = [
     <details class="layout-json" (toggle)="showJson($event)"><summary>Editar layout em JSON</summary><p class="room-note">Formato avançado validado pelo servidor. Nenhum código é executado.</p><textarea [value]="jsonDraft()" (input)="jsonDraft.set($any($event.target).value)" rows="12" spellcheck="false" [disabled]="readOnly"></textarea><button *ngIf="!readOnly" type="button" class="button button-small secondary" (click)="applyJson()">Aplicar JSON</button><p *ngIf="jsonError()" class="form-error" role="alert">{{ jsonError() }}</p></details>
   </section>`, styles: [`
     .layout-designer { margin-top: 32px; border-top: 1px solid var(--border); padding-top: 28px; }
-    .layout-designer > label { max-width: 180px; }
-    .layout-designer input[type=color] { width: 72px; height: 40px; margin-top: 8px; }
+    .sheet-appearance-controls { display: grid; grid-template-columns: minmax(0, 220px) minmax(0, 140px); gap: 12px; align-items: end; margin: 22px 0; }
+    .sheet-appearance-controls label { margin: 0; }
+    .sheet-appearance-controls input[type=color] { width: 72px; height: 40px; margin-top: 8px; }
     .layout-page-tabs { display: flex; flex-wrap: wrap; gap: 7px; margin: 24px 0; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
-    .layout-page-tabs button { border: 1px solid var(--border); background: transparent; color: var(--muted); padding: 8px 12px; }
-    .layout-page-tabs button.active { border-color: var(--gold); color: var(--gold-bright); }
+    .layout-page-tabs button:not(.text-link) { border: 1px solid var(--border); border-radius: 4px 4px 0 0; background: transparent; color: var(--muted); padding: 8px 12px; }
+    .layout-page-tabs button.active { border-color: var(--gold); background: color-mix(in srgb, var(--gold) 10%, var(--surface)); color: var(--gold-bright); }
     .layout-page-controls { display: flex; align-items: end; justify-content: space-between; flex-wrap: wrap; gap: 12px; }
     .layout-page-controls label { flex: 1 1 180px; margin: 0; }
     .layout-page-options { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 10px; margin: 18px 0; }
@@ -57,13 +58,14 @@ const kinds: { value: SheetBlock['kind']; label: string }[] = [
     .layout-json { border-top: 1px solid var(--border); padding-top: 16px; margin-top: 24px; }
     .layout-json summary { cursor: pointer; color: var(--gold-bright); }
     .layout-json textarea { width: 100%; }
-    @media (max-width: 620px) { .layout-block-options, .layout-page-options { grid-template-columns: 1fr; } .layout-block-options .wide, .layout-page-options .wide { grid-column: auto; } }
+    @media (max-width: 620px) { .sheet-appearance-controls, .layout-block-options, .layout-page-options { grid-template-columns: 1fr; } .layout-block-options .wide, .layout-page-options .wide { grid-column: auto; } }
   `] })
 export class SheetLayoutDesignerComponent {
   @Input({ required: true }) layout!: SheetLayout;
   @Input() fields: SystemField[] = [];
   @Input() readOnly = false;
   @Output() layoutChange = new EventEmitter<SheetLayout>();
+  @Output() pageSelected = new EventEmitter<string>();
   kinds = kinds;
   widths = [3, 4, 6, 8, 9, 12];
   kindToAdd: SheetBlock['kind'] = 'field';
@@ -71,29 +73,36 @@ export class SheetLayoutDesignerComponent {
   jsonDraft = signal('');
   jsonError = signal('');
   selectedPage() { return this.layout.pages.find(x => x.id === this.selectedPageId()) || this.layout.pages[0]; }
+  selectPage(id: string) { this.selectedPageId.set(id); this.pageSelected.emit(id); }
   pageIndex(page: SheetPage) { return this.layout.pages.indexOf(page); }
   totalBlocks() { return this.layout.pages.reduce((sum, page) => sum + page.blocks.length, 0); }
   kindLabel(kind: SheetBlock['kind']) { return kinds.find(x => x.value === kind)?.label || kind; }
   numericFields() { return this.fields.filter(field => field.type === 'number'); }
   isBuiltInResource(key: string | null) { return key === 'health' || key === 'sanity' || key === 'mana'; }
   setResourceKey(block: SheetBlock, key: string) { block.key = key; block.maxKey = null; }
+  setSkin(skin: 'archive' | 'investigation' | 'fantasy') {
+    const colors = { archive: '#b8a079', investigation: '#aa9acd', fantasy: '#c4a477' };
+    const previous = this.layout.skin || 'archive';
+    if (this.layout.accentColor.toLowerCase() === colors[previous]) this.layout.accentColor = colors[skin];
+    this.layout.skin = skin;
+  }
   setPageMode(page: SheetPage, mode: 'grid' | 'canvas') { page.layoutMode = mode; if (mode === 'canvas') { page.aspectRatio ??= 0.75; page.blocks.forEach((block, index) => this.placeBlock(block, index)); } }
   private placeBlock(block: SheetBlock, index: number) { block.x ??= (index % 2) * 51; block.y ??= Math.min(Math.floor(index / 2) * 20, 80); block.width ??= 49; block.height ??= 18; }
   private id(prefix: string) { return `${prefix}_${Math.random().toString(36).slice(2, 10)}`; }
-  addPage() { const page: SheetPage = { id: this.id('pagina'), title: 'Nova página', blocks: [{ id: this.id('bloco'), kind: 'note', span: 12, title: 'Introdução', key: null, text: 'Descreva esta página.', style: 'plain' }] }; this.layout.pages.push(page); this.selectedPageId.set(page.id); }
-  removePage(page: SheetPage) { this.layout.pages.splice(this.pageIndex(page), 1); this.selectedPageId.set(this.layout.pages[0].id); }
+  addPage() { const page: SheetPage = { id: this.id('pagina'), title: 'Nova página', blocks: [{ id: this.id('bloco'), kind: 'note', span: 12, title: 'Introdução', key: null, text: 'Descreva esta página.', style: 'plain' }] }; this.layout.pages.push(page); this.selectPage(page.id); }
+  removePage(page: SheetPage) { this.layout.pages.splice(this.pageIndex(page), 1); this.selectPage(this.layout.pages[0].id); }
   movePage(page: SheetPage, step: number) { const index = this.pageIndex(page); this.layout.pages.splice(index, 1); this.layout.pages.splice(index + step, 0, page); }
   addBlock(page: SheetPage) { const kind = this.kindToAdd; const block: SheetBlock = { id: this.id('bloco'), kind, span: kind === 'inventory' || kind === 'abilities' || kind === 'history' ? 12 : 6, title: this.kindLabel(kind), key: kind === 'field' ? this.fields[0]?.key || null : kind === 'resource' ? 'health' : null, text: kind === 'note' ? 'Novo texto' : null, style: 'panel' }; if (page.layoutMode === 'canvas') this.placeBlock(block, page.blocks.length); page.blocks.push(block); }
   removeBlock(page: SheetPage, index: number) { page.blocks.splice(index, 1); }
   moveBlock(page: SheetPage, index: number, step: number) { const [block] = page.blocks.splice(index, 1); page.blocks.splice(index + step, 0, block); }
-  moveToPage(page: SheetPage, block: SheetBlock, targetId: string) { if (page.id === targetId) return; const target = this.layout.pages.find(x => x.id === targetId); if (!target || target.blocks.length >= 40) return; page.blocks.splice(page.blocks.indexOf(block), 1); if (target.layoutMode === 'canvas') this.placeBlock(block, target.blocks.length); target.blocks.push(block); this.selectedPageId.set(target.id); }
+  moveToPage(page: SheetPage, block: SheetBlock, targetId: string) { if (page.id === targetId) return; const target = this.layout.pages.find(x => x.id === targetId); if (!target || target.blocks.length >= 40) return; page.blocks.splice(page.blocks.indexOf(block), 1); if (target.layoutMode === 'canvas') this.placeBlock(block, target.blocks.length); target.blocks.push(block); this.selectPage(target.id); }
   showJson(event: Event) { if ((event.target as HTMLDetailsElement).open) this.jsonDraft.set(JSON.stringify(this.layout, null, 2)); }
   applyJson() {
     try {
       const parsed: unknown = JSON.parse(this.jsonDraft());
       if (!this.isLayout(parsed)) throw new Error();
       this.layoutChange.emit(parsed);
-      this.selectedPageId.set(parsed.pages[0].id);
+      this.selectPage(parsed.pages[0].id);
       this.jsonError.set('');
     } catch { this.jsonError.set('Layout inválido. Defina cor, páginas e blocos válidos; cada campo precisa existir no sistema.'); }
   }
@@ -101,6 +110,7 @@ export class SheetLayoutDesignerComponent {
     if (!value || typeof value !== 'object') return false;
     const layout = value as SheetLayout;
     if (!/^#[0-9a-fA-F]{6}$/.test(layout.accentColor) || !Array.isArray(layout.pages) || layout.pages.length < 1 || layout.pages.length > 8) return false;
+    if (layout.skin != null && !['archive', 'investigation', 'fantasy'].includes(layout.skin)) return false;
     const pages = new Set<string>(); const blocks = new Set<string>(); let total = 0;
     for (const page of layout.pages) {
       if (!page || typeof page.id !== 'string' || !/^[a-z][a-z0-9_]{1,39}$/.test(page.id) || pages.has(page.id)
@@ -136,9 +146,10 @@ export class SheetLayoutDesignerComponent {
 }
 
 @Component({ selector: 'app-sheet-layout-preview', standalone: true, imports: [CommonModule], template: `
-  <div class="sheet-canvas" [style.--sheet-accent]="layout.accentColor">
-    <div *ngFor="let page of layout.pages" class="sheet-canvas-page"><h3>{{ page.title }}</h3><div class="sheet-canvas-grid" [class.free-canvas]="page.layoutMode === 'canvas'" [style.aspect-ratio]="page.layoutMode === 'canvas' ? page.aspectRatio || 0.75 : null" [style.background-image]="page.layoutMode === 'canvas' && page.backgroundUrl ? 'url(' + page.backgroundUrl + ')' : null">
-      <div *ngFor="let block of page.blocks" class="sheet-canvas-block" [class.plain]="block.style === 'plain'" [class.accent]="block.style === 'accent'" [class.draggable]="page.layoutMode === 'canvas' && !readOnly" [style.grid-column]="'span ' + block.span" [style.left.%]="page.layoutMode === 'canvas' ? block.x : null" [style.top.%]="page.layoutMode === 'canvas' ? block.y : null" [style.width.%]="page.layoutMode === 'canvas' ? block.width : null" [style.height.%]="page.layoutMode === 'canvas' ? block.height : null" (pointerdown)="startDrag($event, page, block)" (pointermove)="dragBlock($event)" (pointerup)="stopDrag($event)" (pointercancel)="stopDrag($event)">
+  <div class="sheet-canvas" [class.sheet-skin-investigation]="layout.skin === 'investigation'" [class.sheet-skin-fantasy]="layout.skin === 'fantasy'" [style.--sheet-accent]="layout.accentColor">
+    <header class="sheet-masthead"><div><span>CRÔNICAS / PRÉVIA DA FICHA</span><strong>Personagem de exemplo</strong></div><small>{{ layout.pages.length }} {{ layout.pages.length === 1 ? 'PÁGINA' : 'PÁGINAS' }}</small></header>
+    <div *ngFor="let page of visiblePages()" class="sheet-canvas-page"><div class="sheet-page-heading"><span>CAPÍTULO {{ pageNumber(page) }}</span><h3>{{ page.title }}</h3></div><div class="sheet-canvas-grid" [class.free-canvas]="page.layoutMode === 'canvas'" [style.aspect-ratio]="page.layoutMode === 'canvas' ? page.aspectRatio || 0.75 : null" [style.background-image]="page.layoutMode === 'canvas' && page.backgroundUrl ? 'url(' + page.backgroundUrl + ')' : null">
+      <div *ngFor="let block of page.blocks" class="sheet-canvas-block" [class.plain]="block.style === 'plain'" [class.accent]="block.style === 'accent'" [class.kind-identity]="block.kind === 'identity'" [class.kind-portrait]="block.kind === 'portrait'" [class.kind-resource]="block.kind === 'resource'" [class.kind-field]="block.kind === 'field'" [class.draggable]="page.layoutMode === 'canvas' && !readOnly" [style.grid-column]="'span ' + block.span" [style.left.%]="page.layoutMode === 'canvas' ? block.x : null" [style.top.%]="page.layoutMode === 'canvas' ? block.y : null" [style.width.%]="page.layoutMode === 'canvas' ? block.width : null" [style.height.%]="page.layoutMode === 'canvas' ? block.height : null" (pointerdown)="startDrag($event, page, block)" (pointermove)="dragBlock($event)" (pointerup)="stopDrag($event)" (pointercancel)="stopDrag($event)">
         <small>{{ block.title || blockLabel(block) }}</small>
         <strong *ngIf="block.kind === 'identity'">Nome da personagem</strong>
         <div *ngIf="block.kind === 'portrait'" class="sheet-canvas-portrait">Retrato</div>
@@ -153,12 +164,15 @@ export class SheetLayoutPreviewComponent {
   @Input({ required: true }) layout!: SheetLayout;
   @Input() fields: SystemField[] = [];
   @Input() readOnly = false;
+  @Input() pageId = '';
   private dragging: { pointerId: number; block: SheetBlock; x: number; y: number; clientX: number; clientY: number; width: number; height: number } | null = null;
   blockLabel(block: SheetBlock) { return kinds.find(x => x.value === block.kind)?.label || block.kind; }
+  visiblePages() { return [this.layout.pages.find(page => page.id === this.pageId) || this.layout.pages[0]]; }
+  pageNumber(page: SheetPage) { return String(this.layout.pages.indexOf(page) + 1).padStart(2, '0'); }
   fieldLabel(key: string | null) { return this.fields.find(x => x.key === key)?.label || key || 'Campo'; }
   resourceLabel(key: string | null) { return this.fields.find(field => field.key === key)?.label || ({ health: 'Vida', sanity: 'Sanidade', mana: 'Mana', maxHealth: 'Vida máxima', maxSanity: 'Sanidade máxima', maxMana: 'Mana máxima' } as Record<string, string>)[key || ''] || 'Recurso'; }
   startDrag(event: PointerEvent, page: SheetPage, block: SheetBlock) {
-    if (this.readOnly || page.layoutMode !== 'canvas' || event.button !== 0) return;
+    if (this.readOnly || page.layoutMode !== 'canvas' || event.button !== 0 || window.matchMedia('(max-width: 620px)').matches) return;
     const element = event.currentTarget as HTMLElement;
     const canvas = element.parentElement;
     if (!canvas) return;
