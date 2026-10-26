@@ -48,13 +48,25 @@ export class SystemsPage implements OnInit {
         <div *ngIf="!readonly()" class="form-actions"><button *ngIf="!isNew" type="button" class="text-link danger" (click)="remove()" [disabled]="busy()">Excluir sistema</button><button class="button" [disabled]="form.invalid || busy() || mode === 'structured' && editorMode === 'visual' && !fields.length">{{ busy() ? 'Salvando...' : 'Salvar sistema' }}</button></div>
         <p *ngIf="saved()" class="form-success" role="status">Sistema salvo.</p>
       </section>
-      <aside class="editor-panel designer-preview"><div class="panel-heading"><span>PRÉVIA</span><h2>Estrutura da ficha</h2></div><p *ngIf="mode === 'free'" class="room-note">Ficha livre: o jogador monta seus próprios campos. A identidade e os recursos sempre ficam acessíveis.</p>
+      <aside class="editor-panel designer-preview"><div class="panel-heading"><span>PRÉVIA</span><h2>Estrutura da ficha</h2></div>
+        <div class="designer-mock-header"><span class="designer-mock-portrait" aria-hidden="true">P</span><div><small>PERSONAGEM</small><strong>Nome da personagem</strong></div></div>
+        <div class="designer-mock-resources"><span>Vida <strong>10 / 10</strong></span><span>Sanidade <strong>10 / 10</strong></span><span>Mana <strong>10 / 10</strong></span></div>
+        <p *ngIf="mode === 'free'" class="room-note">Ficha livre: o jogador monta seus próprios campos. A identidade e os recursos sempre ficam acessíveis.</p>
         <ng-container *ngIf="mode === 'structured'"><div *ngFor="let section of sections()" class="preview-section"><h3>{{ section }}</h3><div class="preview-grid"><div *ngFor="let field of sectionFields(section)" class="preview-field" [style.grid-column]="'span ' + (field.span || 6)"><span>{{ field.label || field.key }}</span><div>{{ field.type === 'boolean' ? '☐' : field.type === 'longtext' ? 'Texto longo' : field.type === 'select' ? 'Selecione uma opção' : 'Valor' }}</div></div></div></div><p *ngIf="!fields.length" class="room-note">Adicione campos para desenhar a ficha.</p></ng-container>
       </aside>
     </form>
   </main>`, styles: [`
-    .designer-layout { display: grid; grid-template-columns: minmax(0, 1.35fr) minmax(280px, .85fr); align-items: start; gap: 22px; }
+    .designer-layout { display: grid; grid-template-columns: minmax(0, 1.25fr) minmax(360px, .9fr); align-items: start; gap: 22px; }
+    .designer-controls, .designer-preview { min-width: 0; }
     .designer-preview { position: sticky; top: 20px; }
+    .designer-mock-header { display: flex; align-items: center; gap: 12px; min-width: 0; }
+    .designer-mock-portrait { display: grid; place-items: center; flex: 0 0 50px; width: 50px; height: 50px; border: 1px solid var(--gold-dim); color: var(--gold-bright); font: 27px var(--font-editorial); }
+    .designer-mock-header div { min-width: 0; }
+    .designer-mock-header small { display: block; color: var(--gold); font-size: 9px; letter-spacing: .13em; }
+    .designer-mock-header strong { display: block; font: 20px var(--font-editorial); overflow-wrap: anywhere; }
+    .designer-mock-resources { display: flex; flex-wrap: wrap; gap: 8px; border-bottom: 1px solid var(--border); padding: 16px 0; margin-bottom: 16px; }
+    .designer-mock-resources span { display: grid; gap: 3px; flex: 1 1 70px; color: var(--muted); font-size: 10px; }
+    .designer-mock-resources strong { color: var(--gold-bright); font-size: 12px; }
     .mode-choice { border: 1px solid var(--border); margin: 20px 0; padding: 16px; }
     .mode-choice legend { color: var(--muted); font-size: 12px; }
     .mode-choice label { display: flex; align-items: flex-start; gap: 9px; margin: 8px 0; }
@@ -63,14 +75,16 @@ export class SystemsPage implements OnInit {
     .editor-switch { display: flex; gap: 8px; margin: 14px 0; }
     .editor-switch button { border: 1px solid var(--border); background: transparent; color: var(--muted); padding: 8px 12px; cursor: pointer; }
     .editor-switch button.active { color: var(--gold-bright); border-color: var(--gold); }
-    .field-actions { display: flex; gap: 12px; }
+    .field-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
+    .system-field-head { gap: 12px; }
+    .system-field-head strong { min-width: 0; overflow-wrap: anywhere; }
     .preview-section { border-top: 1px solid var(--border); padding-top: 14px; margin-top: 18px; }
     .preview-section h3 { font: 20px var(--font-editorial); margin: 0 0 12px; }
     .preview-grid { display: grid; grid-template-columns: repeat(12, minmax(0, 1fr)); gap: 9px; }
     .preview-field { min-width: 0; }
     .preview-field span { display: block; color: var(--muted); font-size: 11px; margin-bottom: 5px; overflow-wrap: anywhere; }
     .preview-field div { border: 1px solid var(--border); padding: 9px; font-size: 12px; color: var(--muted); }
-    @media (max-width: 1000px) { .designer-layout { grid-template-columns: 1fr; } .designer-preview { position: static; } }
+    @media (max-width: 1480px) { .designer-layout { grid-template-columns: 1fr; } .designer-preview { position: static; } }
     @media (max-width: 620px) { .preview-field { grid-column: span 12 !important; } }
   `] })
 export class SystemEditorPage implements OnInit {
