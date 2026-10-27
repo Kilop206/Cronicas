@@ -6,7 +6,7 @@ namespace Chronicles.Api;
 // Small arithmetic language for sheet authors. No script execution or dynamic code.
 public static class SheetFormula
 {
-    private static readonly Regex Tokens = new(@"\G\s*([a-z][a-z0-9_]*|[0-9]+|[()+*/-])", RegexOptions.Compiled | RegexOptions.CultureInvariant);
+    private static readonly Regex Tokens = new(@"\G\s*([a-z][a-z0-9_]*|[0-9]+|[(),+*/-])", RegexOptions.Compiled | RegexOptions.CultureInvariant);
 
     public static string? Validate(SystemField[] fields)
     {
@@ -18,7 +18,7 @@ public static class SheetFormula
             if (string.IsNullOrWhiteSpace(field.Formula)) continue;
             if (field.Type != "number" || field.Formula.Length > 200) return $"Fórmula inválida em {field.Label}.";
             try { Evaluate(field.Formula, key => byKey.TryGetValue(key, out var source) && source.Type == "number" ? 1 : throw new FormatException(), syntaxOnly: true); }
-            catch (Exception ex) when (ex is FormatException or OverflowException or DivideByZeroException) { return $"Fórmula inválida em {field.Label}: use chaves de campos numéricos e +, -, *, / ou parênteses."; }
+            catch (Exception ex) when (ex is FormatException or OverflowException or DivideByZeroException) { return $"Fórmula inválida em {field.Label}: use campos numéricos, operações ou floordiv(a,b)."; }
         }
         var visiting = new HashSet<string>(StringComparer.Ordinal);
         var visited = new HashSet<string>(StringComparer.Ordinal);
@@ -35,6 +35,8 @@ public static class SheetFormula
 
     public static string? Apply(SystemField[] fields, Dictionary<string, JsonElement> values)
     {
+        foreach (var field in fields)
+            if (!values.ContainsKey(field.Key) && field.DefaultValue is { } initial && string.IsNullOrWhiteSpace(field.Formula)) values[field.Key] = initial;
         var calculated = fields.Where(x => !string.IsNullOrWhiteSpace(x.Formula)).ToDictionary(x => x.Key, StringComparer.Ordinal);
         var done = new HashSet<string>(StringComparer.Ordinal);
         var visiting = new HashSet<string>(StringComparer.Ordinal);
@@ -58,7 +60,7 @@ public static class SheetFormula
     }
 
     private static IEnumerable<string> References(string? expression) =>
-        expression is null ? [] : Regex.Matches(expression, @"[a-z][a-z0-9_]*").Select(x => x.Value);
+        expression is null ? [] : Regex.Matches(expression, @"[a-z][a-z0-9_]*").Select(x => x.Value).Where(x => x != "floordiv");
 
     private static bool ValidRoll(string expression, Dictionary<string, SystemField> fields)
     {
@@ -66,7 +68,7 @@ public static class SheetFormula
         var placeholders = Regex.Matches(expression, @"\{([a-z][a-z0-9_]*)\}");
         foreach (Match match in placeholders)
             if (!fields.TryGetValue(match.Groups[1].Value, out var field) || field.Type != "number") return false;
-        var sample = Regex.Replace(expression, @"\{[a-z][a-z0-9_]*\}", "1");
+        var sample = Regex.Replace(expression, @"\{[a-z][a-z0-9_]*\}", match => match.Index == 0 ? "2" : "1");
         return DiceExpression.TryParse(sample, out _);
     }
 
@@ -88,6 +90,15 @@ public static class SheetFormula
             if (token == "-") { var operand = Atom(); return syntaxOnly ? 1 : checked(-operand); }
             if (token == "+") return Atom();
             if (token == "(") { var nested = Sum(); if (index >= tokens.Count || tokens[index++] != ")") throw new FormatException(); return nested; }
+            if (token == "floordiv")
+            {
+                if (index >= tokens.Count || tokens[index++] != "(") throw new FormatException();
+                var numerator = Sum();
+                if (index >= tokens.Count || tokens[index++] != ",") throw new FormatException();
+                var denominator = Sum();
+                if (index >= tokens.Count || tokens[index++] != ")") throw new FormatException();
+                return syntaxOnly ? 1 : checked((int)Math.Floor((double)numerator / denominator));
+            }
             if (int.TryParse(token, out var constant)) return syntaxOnly ? 1 : constant;
             if (Regex.IsMatch(token, @"^[a-z][a-z0-9_]*$")) return resolve(token);
             throw new FormatException();

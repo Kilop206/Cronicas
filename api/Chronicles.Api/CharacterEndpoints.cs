@@ -249,7 +249,7 @@ public static class CharacterEndpoints
     private static async Task<Dictionary<string, string[]>?> ValidateFields(AppDbContext db, Guid campaignId, Dictionary<string, JsonElement>? values, string? previousJson = null)
     {
         if (values is null) return null;
-        if (values.Count > 50 || JsonSerializer.Serialize(values).Length > 20000) return new() { ["fields"] = ["Campos excedem o limite."] };
+        if (values.Count > 100 || JsonSerializer.Serialize(values).Length > 20000) return new() { ["fields"] = ["Campos excedem o limite."] };
         var systemId = await db.Campaigns.Where(x => x.Id == campaignId).Select(x => x.SystemId).SingleAsync();
         var schema = systemId is null ? null : await db.RpgSystems.Where(x => x.Id == systemId).Select(x => x.SchemaJson).SingleAsync();
         SystemField[] fields = schema is null ? [] : SystemDefinition.Read(schema).Fields;
@@ -285,7 +285,7 @@ public static class CharacterEndpoints
         }
         var calculationError = SheetFormula.Apply(fields, values);
         if (calculationError is not null) return new() { ["fields"] = [calculationError] };
-        if (values.Count > 50 || JsonSerializer.Serialize(values).Length > 20000) return new() { ["fields"] = ["Campos excedem o limite."] };
+        if (values.Count > 100 || JsonSerializer.Serialize(values).Length > 20000) return new() { ["fields"] = ["Campos excedem o limite."] };
         return null;
     }
     private static void Apply(Character target, CharacterInput input)

@@ -29,8 +29,8 @@ const resources: Record<ResourceKey, { label: string; max: MaxResourceKey }> = {
           <ng-container *ngIf="mode === 'edit'"><label>URL HTTPS do retrato<input type="url" [ngModel]="draft.portraitUrl" (ngModelChange)="draft.portraitUrl = $event; changed.emit()" [ngModelOptions]="{standalone: true}" placeholder="https://..."></label><label>URL HTTPS do fundo<input type="url" [ngModel]="draft.backgroundUrl" (ngModelChange)="draft.backgroundUrl = $event; changed.emit()" [ngModelOptions]="{standalone: true}" placeholder="https://..."></label></ng-container>
         </ng-container>
         <ng-container *ngIf="block.kind === 'resource'">
-          <strong>{{ resourceLabel(block.key) }} · {{ resourceValue(block.key) }} / {{ resourceValue(resourceMaxKey(block)) }}</strong>
-          <div class="sheet-resource-track" role="meter" [attr.aria-label]="resourceLabel(block.key)" [attr.aria-valuenow]="resourceValue(block.key)" aria-valuemin="0" [attr.aria-valuemax]="resourceValue(resourceMaxKey(block))"><span [style.width.%]="resourcePercent(block)"></span></div>
+          <strong>{{ block.title || resourceLabel(block.key) }} · {{ resourceValue(block.key) }} / {{ resourceValue(resourceMaxKey(block)) }}</strong>
+          <div class="sheet-resource-track" role="meter" [attr.aria-label]="block.title || resourceLabel(block.key)" [attr.aria-valuenow]="resourceValue(block.key)" aria-valuemin="0" [attr.aria-valuemax]="resourceValue(resourceMaxKey(block))"><span [style.width.%]="resourcePercent(block)"></span></div>
           <div *ngIf="mode === 'edit'" class="sheet-resource-controls"><label>Atual<input type="number" [ngModel]="resourceValue(block.key)" (ngModelChange)="setResourceValue(block.key, $event)" [ngModelOptions]="{standalone: true}" min="0" max="999999"></label><label>Máximo<input type="number" [ngModel]="resourceValue(resourceMaxKey(block))" (ngModelChange)="setResourceValue(resourceMaxKey(block), $event)" [ngModelOptions]="{standalone: true}" min="1" max="999999"></label></div>
         </ng-container>
         <ng-container *ngIf="block.kind === 'field'"><ng-container *ngIf="fieldFor(block) as field">
@@ -96,5 +96,5 @@ export class SheetLayoutComponent {
   fieldValue(field: SystemField) { return this.draft.fields[field.key] ?? ''; }
   displayField(field: SystemField) { const value = this.fieldValue(field); return value === '' ? '—' : field.type === 'boolean' ? value ? 'Sim' : 'Não' : String(value); }
   setField(field: SystemField, value: string | number | boolean) { if (field.formula) return; if (value === '' || value === null) delete this.draft.fields[field.key]; else this.draft.fields[field.key] = field.type === 'number' ? Number(value) : value; this.changed.emit(); }
-  unplacedFields() { const placed = new Set(this.layout.pages.flatMap(page => page.blocks.filter(block => block.kind === 'field').map(block => block.key))); return this.fields.filter(field => !placed.has(field.key)); }
+  unplacedFields() { const placed = new Set(this.layout.pages.flatMap(page => page.blocks.flatMap(block => block.kind === 'field' ? [block.key] : block.kind === 'resource' ? [block.key, block.maxKey] : []))); return this.fields.filter(field => !placed.has(field.key)); }
 }

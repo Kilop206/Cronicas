@@ -1,0 +1,60 @@
+import assert from 'node:assert/strict';
+import fs from 'node:fs';
+import path from 'node:path';
+import vm from 'node:vm';
+import { createRequire } from 'node:module';
+
+const require = createRequire(import.meta.url);
+const ts = require('../web/node_modules/typescript');
+const root = path.resolve(import.meta.dirname, '../web/src/app');
+
+function load(file) {
+  const source = fs.readFileSync(path.join(root, file), 'utf8');
+  const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
+  const exports = {};
+  vm.runInNewContext(code, { exports, structuredClone }, { filename: file });
+  return exports;
+}
+
+const { SHEET_TEMPLATES: templates } = load('system-templates.ts');
+const { calculateSheet, fieldRoll } = load('sheet-rules.ts');
+assert.equal(templates.length, 4);
+
+for (const template of templates) {
+  const fields = template.fields;
+  const pages = template.layout.pages;
+  assert.ok(fields.length <= 100, `${template.id}: too many fields`);
+  assert.ok(pages.length <= 8, `${template.id}: too many pages`);
+  assert.ok(pages.every(page => page.blocks.length <= 40), `${template.id}: page exceeds block limit`);
+  assert.ok(pages.reduce((total, page) => total + page.blocks.length, 0) <= 100, `${template.id}: too many blocks`);
+  assert.equal(new Set(fields.map(field => field.key)).size, fields.length, `${template.id}: duplicate field key`);
+  assert.equal(new Set(pages.flatMap(page => page.blocks.map(block => block.id))).size, pages.flatMap(page => page.blocks).length, `${template.id}: duplicate block id`);
+  const placed = pages.flatMap(page => page.blocks.filter(block => block.kind === 'field').map(block => block.key));
+  assert.deepEqual(new Set(placed), new Set(fields.map(field => field.key)), `${template.id}: missing or extra field block`);
+  const values = {};
+  assert.equal(calculateSheet(fields, values), null, `${template.id}: formula failed`);
+  for (const field of fields.filter(field => field.rollExpression))
+    assert.ok(fieldRoll(field.rollExpression, values), `${template.id}: roll failed for ${field.key}`);
+}
+
+const dnd = templates.find(template => template.id === 'dnd_5e');
+const dndValues = { forca: 9, treino_per_atletismo: 1, treino_res_forca: 1 };
+assert.equal(calculateSheet(dnd.fields, dndValues), null);
+assert.equal(dndValues.mod_forca, -1);
+assert.equal(dndValues.proficiencia, 2);
+assert.equal(dndValues.per_atletismo, 1);
+assert.equal(dndValues.res_forca, 1);
+assert.equal(fieldRoll('1d20+{mod_forca}', dndValues), '1d20-1');
+
+const coc = templates.find(template => template.id === 'call_of_cthulhu_7e');
+const cocValues = { inteligencia: 65 };
+assert.equal(calculateSheet(coc.fields, cocValues), null);
+assert.equal(cocValues.inteligencia_metade, 32);
+assert.equal(cocValues.inteligencia_quinto, 13);
+
+const order = templates.find(template => template.id === 'ordem_paranormal');
+const orderValues = {};
+assert.equal(calculateSheet(order.fields, orderValues), null);
+assert.equal(orderValues.defesa, 11);
+assert.equal(fieldRoll('{agilidade}d20kh1+{per_luta}', orderValues), '1d20');
+console.log(`Validated ${templates.length} sheet templates and representative formulas/rolls.`);

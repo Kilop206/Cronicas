@@ -13,12 +13,18 @@ O módulo usa o sistema da campanha como template. Um template define campos tip
 | [FichasOP](https://beta.fichasop.com/) | Fichas digitais voltadas a um sistema específico | Editor que aceita sistemas existentes sem incluir regras ou conteúdo de terceiros |
 | [Dark Age RPG](https://darkagerpg.com/sobre) | Ficha universal, cálculo e inventário no navegador | Composição sem esquema fixo e coleções independentes |
 
-As opções iniciais de aventura fantástica e investigação são genéricas. Não contêm regras, textos, marcas visuais ou fichas oficiais dos sistemas citados.
+As opções iniciais de aventura fantástica e investigação são genéricas. O catálogo inclui modelos não oficiais de [Ordem Paranormal](https://jamboeditora.com.br/wp-content/uploads/woocommerce_uploads/2023/02/jamboeditora-ordem-paranormal-ficha-de-personagem-oeuvst.pdf), [D&D 5e](https://media.dndbeyond.com/compendium-images/free-rules/downloads/2024-character-sheet.pdf), [Tormenta20](https://jamboeditora.com.br/wp-content/uploads/2023/06/Tormenta20-Resumo-de-Regras.pdf) e [Call of Cthulhu 7e](https://www.chaosium.com/content/FreePDFs/CoC/CHA23131%20Call%20of%20Cthulhu%207th%20Edition%20Quick-Start%20Rules.pdf). Eles usam campos funcionais curtos e a interface própria do Crônicas, sem reproduzir fichas oficiais, textos extensos, arte ou identidade visual de terceiros.
+
+## Catálogo de modelos
+
+Em **Seus sistemas**, escolha um modelo e salve uma cópia editável. O mestre associa essa cópia à campanha. Personagens existentes seguem o sistema já escolhido para a campanha; criar um modelo novo não altera campanhas automaticamente.
+
+Os modelos ficam em `web/src/app/system-templates.ts`. Cada entrada define metadados, campos e layout, usando o mesmo esquema que o editor e a API validam. Para adicionar um sistema, acrescente uma entrada ao catálogo e execute `node scripts/check-sheet-templates.mjs`. O arquivo de teste verifica limites de campos, páginas e blocos, disposição dos campos, fórmulas e rolagens. O catálogo é um ponto de partida: custos, proficiências, bônus e progressão que dependem da classe, edição ou mesa podem ser ajustados no editor.
 
 ## Como configurar
 
-Em **Seus sistemas**, crie uma ficha livre ou diagramada. Um sistema existente pode ser representado com o nome e os campos que a mesa tiver direito de usar. Para progressão, crie campos como `nivel` e `experiencia`; um terceiro campo numérico pode usar `nivel * 100` como cálculo automático. Fórmulas aceitam números inteiros, chaves de outros campos numéricos, parênteses e `+`, `-`, `*`, `/`. A divisão é inteira. Campos calculados ficam somente para leitura e a API refaz o cálculo ao salvar. Dependências circulares, chaves inexistentes, divisão por zero e resultados fora dos limites são rejeitados.
+Em **Seus sistemas**, crie uma ficha livre ou diagramada. Para progressão, crie campos como `nivel` e `experiencia`; um terceiro campo numérico pode usar `nivel * 100` como cálculo automático. Fórmulas aceitam números inteiros, chaves de outros campos numéricos, parênteses, `+`, `-`, `*`, `/` e `floordiv(a,b)` para divisão arredondada para baixo. A divisão comum é inteira e trunca em direção a zero. Campos podem ter valor inicial. Campos calculados ficam somente para leitura e a API refaz o cálculo ao salvar. Dependências circulares, chaves inexistentes, divisão por zero e resultados fora dos limites são rejeitados.
 
-Uma rolagem pode usar `1d20+3` ou um modificador de campo, como `1d20+{bonus}`. Ela passa pelo serviço de dados da campanha, que registra o resultado compartilhado. Inventário e habilidades podem ser adicionados ao layout como blocos; em fichas livres ficam nas abas próprias.
+Uma rolagem pode usar `1d20+3`, um modificador de campo como `1d20+{bonus}` ou uma quantidade dinâmica de dados como `{agilidade}d20kh1+{luta}`. Ela passa pelo serviço de dados da campanha, que registra o resultado compartilhado. Inventário e habilidades podem ser adicionados ao layout como blocos; em fichas livres ficam nas abas próprias.
 
 O personagem pertence ao jogador que o criou. Dono da campanha, mestre e co-mestre podem editá-lo. Espectadores só leem. Notas secretas usam endpoint separado e são acessíveis apenas a esses papéis de mestre. O editor salva a ficha após uma pausa de 900 ms e usa versão para sinalizar conflitos de edição.

@@ -87,5 +87,10 @@ Check(SheetFormula.Validate([level, bonus with { Formula = "10 / (nivel - 1)" }]
 Check(SheetFormula.Apply([level, bonus with { Formula = "10 / (nivel - 1)" }], new Dictionary<string, System.Text.Json.JsonElement> { ["nivel"] = System.Text.Json.JsonSerializer.SerializeToElement(1) }) is not null, "Divisão por zero rejeitada ao calcular");
 Check(SheetFormula.Validate([level, bonus with { RollExpression = "1d20+{ausente}" }]) is not null, "Modificador desconhecido rejeitado");
 Check(SheetFormula.Evaluate("8 / 3 - 5", _ => 0) == -3, "Divisão inteira e precedência");
+Check(SheetFormula.Evaluate("floordiv(9 - 10, 2)", _ => 0) == -1, "Modificador arredondado para baixo");
+Check(SheetFormula.Validate([level, bonus with { Formula = "floordiv(nivel - 10, 2)", RollExpression = "{nivel}d20kh1+{bonus}" }]) is null, "Fórmula de modificador e quantidade dinâmica de dados");
+var defaultLevel = level with { DefaultValue = System.Text.Json.JsonSerializer.SerializeToElement(1) };
+var defaults = new Dictionary<string, System.Text.Json.JsonElement>();
+Check(SheetFormula.Apply([defaultLevel, milestone], defaults) is null && defaults["nivel"].GetInt32() == 1 && defaults["marco"].GetInt32() == 200, "Valor inicial aplicado antes do cálculo");
 
 Console.WriteLine("Regras de dados: expressões válidas/inválidas, kh1, kl1, modificadores e d100 passaram.");

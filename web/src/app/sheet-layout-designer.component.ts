@@ -154,7 +154,7 @@ export class SheetLayoutDesignerComponent {
         <small>{{ block.title || blockLabel(block) }}</small>
         <strong *ngIf="block.kind === 'identity'">Nome da personagem</strong>
         <div *ngIf="block.kind === 'portrait'" class="sheet-canvas-portrait">Retrato</div>
-        <strong *ngIf="block.kind === 'resource'">{{ resourceLabel(block.key) }} · 10 / 20</strong>
+        <strong *ngIf="block.kind === 'resource'">{{ block.title || resourceLabel(block.key) }} · 10 / 20</strong>
         <strong *ngIf="block.kind === 'field'">{{ fieldLabel(block.key) }}</strong>
         <p *ngIf="block.kind === 'note'">{{ block.text }}</p>
         <span *ngIf="block.kind === 'inventory' || block.kind === 'abilities' || block.kind === 'history'">Lista de {{ blockLabel(block).toLowerCase() }}</span>

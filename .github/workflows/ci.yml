@@ -17,6 +17,7 @@ jobs:
         working-directory: web
       - run: npm run lint
         working-directory: web
+      - run: node scripts/check-sheet-templates.mjs
       - run: npx tsc --noEmit -p tsconfig.app.json
         working-directory: web
       - run: npm run build

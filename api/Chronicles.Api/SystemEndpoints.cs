@@ -84,7 +84,7 @@ public static class SystemEndpoints
     {
         var errors = new Dictionary<string, string[]>();
         if (input.Name?.Trim().Length is not (>= 3 and <= 120) || input.Description is null || input.Description.Length > 2000) errors["system"] = ["Nome ou descrição inválidos."];
-        if (input.Fields is null || input.Fields.Length > 50) { errors["fields"] = ["Defina até 50 campos."]; return errors; }
+        if (input.Fields is null || input.Fields.Length > 100) { errors["fields"] = ["Defina até 100 campos."]; return errors; }
         var keys = new HashSet<string>(StringComparer.Ordinal);
         foreach (var field in input.Fields)
         {
@@ -92,7 +92,8 @@ public static class SystemEndpoints
                 || field.Section?.Trim().Length is not (>= 2 and <= 60) || field.Type is not ("text" or "longtext" or "number" or "boolean" or "select")
                 || field.Span is < 1 or > 12
                 || field.Type == "number" && (field.Min is < -999999 or > 999999 || field.Max is < -999999 or > 999999 || field.Min > field.Max)
-                || field.Type == "select" && (field.Options is null || field.Options.Length is < 1 or > 30 || field.Options.Any(x => string.IsNullOrWhiteSpace(x) || x.Length > 80)))
+                || field.Type == "select" && (field.Options is null || field.Options.Length is < 1 or > 30 || field.Options.Any(x => string.IsNullOrWhiteSpace(x) || x.Length > 80))
+                || !ValidDefault(field))
             { errors["fields"] = ["Campo inválido, chave repetida ou limites fora do intervalo."]; break; }
         }
         if (errors.ContainsKey("fields")) return errors;
@@ -102,6 +103,20 @@ public static class SystemEndpoints
         var layoutError = SystemDefinition.ValidateLayout(input.Layout, input.Fields);
         if (layoutError is not null) errors["layout"] = [layoutError];
         return errors;
+    }
+    private static bool ValidDefault(SystemField field)
+    {
+        if (field.DefaultValue is not { } value) return true;
+        return field.Type switch
+        {
+            "number" => string.IsNullOrWhiteSpace(field.Formula) && value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var number)
+                && (field.Min is null || number >= field.Min) && (field.Max is null || number <= field.Max),
+            "boolean" => value.ValueKind is JsonValueKind.True or JsonValueKind.False,
+            "select" => value.ValueKind == JsonValueKind.String && field.Options?.Contains(value.GetString()) == true,
+            "longtext" => value.ValueKind == JsonValueKind.String && value.GetString()?.Length <= 10000,
+            "text" => value.ValueKind == JsonValueKind.String && value.GetString()?.Length <= 300,
+            _ => false
+        };
     }
     public sealed record SystemInput(string Name, string Description, SystemField[] Fields, SheetLayout? Layout = null);
     public sealed record SetSystemInput(Guid? SystemId);
