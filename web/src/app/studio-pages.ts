@@ -54,7 +54,7 @@ export class SheetFieldsViewComponent {
 }
 
 @Component({ standalone: true, imports: [CommonModule, FormsModule, RouterLink, SheetFieldsViewComponent, SheetLayoutComponent, SheetRollComponent, forwardRef(() => OverlayCardComponent), CharacterHistoryPanelComponent, CharacterInventoryComponent, CharacterAbilitiesComponent], template: `
-  <main class="page narrow" *ngIf="character() as item"><a [routerLink]="['/campaigns', item.campaignId, 'characters']" class="back-link">← Personagens</a>
+  <main class="page narrow" *ngIf="!loading() && !systemLoading() && !systemFailed() && character() as item"><a [routerLink]="['/campaigns', item.campaignId, 'characters']" class="back-link">← Personagens</a>
     <div class="page-heading"><div><span class="overline">FICHA / CENA</span><h1>{{ item.name }}</h1><p>Ficha da campanha e composição para OBS.</p></div></div>
     <button type="button" class="text-link character-favorite" [attr.aria-pressed]="favorite()" [disabled]="favoriteBusy()" (click)="toggleFavorite()">{{ favorite() ? 'Remover dos favoritos' : 'Adicionar aos favoritos' }}</button>
     <div *ngIf="error()" class="notice error" role="alert">{{ error() }}</div>
@@ -96,10 +96,10 @@ export class SheetFieldsViewComponent {
     <app-character-abilities *ngIf="activeTab === 'abilities'" [character]="item" />
     <app-character-history *ngIf="activeTab === 'history'" [character]="item" (restored)="onRestored($event)" />
     <section *ngIf="master() && activeTab === 'secret'" class="editor-panel character-secret"><div class="panel-heading"><span>SOMENTE MESTRES</span><h2>Anotações secretas</h2></div><p class="room-note">Estas notas ficam em uma área separada da ficha pública. Jogadores não recebem o conteúdo pela API.</p><label>Segredos e planejamento<textarea [(ngModel)]="secretDraft" rows="7" maxlength="10000" placeholder="Informações ainda não reveladas..."></textarea></label><div class="form-actions"><button type="button" class="button" [disabled]="secretBusy() || !secret()" (click)="saveSecret()">{{ secretBusy() ? 'Salvando...' : 'Salvar notas secretas' }}</button><span *ngIf="secretSaved()" class="form-success" role="status">Notas salvas.</span></div></section>
-  </main><main class="page" *ngIf="loading()"><div class="loading">Abrindo ficha...</div></main>` })
+  </main><main class="page" *ngIf="loading() || systemLoading()"><div class="loading">Abrindo ficha...</div></main><main class="page" *ngIf="!loading() && !systemLoading() && (!character() || systemFailed()) && error()"><div class="notice error" role="alert">{{ error() }}</div></main>` })
 export class CharacterEditorPage implements OnDestroy {
   api = inject(ApiService); private route = inject(ActivatedRoute); private router = inject(Router); private document = inject(DOCUMENT);
-  character = signal<Character | null>(null); system = signal<RpgSystem | null>(null); systemLoading = signal(true); draft: CharacterInput = emptyCharacter(); loading = signal(true); saving = signal(false); saved = signal(false); error = signal(''); overlayUrl = signal('');
+  character = signal<Character | null>(null); system = signal<RpgSystem | null>(null); systemLoading = signal(true); systemFailed = signal(false); draft: CharacterInput = emptyCharacter(); loading = signal(true); saving = signal(false); saved = signal(false); error = signal(''); overlayUrl = signal('');
   master = signal(false); secret = signal<CharacterSecret | null>(null); secretDraft = ''; secretBusy = signal(false); secretSaved = signal(false);
   favorite = signal(false); favoriteBusy = signal(false);
   activeTab: 'sheet' | 'inventory' | 'abilities' | 'history' | 'secret' = 'sheet';
@@ -111,7 +111,7 @@ export class CharacterEditorPage implements OnDestroy {
   constructor() { this.routeSubscription = this.route.paramMap.subscribe(params => this.loadCharacter(params.get('id')!)); }
   private loadCharacter(id: string) {
     clearTimeout(this.saveTimer);
-    this.loading.set(true); this.systemLoading.set(true); this.character.set(null); this.system.set(null);
+    this.loading.set(true); this.systemLoading.set(true); this.systemFailed.set(false); this.character.set(null); this.system.set(null);
     this.activeTab = 'sheet'; this.favorite.set(false); this.master.set(false); this.secret.set(null);
     this.secretDraft = ''; this.overlayUrl.set(''); this.error.set('');
     this.api.character(id).pipe(finalize(() => this.loading.set(false))).subscribe({
@@ -122,9 +122,9 @@ export class CharacterEditorPage implements OnDestroy {
           next: campaign => {
             const master = ['owner', 'gm', 'co-gm'].includes(campaign.role); this.master.set(master);
             if (master) this.api.characterSecret(id).subscribe({ next: secret => { this.secret.set(secret); this.secretDraft = secret.notes; }, error: e => this.error.set(apiError(e)) });
-            if (campaign.systemId) this.api.system(campaign.systemId).pipe(finalize(() => this.systemLoading.set(false))).subscribe({ next: system => { this.system.set(system); this.recalculate(); }, error: e => this.error.set(apiError(e)) });
+            if (campaign.systemId) this.api.system(campaign.systemId).pipe(finalize(() => this.systemLoading.set(false))).subscribe({ next: system => { this.system.set(system); this.recalculate(); }, error: e => { this.systemFailed.set(true); this.error.set(apiError(e)); } });
             else this.systemLoading.set(false);
-          }, error: e => { this.systemLoading.set(false); this.error.set(apiError(e)); }
+          }, error: e => { this.systemFailed.set(true); this.systemLoading.set(false); this.error.set(apiError(e)); }
         });
       }, error: error => { this.systemLoading.set(false); this.error.set(apiError(error)); }
     });
