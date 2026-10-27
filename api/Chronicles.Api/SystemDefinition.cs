@@ -51,7 +51,7 @@ public sealed record SystemDefinition(SystemField[] Fields, SheetLayout? Layout)
             {
                 if (block is null || block.Id is null || !IdPattern.IsMatch(block.Id) || !blockIds.Add(block.Id)
                     || block.Span is < 1 or > 12 || block.Kind is not ("identity" or "portrait" or "resource" or "field" or "note" or "inventory" or "abilities" or "history")
-                    || block.Title?.Length > 80 || block.Text?.Length > 2000 || block.Style is not (null or "panel" or "plain" or "accent"))
+                    || block.Title?.Length > 80 || block.Text?.Length > 2000 || block.Style is not (null or "panel" or "plain" or "accent" or "score" or "compact"))
                     return "Bloco da ficha inválido ou repetido.";
                 if (block.Kind == "field" && (block.Key is null || !fieldKeys.Contains(block.Key)))
                     return "Um bloco aponta para um campo inexistente.";

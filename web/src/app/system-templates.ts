@@ -25,14 +25,16 @@ const history = () => block('colecao_historico', 'history', 'Histórico do perso
 const highlight = (key: string, span = 3) => block(`campo_${key}`, 'field', '', span, key, 'accent');
 const note = (id: string, title: string, text: string): SheetBlock => ({ ...block(id, 'note', title, 12, null, 'plain'), text });
 type PageSpec = { id: string; title: string; items: (string | SheetBlock)[] };
+type FieldPresentation = Record<string, { style: SheetBlock['style']; span: number }>;
 
-function makeLayout(fields: SystemField[], specs: PageSpec[], skin: SheetLayout['skin'], accentColor: string, headerLabel: string): SheetLayout {
+function makeLayout(fields: SystemField[], specs: PageSpec[], skin: SheetLayout['skin'], accentColor: string, headerLabel: string, presentation: FieldPresentation): SheetLayout {
   const byKey = new Map(fields.map(field => [field.key, field]));
   const pages: SheetPage[] = specs.map(spec => ({ id: spec.id, title: spec.title, blocks: spec.items.map(item => {
     if (typeof item !== 'string') return item;
     const field = byKey.get(item);
     if (!field) throw new Error(`Campo ${item} não existe no modelo`);
-    return block(`campo_${item}`, 'field', field.label, field.span || 6, item);
+    const display = presentation[field.section];
+    return block(`campo_${item}`, 'field', field.label, display?.span || field.span || 6, item, display?.style || 'panel');
   }) }));
   return { accentColor, skin, headerLabel, pages };
 }
@@ -134,16 +136,16 @@ export const SHEET_TEMPLATES: SheetTemplate[] = [
       { id: 'investigacao', title: 'Investigação e presença', items: orderSkills.filter(([, , attribute]) => ['intelecto', 'presenca'].includes(attribute)).map(([key]) => `per_${key}`) },
       { id: 'arsenal', title: 'Arsenal e rituais', items: [inventory(), abilities()] },
       { id: 'registros', title: 'Registros', items: [history()] }
-    ], 'investigation', '#9b8bc0', 'CRÔNICAS / DOSSIÊ DO AGENTE') },
+    ], 'investigation', '#9b8bc0', 'CRÔNICAS / DOSSIÊ DO AGENTE', { Atributos: { style: 'score', span: 3 }, Perícias: { style: 'compact', span: 6 } }) },
   { id: 'dnd_5e', name: 'D&D 5e', summary: 'Atributos, modificadores, resistências, perícias, progressão e combate.', sourceUrl: 'https://media.dndbeyond.com/compendium-images/free-rules/downloads/2024-character-sheet.pdf', fields: dndFields,
     layout: makeLayout(dndFields, [
       { id: 'aventura', title: 'Personagem e combate', items: [identity(), portrait(), ...sectionKeys(dndFields, 'Identidade'), 'nivel', 'experiencia', highlight('proficiencia', 4), resource('health', 'Pontos de vida', 8), highlight('classe_armadura', 4), 'iniciativa', 'deslocamento', 'pontos_temporarios'] },
-      { id: 'aptidoes', title: 'Atributos e resistências', items: dndAbilities.flatMap(([key]) => [key, `mod_${key}`, `treino_res_${key}`, `res_${key}`]) },
+      { id: 'aptidoes', title: 'Atributos e resistências', items: [...dndAbilities.flatMap(([key]) => [key, `mod_${key}`]), ...dndAbilities.flatMap(([key]) => [`treino_res_${key}`, `res_${key}`])] },
       { id: 'pericias', title: 'Perícias e treino', items: [note('nota_treino', 'Treino', 'Use 0 para nenhum, 1 para proficiência e 2 para especialização. Os bônus são recalculados.'), ...dndSkills.flatMap(([key]) => [`treino_per_${key}`, `per_${key}`])] },
       { id: 'equipamento', title: 'Equipamento', items: [inventory()] },
       { id: 'recursos', title: 'Características e magias', items: [abilities()] },
       { id: 'jornada', title: 'Jornada', items: [history()] }
-    ], 'fantasy', '#a99167', 'CRÔNICAS / AVENTURA') },
+    ], 'fantasy', '#b56d63', 'CRÔNICAS / AVENTURA', { Atributos: { style: 'score', span: 3 }, Modificadores: { style: 'score', span: 3 }, Resistências: { style: 'compact', span: 6 }, Perícias: { style: 'compact', span: 6 } }) },
   { id: 'tormenta20', name: 'Tormenta20', summary: 'Raça, origem, classe, seis atributos, PV, PM e perícias.', sourceUrl: 'https://jamboeditora.com.br/wp-content/uploads/2023/06/Tormenta20-Resumo-de-Regras.pdf', fields: t20Fields,
     layout: makeLayout(t20Fields, [
       { id: 'heroi', title: 'Herói de Arton', items: [identity(), portrait(), ...sectionKeys(t20Fields, 'Identidade'), 'nivel', 'experiencia', resource('health', 'PV', 6), resource('mana', 'PM', 6), highlight('defesa', 6), 'deslocamento'] },
@@ -152,7 +154,7 @@ export const SHEET_TEMPLATES: SheetTemplate[] = [
       { id: 'poderes', title: 'Poderes e magias', items: [abilities()] },
       { id: 'mochila', title: 'Mochila', items: [inventory()] },
       { id: 'cronica', title: 'Crônica', items: [history()] }
-    ], 'mythic', '#be825d', 'CRÔNICAS / LENDA') },
+    ], 'mythic', '#be825d', 'CRÔNICAS / LENDA', { Atributos: { style: 'score', span: 4 }, Perícias: { style: 'compact', span: 6 } }) },
   { id: 'call_of_cthulhu_7e', name: 'Call of Cthulhu 7e', summary: 'Características percentuais, limiares calculados, perícias, PV, SAN e magia.', sourceUrl: 'https://www.chaosium.com/content/FreePDFs/CoC/CHA23131%20Call%20of%20Cthulhu%207th%20Edition%20Quick-Start%20Rules.pdf', fields: cocFields,
     layout: makeLayout(cocFields, [
       { id: 'investigador', title: 'Arquivo do investigador', items: [identity(), portrait(), ...sectionKeys(cocFields, 'Identidade'), 'credito', resource('health', 'PV', 4), resource('sanity', 'SAN', 4), resource('mana', 'Magia', 4)] },
@@ -160,5 +162,5 @@ export const SHEET_TEMPLATES: SheetTemplate[] = [
       { id: 'pericias', title: 'Perícias', items: sectionKeys(cocFields, 'Perícias') },
       { id: 'pertences', title: 'Pertences e conhecimentos', items: [inventory(), abilities()] },
       { id: 'anotacoes', title: 'Anotações', items: [history()] }
-    ], 'archive', '#748d85', 'CRÔNICAS / ARQUIVO DO INVESTIGADOR') }
+    ], 'archive', '#748d85', 'CRÔNICAS / ARQUIVO DO INVESTIGADOR', { Características: { style: 'score', span: 4 }, Limiares: { style: 'compact', span: 4 }, Perícias: { style: 'compact', span: 6 } }) }
 ];

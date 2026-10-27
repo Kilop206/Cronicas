@@ -5,15 +5,16 @@ import { ApiService, apiError } from './api';
 import { SheetValues, fieldRoll } from './sheet-rules';
 
 @Component({ selector: 'app-sheet-roll', standalone: true, imports: [CommonModule], template: `
-  <div class="sheet-roll"><button type="button" class="button button-small secondary" (click)="roll()" [disabled]="busy()">{{ busy() ? 'Rolando...' : 'Rolar ' + label }}</button>
+  <div class="sheet-roll" [class.compact]="compact"><button type="button" class="button button-small secondary" (click)="roll()" [disabled]="busy()" [attr.aria-label]="'Rolar ' + label">{{ busy() ? 'Rolando...' : compact ? 'Rolar' : 'Rolar ' + label }}</button>
     <span *ngIf="total() !== null" role="status">Resultado {{ total() }}</span><span *ngIf="error()" class="form-error" role="alert">{{ error() }}</span></div>`,
-  styles: [`.sheet-roll { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 8px; font-size: 13px; } @media print { .sheet-roll { display: none; } }`]
+  styles: [`.sheet-roll { display: flex; align-items: center; flex-wrap: wrap; gap: 8px; margin-top: 8px; font-size: 13px; } .sheet-roll.compact { margin-top: 0; } .sheet-roll.compact button { min-height: 30px; padding: 5px 9px; } @media print { .sheet-roll { display: none; } }`]
 })
 export class SheetRollComponent {
   @Input({ required: true }) campaignId!: string;
   @Input({ required: true }) expression!: string;
   @Input({ required: true }) values!: SheetValues;
   @Input() label = 'dados';
+  @Input() compact = false;
   private api = inject(ApiService);
   busy = signal(false); total = signal<number | null>(null); error = signal('');
   roll() {

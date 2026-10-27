@@ -34,6 +34,8 @@ for (const template of templates) {
   assert.equal(new Set(pages.flatMap(page => page.blocks.map(block => block.id))).size, pages.flatMap(page => page.blocks).length, `${template.id}: duplicate block id`);
   assert.ok(pages.every(page => page.blocks.length > 0), `${template.id}: empty page`);
   assert.ok(pages.flatMap(page => page.blocks).every(block => /^[a-z][a-z0-9_]{1,39}$/.test(block.id)), `${template.id}: invalid block id`);
+  assert.ok(pages.flatMap(page => page.blocks).some(block => block.style === 'score'), `${template.id}: no prominent score blocks`);
+  assert.ok(pages.flatMap(page => page.blocks).some(block => block.style === 'compact'), `${template.id}: no compact skill rows`);
   const placed = pages.flatMap(page => page.blocks.filter(block => block.kind === 'field').map(block => block.key));
   assert.deepEqual(new Set(placed), new Set(fields.map(field => field.key)), `${template.id}: missing or extra field block`);
   const values = {};

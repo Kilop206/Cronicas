@@ -14,11 +14,17 @@ const resources: Record<ResourceKey, { label: string; max: MaxResourceKey }> = {
 };
 
 @Component({ selector: 'app-sheet-layout', standalone: true, imports: [CommonModule, FormsModule, CharacterInventoryComponent, CharacterAbilitiesComponent, CharacterHistoryPanelComponent, SheetRollComponent], template: `
-  <div class="sheet-canvas" [class.sheet-skin-investigation]="layout.skin === 'investigation'" [class.sheet-skin-fantasy]="layout.skin === 'fantasy'" [class.sheet-skin-mythic]="layout.skin === 'mythic'" [style.--sheet-accent]="layout.accentColor">
+  <div class="sheet-canvas" [class.sheet-skin-archive]="layout.skin === 'archive'" [class.sheet-skin-investigation]="layout.skin === 'investigation'" [class.sheet-skin-fantasy]="layout.skin === 'fantasy'" [class.sheet-skin-mythic]="layout.skin === 'mythic'" [style.--sheet-accent]="layout.accentColor">
     <header class="sheet-masthead"><div><span>{{ layout.headerLabel || 'CRÔNICAS / FICHA DE PERSONAGEM' }}</span><strong>{{ draft.name || 'Personagem' }}</strong></div><small>{{ layout.pages.length }} {{ layout.pages.length === 1 ? 'PÁGINA' : 'PÁGINAS' }}</small></header>
+    <div *ngIf="mode !== 'print' && activePage().id !== layout.pages[0].id" class="sheet-quickbar" aria-label="Resumo do personagem"><div *ngFor="let block of pinnedBlocks()" class="sheet-quick-stat">
+      <span>{{ block.title || (block.kind === 'resource' ? resourceLabel(block.key) : fieldFor(block)?.label) }}</span>
+      <strong *ngIf="block.kind === 'resource'">{{ resourceValue(block.key) }} / {{ resourceValue(resourceMaxKey(block)) }}</strong>
+      <div *ngIf="block.kind === 'resource' && character.canEdit" class="sheet-resource-steps"><button type="button" [attr.aria-label]="'Diminuir ' + (block.title || resourceLabel(block.key))" [disabled]="resourceValue(block.key) <= 0" (click)="adjustResource(block, -1)">−</button><button type="button" [attr.aria-label]="'Aumentar ' + (block.title || resourceLabel(block.key))" [disabled]="resourceValue(block.key) >= resourceValue(resourceMaxKey(block))" (click)="adjustResource(block, 1)">+</button></div>
+      <strong *ngIf="block.kind === 'field' && fieldFor(block) as field">{{ displayField(field) }}</strong>
+    </div></div>
     <nav *ngIf="mode !== 'print'" class="custom-sheet-tabs" aria-label="Páginas da ficha"><button *ngFor="let page of layout.pages" type="button" [class.active]="activePage().id === page.id" (click)="selectedPageId.set(page.id)">{{ page.title }}</button></nav>
     <section *ngFor="let page of visiblePages()" class="sheet-canvas-page"><div class="sheet-page-heading"><span>CAPÍTULO {{ pageNumber(page) }}</span><h3>{{ page.title }}</h3></div><div class="sheet-canvas-grid" [class.free-canvas]="page.layoutMode === 'canvas'" [style.aspect-ratio]="page.layoutMode === 'canvas' ? page.aspectRatio || 0.75 : null" [style.background-image]="page.layoutMode === 'canvas' && page.backgroundUrl ? 'url(' + page.backgroundUrl + ')' : null">
-      <div *ngFor="let block of page.blocks" class="sheet-canvas-block" [class.plain]="block.style === 'plain'" [class.accent]="block.style === 'accent'" [class.kind-identity]="block.kind === 'identity'" [class.kind-portrait]="block.kind === 'portrait'" [class.kind-resource]="block.kind === 'resource'" [class.kind-field]="block.kind === 'field'" [class.kind-collection]="block.kind === 'inventory' || block.kind === 'abilities' || block.kind === 'history'" [class.is-numeric]="block.kind === 'field' && fieldFor(block)?.type === 'number'" [style.grid-column]="'span ' + block.span" [style.left.%]="page.layoutMode === 'canvas' ? block.x : null" [style.top.%]="page.layoutMode === 'canvas' ? block.y : null" [style.width.%]="page.layoutMode === 'canvas' ? block.width : null" [style.height.%]="page.layoutMode === 'canvas' ? block.height : null">
+      <div *ngFor="let block of page.blocks" class="sheet-canvas-block" [class.plain]="block.style === 'plain'" [class.accent]="block.style === 'accent'" [class.score]="block.style === 'score'" [class.compact]="block.style === 'compact'" [class.kind-identity]="block.kind === 'identity'" [class.kind-portrait]="block.kind === 'portrait'" [class.kind-resource]="block.kind === 'resource'" [class.kind-field]="block.kind === 'field'" [class.kind-collection]="block.kind === 'inventory' || block.kind === 'abilities' || block.kind === 'history'" [class.is-numeric]="block.kind === 'field' && fieldFor(block)?.type === 'number'" [style.grid-column]="'span ' + block.span" [style.left.%]="page.layoutMode === 'canvas' ? block.x : null" [style.top.%]="page.layoutMode === 'canvas' ? block.y : null" [style.width.%]="page.layoutMode === 'canvas' ? block.width : null" [style.height.%]="page.layoutMode === 'canvas' ? block.height : null">
         <small>{{ block.title || (block.kind === 'field' ? fieldFor(block)?.label : blockLabel(block)) }}</small>
         <ng-container *ngIf="block.kind === 'identity'">
           <label *ngIf="mode === 'edit'">Nome<input [ngModel]="draft.name" (ngModelChange)="draft.name = $event; changed.emit()" [ngModelOptions]="{standalone: true}" required minlength="2" maxlength="120"></label>
@@ -31,6 +37,7 @@ const resources: Record<ResourceKey, { label: string; max: MaxResourceKey }> = {
         <ng-container *ngIf="block.kind === 'resource'">
           <strong>{{ block.title || resourceLabel(block.key) }} · {{ resourceValue(block.key) }} / {{ resourceValue(resourceMaxKey(block)) }}</strong>
           <div class="sheet-resource-track" role="meter" [attr.aria-label]="block.title || resourceLabel(block.key)" [attr.aria-valuenow]="resourceValue(block.key)" aria-valuemin="0" [attr.aria-valuemax]="resourceValue(resourceMaxKey(block))"><span [style.width.%]="resourcePercent(block)"></span></div>
+          <div *ngIf="mode === 'read' && character.canEdit" class="sheet-resource-steps"><button type="button" [attr.aria-label]="'Diminuir ' + (block.title || resourceLabel(block.key))" [disabled]="resourceValue(block.key) <= 0" (click)="adjustResource(block, -1)">−</button><button type="button" [attr.aria-label]="'Aumentar ' + (block.title || resourceLabel(block.key))" [disabled]="resourceValue(block.key) >= resourceValue(resourceMaxKey(block))" (click)="adjustResource(block, 1)">+</button></div>
           <div *ngIf="mode === 'edit'" class="sheet-resource-controls"><label>Atual<input type="number" [ngModel]="resourceValue(block.key)" (ngModelChange)="setResourceValue(block.key, $event)" [ngModelOptions]="{standalone: true}" min="0" max="999999"></label><label>Máximo<input type="number" [ngModel]="resourceValue(resourceMaxKey(block))" (ngModelChange)="setResourceValue(resourceMaxKey(block), $event)" [ngModelOptions]="{standalone: true}" min="1" max="999999"></label></div>
         </ng-container>
         <ng-container *ngIf="block.kind === 'field'"><ng-container *ngIf="fieldFor(block) as field">
@@ -39,7 +46,7 @@ const resources: Record<ResourceKey, { label: string; max: MaxResourceKey }> = {
           <label *ngIf="mode === 'edit' && field.type === 'select'">{{ field.label }}<select [ngModel]="fieldValue(field)" (ngModelChange)="setField(field, $event)" [ngModelOptions]="{standalone: true}"><option value="">Selecione</option><option *ngFor="let option of field.options" [value]="option">{{ option }}</option></select></label>
           <label *ngIf="mode === 'edit' && field.type === 'boolean'" class="checkbox-field"><input type="checkbox" [ngModel]="fieldValue(field) === true" (ngModelChange)="setField(field, $event)" [ngModelOptions]="{standalone: true}"> {{ field.label }}</label>
           <strong *ngIf="mode !== 'edit'" class="sheet-value"><span class="sheet-field-caption">{{ field.label }}</span>{{ displayField(field) }}</strong>
-          <app-sheet-roll *ngIf="mode !== 'print' && field.rollExpression" [campaignId]="character.campaignId" [expression]="field.rollExpression" [values]="draft.fields" [label]="field.label" />
+          <app-sheet-roll *ngIf="mode !== 'print' && field.rollExpression" [campaignId]="character.campaignId" [expression]="field.rollExpression" [values]="draft.fields" [label]="field.label" [compact]="block.style === 'compact' || block.style === 'score'" />
         </ng-container></ng-container>
         <p *ngIf="block.kind === 'note'">{{ block.text }}</p>
         <app-character-inventory *ngIf="block.kind === 'inventory'" [character]="character" />
@@ -78,6 +85,7 @@ export class SheetLayoutComponent {
   activePage(): SheetPage { return this.layout.pages.find(page => page.id === this.selectedPageId()) || this.layout.pages[0]; }
   pageNumber(page: SheetPage) { return String(this.layout.pages.indexOf(page) + 1).padStart(2, '0'); }
   visiblePages() { return this.mode === 'print' ? this.layout.pages : [this.activePage()]; }
+  pinnedBlocks() { return this.layout.pages[0].blocks.filter(block => block.kind === 'resource' || block.kind === 'field' && block.style === 'accent').slice(0, 6); }
   blockLabel(block: SheetBlock) { return block.kind === 'field' ? 'Campo' : block.kind === 'resource' ? 'Recurso' : block.kind === 'note' ? 'Nota' : block.kind === 'identity' ? 'Identidade' : block.kind === 'portrait' ? 'Retrato' : block.kind === 'inventory' ? 'Inventário' : block.kind === 'abilities' ? 'Habilidades' : 'Histórico'; }
   resourceMaxKey(block: SheetBlock): string | null { return block.maxKey || (block.key === 'health' || block.key === 'sanity' || block.key === 'mana' ? resources[block.key].max : null); }
   resourceLabel(key: string | null) { return this.fields.find(field => field.key === key)?.label || ({ health: 'Vida', sanity: 'Sanidade', mana: 'Mana', maxHealth: 'Vida máxima', maxSanity: 'Sanidade máxima', maxMana: 'Mana máxima' } as Record<string, string>)[key || ''] || 'Recurso'; }
@@ -86,6 +94,7 @@ export class SheetLayoutComponent {
     return Number(this.draft.fields[key || ''] ?? 0);
   }
   resourcePercent(block: SheetBlock) { const maximum = this.resourceValue(this.resourceMaxKey(block)); return Math.max(0, Math.min(100, maximum > 0 ? this.resourceValue(block.key) / maximum * 100 : 0)); }
+  adjustResource(block: SheetBlock, delta: number) { const max = this.resourceValue(this.resourceMaxKey(block)); this.setResourceValue(block.key, Math.max(0, Math.min(max, this.resourceValue(block.key) + delta))); }
   setResourceValue(key: string | null, value: number) {
     if (!key) return;
     if (key === 'health' || key === 'sanity' || key === 'mana' || key === 'maxHealth' || key === 'maxSanity' || key === 'maxMana') { this.draft[key] = Number(value); this.changed.emit(); return; }

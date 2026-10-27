@@ -50,6 +50,7 @@ var layout = new SheetLayout("#8d6c9e", [new SheetPage("principal", "Principal",
     new SheetBlock("vida", "resource", 6, Key: "health")
 ])]);
 Check(SystemDefinition.ValidateLayout(layout, [field]) is null, "Layout de ficha valido");
+Check(SystemDefinition.ValidateLayout(layout with { Pages = [layout.Pages[0] with { Blocks = [layout.Pages[0].Blocks[0], layout.Pages[0].Blocks[1] with { Style = "score" }, layout.Pages[0].Blocks[2] with { Style = "compact" }] }] }, [field]) is null, "Estilos compactos de ficha validos");
 var stored = System.Text.Json.JsonSerializer.Serialize(new SystemDefinition([field], layout));
 Check(SystemDefinition.Read(stored).Layout?.Pages[0].Blocks.Length == 3, "Layout persiste no esquema");
 Check(SystemDefinition.Read(System.Text.Json.JsonSerializer.Serialize(new[] { field })).Layout is null, "Esquema antigo permanece legivel");
