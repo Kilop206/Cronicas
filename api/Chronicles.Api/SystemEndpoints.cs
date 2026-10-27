@@ -96,6 +96,9 @@ public static class SystemEndpoints
             { errors["fields"] = ["Campo inválido, chave repetida ou limites fora do intervalo."]; break; }
         }
         if (errors.ContainsKey("fields")) return errors;
+        var formulaError = SheetFormula.Validate(input.Fields);
+        if (formulaError is not null) errors["fields"] = [formulaError];
+        if (errors.ContainsKey("fields")) return errors;
         var layoutError = SystemDefinition.ValidateLayout(input.Layout, input.Fields);
         if (layoutError is not null) errors["layout"] = [layoutError];
         return errors;

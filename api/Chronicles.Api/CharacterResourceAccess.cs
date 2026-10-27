@@ -18,6 +18,6 @@ internal static class CharacterResourceAccess
             .Where(x => x.Id == characterId && x.Campaign.Memberships.Any(m => m.UserId == userId))
             .Select(x => new { x.OwnerId, Role = x.Campaign.Memberships.Where(m => m.UserId == userId).Select(m => m.Role).First() })
             .SingleOrDefaultAsync();
-        return member is null ? null : member.OwnerId == userId || member.Role is "owner" or "gm" or "co-gm";
+        return member is null ? null : member.Role != "spectator" && (member.OwnerId == userId || member.Role is "owner" or "gm" or "co-gm");
     }
 }

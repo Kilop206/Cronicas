@@ -9,8 +9,7 @@ import { SheetLayoutDesignerComponent, SheetLayoutPreviewComponent } from './she
 const newSheetLayout = (): SheetLayout => ({ accentColor: '#aa9acd', skin: 'investigation', pages: [
   { id: 'principal', title: 'Principal', blocks: [
     { id: 'identidade', kind: 'identity', span: 8, title: 'Identidade', key: null, text: null, style: 'plain' },
-    { id: 'retrato', kind: 'portrait', span: 4, title: 'Retrato', key: null, text: null, style: 'panel' },
-    ...(['health', 'sanity', 'mana'] as const).map(key => ({ id: `recurso_${key}`, kind: 'resource' as const, span: 4, title: null, key, text: null, style: 'accent' as const }))
+    { id: 'retrato', kind: 'portrait', span: 4, title: 'Retrato', key: null, text: null, style: 'panel' }
   ] },
   { id: 'inventario', title: 'Inventário', blocks: [{ id: 'colecao_inventario', kind: 'inventory', span: 12, title: 'Inventário', key: null, text: null, style: 'plain' }] },
   { id: 'habilidades', title: 'Habilidades', blocks: [{ id: 'colecao_habilidades', kind: 'abilities', span: 12, title: 'Habilidades', key: null, text: null, style: 'plain' }] },
@@ -42,6 +41,7 @@ export class SystemsPage implements OnInit {
       <section class="editor-panel designer-controls"><div class="panel-heading"><span>IDENTIDADE</span><h2>Definição do sistema</h2></div>
         <label>Nome<input name="name" [(ngModel)]="name" required minlength="3" maxlength="120" [disabled]="readonly()"></label>
         <label>Descrição<textarea name="description" [(ngModel)]="description" maxlength="2000" rows="3" [disabled]="readonly()"></textarea></label>
+        <label *ngIf="isNew">Ponto de partida<select name="preset" [ngModel]="preset" (ngModelChange)="applyPreset($event)"><option value="blank">Em branco</option><option value="fantasy">Aventura fantástica genérica</option><option value="mystery">Investigação genérica</option></select></label>
         <fieldset class="mode-choice" [disabled]="readonly()"><legend>Como criar a ficha</legend>
           <label [class.selected]="mode === 'free'"><input type="radio" name="mode" [checked]="mode === 'free'" (change)="mode = 'free'"><span><strong>Livre</strong><small>Jogadores adicionam campos manualmente à própria ficha.</small></span></label>
           <label [class.selected]="mode === 'structured'"><input type="radio" name="mode" [checked]="mode === 'structured'" (change)="mode = 'structured'"><span><strong>Diagramada</strong><small>Você define páginas, blocos, campos e recursos da ficha.</small></span></label>
@@ -58,9 +58,11 @@ export class SystemsPage implements OnInit {
               <label>Largura<select [name]="'span' + i" [(ngModel)]="field.span" [disabled]="readonly()"><option [ngValue]="3">¼ da linha</option><option [ngValue]="4">⅓ da linha</option><option [ngValue]="6">½ linha</option><option [ngValue]="12">Linha inteira</option></select></label>
               <label *ngIf="field.type === 'number'">Mínimo<input type="number" [name]="'min' + i" [(ngModel)]="field.min" [disabled]="readonly()"></label>
               <label *ngIf="field.type === 'number'">Máximo<input type="number" [name]="'max' + i" [(ngModel)]="field.max" [disabled]="readonly()"></label>
+              <label *ngIf="field.type === 'number'" class="wide">Cálculo automático<input [name]="'formula' + i" [(ngModel)]="field.formula" maxlength="200" placeholder="nivel * 100 + experiencia" [disabled]="readonly()"><small>Use chaves de outros campos numéricos, +, -, *, / e parênteses. O resultado fica somente para leitura.</small></label>
+              <label *ngIf="field.type === 'number'" class="wide">Rolagem do campo<input [name]="'roll' + i" [(ngModel)]="field.rollExpression" maxlength="80" placeholder="1d20+&#123;bonus&#125;" [disabled]="readonly()"><small>Ex.: 1d20+3 ou 1d20+&#123;bonus&#125;. O resultado aparece na campanha.</small></label>
               <label *ngIf="field.type === 'select'" class="wide">Opções separadas por vírgula<input [name]="'options' + i" [ngModel]="field.options?.join(', ') || ''" (ngModelChange)="field.options = parseOptions($event)" [disabled]="readonly()"></label></div>
           </div></div>
-          <label *ngIf="editorMode === 'json'">Campos em JSON<textarea name="json" [(ngModel)]="jsonDraft" rows="18" spellcheck="false" [disabled]="readonly()"></textarea><small>Use um array de campos com key, label, type, section, span, min, max e options. Nenhum script é executado.</small></label>
+          <label *ngIf="editorMode === 'json'">Campos em JSON<textarea name="json" [(ngModel)]="jsonDraft" rows="18" spellcheck="false" [disabled]="readonly()"></textarea><small>Use um array de campos com key, label, type, section, span, min, max, options, formula e rollExpression. Nenhum script é executado.</small></label>
           <app-sheet-layout-designer [layout]="layout" [fields]="fields" [readOnly]="readonly()" (layoutChange)="layout = $event" (pageSelected)="selectedPreviewPage = $event" />
         </div>
         <p *ngIf="readonly()" class="room-note">Você pode consultar este sistema porque participa de uma campanha que o usa.</p>
@@ -98,14 +100,40 @@ export class SystemsPage implements OnInit {
 export class SystemEditorPage implements OnInit {
   private api = inject(ApiService); private route = inject(ActivatedRoute); private router = inject(Router);
   id = this.route.snapshot.paramMap.get('id') || 'new'; isNew = this.id === 'new'; ownerId: string | null = null;
-  name = ''; description = ''; mode: 'free' | 'structured' = 'structured'; editorMode: 'visual' | 'json' = 'visual'; jsonDraft = '[]';
+  name = ''; description = ''; preset = 'blank'; mode: 'free' | 'structured' = 'structured'; editorMode: 'visual' | 'json' = 'visual'; jsonDraft = '[]';
   layout = newSheetLayout();
   selectedPreviewPage = 'principal';
   fields: SystemField[] = []; loading = signal(!this.isNew); busy = signal(false); saved = signal(false); error = signal('');
   ngOnInit() { if (!this.isNew) this.api.system(this.id).pipe(finalize(() => this.loading.set(false))).subscribe({ next: system => { this.name = system.name; this.description = system.description; this.fields = system.fields.map(f => ({ ...f, span: f.span || 6, options: f.options?.slice() || null })); this.layout = system.layout || layoutFromFields(this.fields); this.selectedPreviewPage = this.layout.pages[0].id; this.mode = (system.layout || this.fields.length) ? 'structured' : 'free'; this.ownerId = system.ownerId; }, error: e => this.error.set(apiError(e)) }); }
   readonly() { return !this.isNew && this.ownerId !== this.api.user()?.id; }
+  applyPreset(value: string) {
+    this.preset = value;
+    if (value === 'blank') { this.fields = []; this.layout = newSheetLayout(); return; }
+    const basic = (key: string, label: string, section: string, formula: string | null = null, rollExpression: string | null = null): SystemField =>
+      ({ key, label, section, type: 'number', min: null, max: null, options: null, span: 6, formula, rollExpression });
+    this.fields = value === 'fantasy' ? [
+      basic('nivel', 'Nível', 'Progressão'), basic('experiencia', 'Experiência', 'Progressão'),
+      basic('proximo_marco', 'Próximo marco', 'Progressão', 'nivel * 100'),
+      basic('atributo', 'Atributo', 'Aptidões'), basic('bonus', 'Bônus', 'Aptidões', 'atributo + nivel', '1d20+{bonus}')
+    ] : [
+      basic('capitulo', 'Capítulo', 'Progressão'), basic('pistas', 'Pistas descobertas', 'Progressão'),
+      basic('reputacao', 'Reputação', 'Progressão', 'capitulo + pistas'),
+      basic('percepcao', 'Percepção', 'Aptidões', null, '1d20+{percepcao}')
+    ];
+    this.layout = layoutFromFields(this.fields); this.mode = 'structured'; this.selectedPreviewPage = this.layout.pages[0].id;
+  }
   addField() { if (this.fields.length >= 50) return; let number = 1; while (this.fields.some(field => field.key === `campo_${number}`)) number++; const key = `campo_${number}`; this.fields.push({ key, label: '', section: 'Geral', type: 'text', min: null, max: null, options: null, span: 6 }); const page = this.layout.pages.find(item => item.blocks.length < 40); if (page && this.layout.pages.reduce((count, item) => count + item.blocks.length, 0) < 100) { const index = page.blocks.length; page.blocks.push({ id: `bloco_${key}`, kind: 'field', span: 6, title: null, key, text: null, style: 'panel', ...(page.layoutMode === 'canvas' ? { x: (index % 2) * 51, y: Math.min(Math.floor(index / 2) * 20, 80), width: 49, height: 18 } : {}) }); } }
-  renameField(field: SystemField, key: string) { const previous = field.key; field.key = key; for (const page of this.layout.pages) for (const block of page.blocks) if (block.kind === 'field' && block.key === previous) block.key = key; }
+  renameField(field: SystemField, key: string) {
+    const previous = field.key; field.key = key;
+    for (const item of this.fields) {
+      if (item.formula) item.formula = item.formula.replace(/\b[a-z][a-z0-9_]*\b/g, token => token === previous ? key : token);
+      if (item.rollExpression) item.rollExpression = item.rollExpression.replaceAll(`{${previous}}`, `{${key}}`);
+    }
+    for (const page of this.layout.pages) for (const block of page.blocks) {
+      if ((block.kind === 'field' || block.kind === 'resource') && block.key === previous) block.key = key;
+      if (block.kind === 'resource' && block.maxKey === previous) block.maxKey = key;
+    }
+  }
   removeField(index: number) { const [field] = this.fields.splice(index, 1); for (const page of this.layout.pages) page.blocks = page.blocks.filter(block => block.kind !== 'field' || block.key !== field.key); }
   moveField(index: number, step: number) { const [item] = this.fields.splice(index, 1); this.fields.splice(index + step, 0, item); }
   sections() { return [...new Set(this.fields.map(field => field.section || 'Geral'))]; }
@@ -123,7 +151,9 @@ export class SystemEditorPage implements OnInit {
       if (!Array.isArray(parsed) || parsed.length > 50 || !parsed.every(field => field && typeof field === 'object'
         && typeof field.key === 'string' && typeof field.label === 'string' && typeof field.section === 'string'
         && ['text', 'longtext', 'number', 'boolean', 'select'].includes(field.type)
-        && (field.options == null || Array.isArray(field.options)))) throw new Error();
+        && (field.options == null || Array.isArray(field.options))
+        && (field.formula == null || typeof field.formula === 'string')
+        && (field.rollExpression == null || typeof field.rollExpression === 'string'))) throw new Error();
       this.fields = parsed as SystemField[]; this.error.set(''); return true;
     } catch { this.error.set('Definição JSON inválida. Informe um array de até 50 campos tipados.'); return false; }
   }

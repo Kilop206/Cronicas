@@ -19,7 +19,7 @@ public static class CharacterEndpoints
             var characters = await db.Characters.AsNoTracking().Where(x => x.CampaignId == campaignId)
                 .OrderBy(x => x.Name).ToListAsync();
             var role = await db.CampaignMemberships.AsNoTracking().Where(x => x.CampaignId == campaignId && x.UserId == userId).Select(x => x.Role).SingleAsync();
-            var items = characters.Select(x => View(x, x.OwnerId == userId || role is "owner" or "gm" or "co-gm")).ToList();
+            var items = characters.Select(x => View(x, role != "spectator" && (x.OwnerId == userId || role is "owner" or "gm" or "co-gm"))).ToList();
             return Results.Ok(items);
         });
 
@@ -31,10 +31,11 @@ public static class CharacterEndpoints
             if (role is "spectator") return Results.Problem("Espectadores não podem criar personagens.", statusCode: 403);
             var error = Validate(input);
             if (error is not null) return Results.ValidationProblem(error);
-            var fieldErrors = await ValidateFields(db, campaignId, input.Fields);
+            var values = input.Fields ?? [];
+            var fieldErrors = await ValidateFields(db, campaignId, values);
             if (fieldErrors is not null) return Results.ValidationProblem(fieldErrors);
             var character = new Character { CampaignId = campaignId, OwnerId = userId, Name = input.Name.Trim() };
-            Apply(character, input);
+            Apply(character, input with { Fields = values });
             db.Characters.Add(character);
             await db.SaveChangesAsync();
             return Results.Created($"/api/characters/{character.Id}", View(character));
@@ -47,7 +48,7 @@ public static class CharacterEndpoints
             if (character is null) return Results.NotFound();
             var role = await db.CampaignMemberships.AsNoTracking().Where(x => x.CampaignId == character.CampaignId && x.UserId == userId).Select(x => x.Role).SingleOrDefaultAsync();
             if (role is null) return Results.NotFound();
-            return Results.Ok(View(character, character.OwnerId == userId || role is "owner" or "gm" or "co-gm"));
+            return Results.Ok(View(character, role != "spectator" && (character.OwnerId == userId || role is "owner" or "gm" or "co-gm")));
         });
 
         api.MapPut("/characters/{id:guid}", async Task<IResult> (Guid id, CharacterInput input, HttpContext http, AppDbContext db) =>
@@ -55,14 +56,15 @@ public static class CharacterEndpoints
             if (UserId(http) is not { } userId) return Results.Unauthorized();
             var character = await db.Characters.Include(x => x.Campaign).ThenInclude(x => x.Memberships).SingleOrDefaultAsync(x => x.Id == id);
             if (character is null || !character.Campaign.Memberships.Any(x => x.UserId == userId)) return Results.NotFound();
-            if (character.OwnerId != userId && !character.Campaign.Memberships.Any(x => x.UserId == userId && x.Role is "owner" or "gm" or "co-gm")) return Results.Problem("Você não pode editar este personagem.", statusCode: 403);
+            if (!character.Campaign.Memberships.Any(x => x.UserId == userId && x.Role != "spectator" && (character.OwnerId == userId || x.Role is "owner" or "gm" or "co-gm"))) return Results.Problem("Você não pode editar este personagem.", statusCode: 403);
             if (input.Version is { } expected && expected != character.Version) return Results.Conflict(new { message = "A ficha mudou. Atualize antes de salvar." });
             var error = Validate(input);
             if (error is not null) return Results.ValidationProblem(error);
-            var fieldErrors = await ValidateFields(db, character.CampaignId, input.Fields, character.FieldsJson);
+            var values = input.Fields ?? JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(character.FieldsJson) ?? [];
+            var fieldErrors = await ValidateFields(db, character.CampaignId, values, character.FieldsJson);
             if (fieldErrors is not null) return Results.ValidationProblem(fieldErrors);
             CharacterHistory.Capture(db, character, userId);
-            Apply(character, input);
+            Apply(character, input with { Fields = values });
             try { await db.SaveChangesAsync(); }
             catch (DbUpdateConcurrencyException) { return Results.Conflict(new { message = "A ficha mudou. Atualize antes de salvar." }); }
             return Results.Ok(View(character, true));
@@ -74,7 +76,7 @@ public static class CharacterEndpoints
             var character = await db.Characters.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id);
             if (character is null) return Results.NotFound();
             var role = await db.CampaignMemberships.AsNoTracking().Where(x => x.CampaignId == character.CampaignId && x.UserId == userId).Select(x => x.Role).SingleOrDefaultAsync();
-            if (role is null || character.OwnerId != userId && role is not ("owner" or "gm" or "co-gm")) return Results.NotFound();
+            if (role is null or "spectator" || character.OwnerId != userId && role is not ("owner" or "gm" or "co-gm")) return Results.NotFound();
             var revisions = await db.CharacterRevisions.AsNoTracking().Where(x => x.CharacterId == id).OrderByDescending(x => x.Version).Take(100)
                 .Select(x => new { x.Id, x.Version, x.CreatedAt, editedBy = x.EditedBy.DisplayName }).ToListAsync();
             return Results.Ok(revisions);
@@ -86,14 +88,17 @@ public static class CharacterEndpoints
             var character = await db.Characters.SingleOrDefaultAsync(x => x.Id == id);
             if (character is null) return Results.NotFound();
             var role = await db.CampaignMemberships.AsNoTracking().Where(x => x.CampaignId == character.CampaignId && x.UserId == userId).Select(x => x.Role).SingleOrDefaultAsync();
-            if (role is null || character.OwnerId != userId && role is not ("owner" or "gm" or "co-gm")) return Results.NotFound();
+            if (role is null or "spectator" || character.OwnerId != userId && role is not ("owner" or "gm" or "co-gm")) return Results.NotFound();
             if (input.ExpectedVersion != character.Version) return Results.Conflict(new { message = "A ficha mudou. Atualize antes de restaurar." });
             var revision = await db.CharacterRevisions.AsNoTracking().SingleOrDefaultAsync(x => x.Id == revisionId && x.CharacterId == id);
             if (revision is null) return Results.NotFound();
             var snapshot = JsonSerializer.Deserialize<CharacterSnapshot>(revision.SnapshotJson);
             if (snapshot is null) return Results.Problem("Revisão inválida.", statusCode: 500);
+            var restoredValues = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(snapshot.FieldsJson) ?? [];
+            var fieldErrors = await ValidateFields(db, character.CampaignId, restoredValues, snapshot.FieldsJson);
+            if (fieldErrors is not null) return Results.ValidationProblem(fieldErrors);
             CharacterHistory.Capture(db, character, userId);
-            CharacterHistory.Restore(character, snapshot);
+            CharacterHistory.Restore(character, snapshot with { FieldsJson = JsonSerializer.Serialize(restoredValues) });
             try { await db.SaveChangesAsync(); }
             catch (DbUpdateConcurrencyException) { return Results.Conflict(new { message = "A ficha mudou. Atualize antes de restaurar." }); }
             return Results.Ok(View(character, true));
@@ -105,7 +110,7 @@ public static class CharacterEndpoints
             var source = await db.Characters.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id);
             if (source is null) return Results.NotFound();
             var role = await db.CampaignMemberships.AsNoTracking().Where(x => x.CampaignId == source.CampaignId && x.UserId == userId).Select(x => x.Role).SingleOrDefaultAsync();
-            if (role is null) return Results.NotFound();
+            if (role is null or "spectator") return Results.NotFound();
             if (source.OwnerId != userId && role is not ("owner" or "gm" or "co-gm"))
                 return Results.Problem("Você não pode duplicar este personagem.", statusCode: 403);
             var copy = new Character
@@ -204,7 +209,7 @@ public static class CharacterEndpoints
         api.MapPost("/characters/{id:guid}/overlay-key", async Task<IResult> (Guid id, HttpContext http, AppDbContext db) =>
         {
             if (UserId(http) is not { } userId) return Results.Unauthorized();
-            var character = await db.Characters.SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == userId && x.Campaign.Memberships.Any(m => m.UserId == userId));
+            var character = await db.Characters.SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == userId && x.Campaign.Memberships.Any(m => m.UserId == userId && m.Role != "spectator"));
             if (character is null) return Results.NotFound();
             var key = Convert.ToHexString(RandomNumberGenerator.GetBytes(32)).ToLowerInvariant();
             character.OverlayKeyHash = Hash(key);
@@ -266,6 +271,7 @@ public static class CharacterEndpoints
                 if (previous.TryGetValue(key, out var oldValue) && JsonElement.DeepEquals(value, oldValue)) continue;
                 return new() { ["fields"] = [$"Campo desconhecido: {key}."] };
             }
+            if (!string.IsNullOrWhiteSpace(field.Formula)) continue;
             var valid = field.Type switch
             {
                 "number" => value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var number) && (field.Min is null || number >= field.Min) && (field.Max is null || number <= field.Max),
@@ -277,6 +283,9 @@ public static class CharacterEndpoints
             };
             if (!valid) return new() { ["fields"] = [$"Valor inválido para {field.Label}."] };
         }
+        var calculationError = SheetFormula.Apply(fields, values);
+        if (calculationError is not null) return new() { ["fields"] = [calculationError] };
+        if (values.Count > 50 || JsonSerializer.Serialize(values).Length > 20000) return new() { ["fields"] = ["Campos excedem o limite."] };
         return null;
     }
     private static void Apply(Character target, CharacterInput input)

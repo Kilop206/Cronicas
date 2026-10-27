@@ -5,6 +5,7 @@ import { Character, CharacterInput, SheetBlock, SheetLayout, SheetPage, SystemFi
 import { CharacterInventoryComponent } from './character-inventory.component';
 import { CharacterAbilitiesComponent } from './character-abilities.component';
 import { CharacterHistoryPanelComponent } from './character-history.component';
+import { SheetRollComponent } from './sheet-roll.component';
 
 type ResourceKey = 'health' | 'sanity' | 'mana';
 type MaxResourceKey = 'maxHealth' | 'maxSanity' | 'maxMana';
@@ -12,7 +13,7 @@ const resources: Record<ResourceKey, { label: string; max: MaxResourceKey }> = {
   health: { label: 'Vida', max: 'maxHealth' }, sanity: { label: 'Sanidade', max: 'maxSanity' }, mana: { label: 'Mana', max: 'maxMana' }
 };
 
-@Component({ selector: 'app-sheet-layout', standalone: true, imports: [CommonModule, FormsModule, CharacterInventoryComponent, CharacterAbilitiesComponent, CharacterHistoryPanelComponent], template: `
+@Component({ selector: 'app-sheet-layout', standalone: true, imports: [CommonModule, FormsModule, CharacterInventoryComponent, CharacterAbilitiesComponent, CharacterHistoryPanelComponent, SheetRollComponent], template: `
   <div class="sheet-canvas" [class.sheet-skin-investigation]="layout.skin === 'investigation'" [class.sheet-skin-fantasy]="layout.skin === 'fantasy'" [style.--sheet-accent]="layout.accentColor">
     <header class="sheet-masthead"><div><span>CRÔNICAS / FICHA DE PERSONAGEM</span><strong>{{ draft.name || 'Personagem' }}</strong></div><small>{{ layout.pages.length }} {{ layout.pages.length === 1 ? 'PÁGINA' : 'PÁGINAS' }}</small></header>
     <nav *ngIf="mode !== 'print'" class="custom-sheet-tabs" aria-label="Páginas da ficha"><button *ngFor="let page of layout.pages" type="button" [class.active]="activePage().id === page.id" (click)="selectedPageId.set(page.id)">{{ page.title }}</button></nav>
@@ -33,11 +34,12 @@ const resources: Record<ResourceKey, { label: string; max: MaxResourceKey }> = {
           <div *ngIf="mode === 'edit'" class="sheet-resource-controls"><label>Atual<input type="number" [ngModel]="resourceValue(block.key)" (ngModelChange)="setResourceValue(block.key, $event)" [ngModelOptions]="{standalone: true}" min="0" max="999999"></label><label>Máximo<input type="number" [ngModel]="resourceValue(resourceMaxKey(block))" (ngModelChange)="setResourceValue(resourceMaxKey(block), $event)" [ngModelOptions]="{standalone: true}" min="1" max="999999"></label></div>
         </ng-container>
         <ng-container *ngIf="block.kind === 'field'"><ng-container *ngIf="fieldFor(block) as field">
-          <label *ngIf="mode === 'edit' && (field.type === 'text' || field.type === 'number')">{{ field.label }}<input [type]="field.type === 'number' ? 'number' : 'text'" [ngModel]="fieldValue(field)" (ngModelChange)="setField(field, $event)" [ngModelOptions]="{standalone: true}" [min]="field.min" [max]="field.max" [attr.maxlength]="field.type === 'text' ? 300 : null"></label>
+          <label *ngIf="mode === 'edit' && (field.type === 'text' || field.type === 'number')">{{ field.label }}<input [type]="field.type === 'number' ? 'number' : 'text'" [ngModel]="fieldValue(field)" (ngModelChange)="setField(field, $event)" [ngModelOptions]="{standalone: true}" [min]="field.min" [max]="field.max" [attr.maxlength]="field.type === 'text' ? 300 : null" [readonly]="!!field.formula"></label>
           <label *ngIf="mode === 'edit' && field.type === 'longtext'">{{ field.label }}<textarea [ngModel]="fieldValue(field)" (ngModelChange)="setField(field, $event)" [ngModelOptions]="{standalone: true}" rows="5" maxlength="10000"></textarea></label>
           <label *ngIf="mode === 'edit' && field.type === 'select'">{{ field.label }}<select [ngModel]="fieldValue(field)" (ngModelChange)="setField(field, $event)" [ngModelOptions]="{standalone: true}"><option value="">Selecione</option><option *ngFor="let option of field.options" [value]="option">{{ option }}</option></select></label>
           <label *ngIf="mode === 'edit' && field.type === 'boolean'" class="checkbox-field"><input type="checkbox" [ngModel]="fieldValue(field) === true" (ngModelChange)="setField(field, $event)" [ngModelOptions]="{standalone: true}"> {{ field.label }}</label>
           <strong *ngIf="mode !== 'edit'" class="sheet-value"><span class="sheet-field-caption">{{ field.label }}</span>{{ displayField(field) }}</strong>
+          <app-sheet-roll *ngIf="mode !== 'print' && field.rollExpression" [campaignId]="character.campaignId" [expression]="field.rollExpression" [values]="draft.fields" [label]="field.label" />
         </ng-container></ng-container>
         <p *ngIf="block.kind === 'note'">{{ block.text }}</p>
         <app-character-inventory *ngIf="block.kind === 'inventory'" [character]="character" />
@@ -46,11 +48,12 @@ const resources: Record<ResourceKey, { label: string; max: MaxResourceKey }> = {
       </div>
     </div></section>
     <section *ngIf="unplacedFields().length" class="sheet-canvas-page"><h3>Campos não posicionados</h3><div class="sheet-canvas-grid"><div *ngFor="let field of unplacedFields()" class="sheet-canvas-block" [style.grid-column]="'span ' + (field.span || 6)">
-      <label *ngIf="mode === 'edit' && (field.type === 'text' || field.type === 'number')">{{ field.label }}<input [type]="field.type === 'number' ? 'number' : 'text'" [ngModel]="fieldValue(field)" (ngModelChange)="setField(field, $event)" [ngModelOptions]="{standalone: true}" [min]="field.min" [max]="field.max" [attr.maxlength]="field.type === 'text' ? 300 : null"></label>
+      <label *ngIf="mode === 'edit' && (field.type === 'text' || field.type === 'number')">{{ field.label }}<input [type]="field.type === 'number' ? 'number' : 'text'" [ngModel]="fieldValue(field)" (ngModelChange)="setField(field, $event)" [ngModelOptions]="{standalone: true}" [min]="field.min" [max]="field.max" [attr.maxlength]="field.type === 'text' ? 300 : null" [readonly]="!!field.formula"></label>
       <label *ngIf="mode === 'edit' && field.type === 'longtext'">{{ field.label }}<textarea [ngModel]="fieldValue(field)" (ngModelChange)="setField(field, $event)" [ngModelOptions]="{standalone: true}" rows="5" maxlength="10000"></textarea></label>
       <label *ngIf="mode === 'edit' && field.type === 'select'">{{ field.label }}<select [ngModel]="fieldValue(field)" (ngModelChange)="setField(field, $event)" [ngModelOptions]="{standalone: true}"><option value="">Selecione</option><option *ngFor="let option of field.options" [value]="option">{{ option }}</option></select></label>
       <label *ngIf="mode === 'edit' && field.type === 'boolean'" class="checkbox-field"><input type="checkbox" [ngModel]="fieldValue(field) === true" (ngModelChange)="setField(field, $event)" [ngModelOptions]="{standalone: true}"> {{ field.label }}</label>
       <strong *ngIf="mode !== 'edit'">{{ field.label }}: {{ displayField(field) }}</strong>
+      <app-sheet-roll *ngIf="mode !== 'print' && field.rollExpression" [campaignId]="character.campaignId" [expression]="field.rollExpression" [values]="draft.fields" [label]="field.label" />
     </div></div></section>
   </div>`, styles: [`
     .custom-sheet-tabs { display: flex; gap: 4px; max-width: 100%; overflow-x: auto; border-bottom: 1px solid var(--border); margin: 0 0 18px; scrollbar-width: thin; }
@@ -92,6 +95,6 @@ export class SheetLayoutComponent {
   fieldFor(block: SheetBlock) { return this.fields.find(field => field.key === block.key); }
   fieldValue(field: SystemField) { return this.draft.fields[field.key] ?? ''; }
   displayField(field: SystemField) { const value = this.fieldValue(field); return value === '' ? '—' : field.type === 'boolean' ? value ? 'Sim' : 'Não' : String(value); }
-  setField(field: SystemField, value: string | number | boolean) { if (value === '' || value === null) delete this.draft.fields[field.key]; else this.draft.fields[field.key] = field.type === 'number' ? Number(value) : value; this.changed.emit(); }
+  setField(field: SystemField, value: string | number | boolean) { if (field.formula) return; if (value === '' || value === null) delete this.draft.fields[field.key]; else this.draft.fields[field.key] = field.type === 'number' ? Number(value) : value; this.changed.emit(); }
   unplacedFields() { const placed = new Set(this.layout.pages.flatMap(page => page.blocks.filter(block => block.kind === 'field').map(block => block.key))); return this.fields.filter(field => !placed.has(field.key)); }
 }

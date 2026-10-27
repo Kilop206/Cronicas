@@ -8,6 +8,8 @@ import { CharacterHistoryPanelComponent } from './character-history.component';
 import { CharacterInventoryComponent } from './character-inventory.component';
 import { CharacterAbilitiesComponent } from './character-abilities.component';
 import { SheetLayoutComponent } from './sheet-layout.component';
+import { SheetRollComponent } from './sheet-roll.component';
+import { calculateSheet } from './sheet-rules';
 
 const emptyCharacter = (): CharacterInput => ({ name: '', portraitUrl: null, backgroundUrl: null, health: 10, maxHealth: 10, sanity: 10, maxSanity: 10, mana: 10, maxMana: 10, fields: {}, version: 1 });
 
@@ -51,7 +53,7 @@ export class SheetFieldsViewComponent {
   }
 }
 
-@Component({ standalone: true, imports: [CommonModule, FormsModule, RouterLink, SheetFieldsViewComponent, SheetLayoutComponent, forwardRef(() => OverlayCardComponent), CharacterHistoryPanelComponent, CharacterInventoryComponent, CharacterAbilitiesComponent], template: `
+@Component({ standalone: true, imports: [CommonModule, FormsModule, RouterLink, SheetFieldsViewComponent, SheetLayoutComponent, SheetRollComponent, forwardRef(() => OverlayCardComponent), CharacterHistoryPanelComponent, CharacterInventoryComponent, CharacterAbilitiesComponent], template: `
   <main class="page narrow" *ngIf="character() as item"><a [routerLink]="['/campaigns', item.campaignId, 'characters']" class="back-link">← Personagens</a>
     <div class="page-heading"><div><span class="overline">FICHA / CENA</span><h1>{{ item.name }}</h1><p>Ficha da campanha e composição para OBS.</p></div></div>
     <button type="button" class="text-link character-favorite" [attr.aria-pressed]="favorite()" [disabled]="favoriteBusy()" (click)="toggleFavorite()">{{ favorite() ? 'Remover dos favoritos' : 'Adicionar aos favoritos' }}</button>
@@ -66,7 +68,8 @@ export class SheetFieldsViewComponent {
       <div class="resource-fields"><div *ngFor="let resource of resources"><label>{{ resource.label }}<input type="number" [name]="resource.key" [(ngModel)]="draft[resource.key]" (ngModelChange)="scheduleSave()" min="0" max="9999" required></label><label>Máximo<input type="number" [name]="resource.max" [(ngModel)]="draft[resource.max]" (ngModelChange)="scheduleSave()" min="1" max="9999" required></label></div></div>
       <div *ngIf="!systemLoading() && system()?.fields?.length" class="dynamic-fields"><div class="panel-heading"><span>SISTEMA / {{ system()?.name }}</span><h2>Campos da ficha</h2></div>
         <section *ngFor="let section of sheetSections()" class="sheet-field-section"><h3>{{ section }}</h3><div class="sheet-field-grid"><div *ngFor="let field of sectionFields(section)" class="dynamic-field" [style.grid-column]="'span ' + (field.span || 6)">
-          <label *ngIf="field.type === 'text' || field.type === 'number'">{{ field.label }}<input [name]="field.key" [type]="field.type === 'number' ? 'number' : 'text'" [min]="field.min" [max]="field.max" [ngModel]="fieldValue(field.key)" (ngModelChange)="setField(field, $event)"></label>
+          <label *ngIf="field.type === 'text' || field.type === 'number'">{{ field.label }}<input [name]="field.key" [type]="field.type === 'number' ? 'number' : 'text'" [min]="field.min" [max]="field.max" [ngModel]="fieldValue(field.key)" (ngModelChange)="setField(field, $event)" [readonly]="!!field.formula"></label>
+          <app-sheet-roll *ngIf="field.rollExpression" [campaignId]="item.campaignId" [expression]="field.rollExpression" [values]="draft.fields" [label]="field.label" />
           <label *ngIf="field.type === 'longtext'">{{ field.label }}<textarea [name]="field.key" [ngModel]="fieldValue(field.key)" (ngModelChange)="setField(field, $event)" rows="5" maxlength="10000"></textarea></label>
           <label *ngIf="field.type === 'select'">{{ field.label }}<select [name]="field.key" [ngModel]="fieldValue(field.key)" (ngModelChange)="setField(field, $event)"><option value="">Selecione</option><option *ngFor="let option of field.options" [value]="option">{{ option }}</option></select></label>
           <label *ngIf="field.type === 'boolean'" class="checkbox-field"><input type="checkbox" [name]="field.key" [ngModel]="fieldValue(field.key)" (ngModelChange)="setField(field, $event)"> {{ field.label }}</label>
@@ -119,7 +122,7 @@ export class CharacterEditorPage implements OnDestroy {
           next: campaign => {
             const master = ['owner', 'gm', 'co-gm'].includes(campaign.role); this.master.set(master);
             if (master) this.api.characterSecret(id).subscribe({ next: secret => { this.secret.set(secret); this.secretDraft = secret.notes; }, error: e => this.error.set(apiError(e)) });
-            if (campaign.systemId) this.api.system(campaign.systemId).pipe(finalize(() => this.systemLoading.set(false))).subscribe({ next: system => this.system.set(system), error: e => this.error.set(apiError(e)) });
+            if (campaign.systemId) this.api.system(campaign.systemId).pipe(finalize(() => this.systemLoading.set(false))).subscribe({ next: system => { this.system.set(system); this.recalculate(); }, error: e => this.error.set(apiError(e)) });
             else this.systemLoading.set(false);
           }, error: e => { this.systemLoading.set(false); this.error.set(apiError(e)); }
         });
@@ -134,8 +137,9 @@ export class CharacterEditorPage implements OnDestroy {
   addManualField() { const key = this.newManualLabel.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, ''); if (!/^[a-z][a-z0-9_]{1,39}$/.test(key) || this.draft.fields[key] !== undefined) { this.error.set('Use outro nome para este campo.'); return; } this.draft.fields[key] = this.newManualType === 'number' ? 0 : this.newManualType === 'boolean' ? false : ''; this.newManualLabel = ''; this.error.set(''); this.scheduleSave(); }
   removeManualField(key: string) { delete this.draft.fields[key]; this.scheduleSave(); }
   fieldValue(key: string) { return this.draft.fields[key] ?? ''; }
-  setField(field: SystemField, value: string | number | boolean) { if (value === '' || value === null) delete this.draft.fields[field.key]; else this.draft.fields[field.key] = field.type === 'number' ? Number(value) : value; this.scheduleSave(); }
-  scheduleSave() { this.editRevision++; this.saved.set(false); clearTimeout(this.saveTimer); this.saveTimer = setTimeout(() => { if (this.validDraft()) this.save(); }, 900); }
+  setField(field: SystemField, value: string | number | boolean) { if (field.formula) return; if (value === '' || value === null) delete this.draft.fields[field.key]; else this.draft.fields[field.key] = field.type === 'number' ? Number(value) : value; this.scheduleSave(); }
+  private recalculate() { const before = JSON.stringify(this.draft.fields); const error = calculateSheet(this.system()?.fields || [], this.draft.fields); if (error) this.error.set(error); else if (before !== JSON.stringify(this.draft.fields) && this.character()?.canEdit) this.scheduleSave(); }
+  scheduleSave() { this.editRevision++; this.saved.set(false); clearTimeout(this.saveTimer); if (calculateSheet(this.system()?.fields || [], this.draft.fields)) { this.error.set('Confira as fórmulas e os valores da ficha.'); return; } this.error.set(''); this.saveTimer = setTimeout(() => { if (this.validDraft()) this.save(); }, 900); }
   private validDraft() { return this.draft.name.trim().length >= 2 && this.resources.every(r => this.draft[r.key] >= 0 && this.draft[r.key] <= this.draft[r.max] && this.draft[r.max] >= 1); }
   save() {
     const current = this.character(); if (!current || this.saving() || !this.validDraft()) return;

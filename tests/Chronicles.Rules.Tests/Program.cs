@@ -68,4 +68,24 @@ Check(SystemDefinition.ValidateLayout(canvas with { Pages = [canvas.Pages[0] wit
 Check(SystemDefinition.ValidateLayout(canvas with { Skin = "investigation" }, []) is null, "Aparencia de investigacao valida");
 Check(SystemDefinition.ValidateLayout(canvas with { Skin = "script" }, []) is not null, "Aparencia desconhecida rejeitada");
 
+var level = new SystemField("nivel", "Nível", "number", "Progressão", 0, 100, null);
+var experience = new SystemField("experiencia", "Experiência", "number", "Progressão", 0, null, null);
+var milestone = new SystemField("marco", "Próximo marco", "number", "Progressão", 0, null, null, Formula: "(nivel + 1) * 100");
+var bonus = new SystemField("bonus", "Bônus", "number", "Aptidões", null, null, null, Formula: "nivel + experiencia / 10", RollExpression: "1d20+{bonus}");
+var formulaFields = new[] { level, experience, milestone, bonus };
+Check(SheetFormula.Validate(formulaFields) is null, "Fórmulas e rolagem dinâmica válidas");
+var values = new Dictionary<string, System.Text.Json.JsonElement>
+{
+    ["nivel"] = System.Text.Json.JsonSerializer.SerializeToElement(3),
+    ["experiencia"] = System.Text.Json.JsonSerializer.SerializeToElement(25),
+    ["bonus"] = System.Text.Json.JsonSerializer.SerializeToElement(999)
+};
+Check(SheetFormula.Apply(formulaFields, values) is null && values["marco"].GetInt32() == 400 && values["bonus"].GetInt32() == 5, "Cálculo substitui valor enviado pelo cliente");
+Check(SheetFormula.Validate([level with { Formula = "marco" }, milestone with { Formula = "nivel" }]) is not null, "Ciclo entre campos rejeitado");
+Check(SheetFormula.Validate([level, bonus with { Formula = "nivel + ausente" }]) is not null, "Referência desconhecida rejeitada");
+Check(SheetFormula.Validate([level, bonus with { Formula = "10 / (nivel - 1)" }]) is null, "Divisão dependente de valores aceita no template");
+Check(SheetFormula.Apply([level, bonus with { Formula = "10 / (nivel - 1)" }], new Dictionary<string, System.Text.Json.JsonElement> { ["nivel"] = System.Text.Json.JsonSerializer.SerializeToElement(1) }) is not null, "Divisão por zero rejeitada ao calcular");
+Check(SheetFormula.Validate([level, bonus with { RollExpression = "1d20+{ausente}" }]) is not null, "Modificador desconhecido rejeitado");
+Check(SheetFormula.Evaluate("8 / 3 - 5", _ => 0) == -3, "Divisão inteira e precedência");
+
 Console.WriteLine("Regras de dados: expressões válidas/inválidas, kh1, kl1, modificadores e d100 passaram.");
