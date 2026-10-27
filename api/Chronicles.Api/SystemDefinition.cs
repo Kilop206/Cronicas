@@ -8,7 +8,7 @@ public sealed record SheetBlock(string Id, string Kind, int Span, string? Title 
     double? X = null, double? Y = null, double? Width = null, double? Height = null);
 public sealed record SheetPage(string Id, string Title, SheetBlock[] Blocks, string? LayoutMode = null,
     string? BackgroundUrl = null, double? AspectRatio = null);
-public sealed record SheetLayout(string AccentColor, SheetPage[] Pages, string? Skin = null);
+public sealed record SheetLayout(string AccentColor, SheetPage[] Pages, string? Skin = null, string? HeaderLabel = null);
 public sealed record SystemDefinition(SystemField[] Fields, SheetLayout? Layout)
 {
     private static readonly Regex IdPattern = new("^[a-z][a-z0-9_]{1,39}$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
@@ -26,7 +26,8 @@ public sealed record SystemDefinition(SystemField[] Fields, SheetLayout? Layout)
     {
         if (layout is null) return null;
         if (layout.AccentColor is null || !ColorPattern.IsMatch(layout.AccentColor) || layout.Pages is null || layout.Pages.Length is < 1 or > 8
-            || layout.Skin is not (null or "archive" or "investigation" or "fantasy"))
+            || layout.Skin is not (null or "archive" or "investigation" or "fantasy" or "mythic")
+            || layout.HeaderLabel is not null && layout.HeaderLabel.Trim().Length is < 3 or > 80)
             return "Defina uma cor hexadecimal e de 1 a 8 páginas.";
         var pageIds = new HashSet<string>(StringComparer.Ordinal);
         var blockIds = new HashSet<string>(StringComparer.Ordinal);

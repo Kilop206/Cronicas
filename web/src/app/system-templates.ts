@@ -14,18 +14,30 @@ const numberField = (key: string, label: string, section: string, initial = 0, r
 const textField = (key: string, label: string, section: string, span = 6): SystemField =>
   ({ key, label, section, type: 'text', min: null, max: null, options: null, span });
 
-const block = (id: string, kind: SheetBlock['kind'], title: string, span: number, key: string | null = null): SheetBlock =>
-  ({ id, kind, title, span, key, text: null, style: kind === 'identity' || kind === 'inventory' || kind === 'abilities' || kind === 'history' ? 'plain' : 'panel' });
+const block = (id: string, kind: SheetBlock['kind'], title: string, span: number, key: string | null = null, style: SheetBlock['style'] = 'panel'): SheetBlock =>
+  ({ id, kind, title, span, key, text: null, style });
+const resource = (key: 'health' | 'mana' | 'sanity', title: string, span: number) => block(`recurso_${key}`, 'resource', title, span, key, 'accent');
+const identity = (span = 8) => block('identidade', 'identity', 'Personagem', span, null, 'plain');
+const portrait = (span = 4) => block('retrato', 'portrait', 'Retrato', span);
+const inventory = () => block('colecao_inventario', 'inventory', 'Inventário', 12, null, 'plain');
+const abilities = () => block('colecao_habilidades', 'abilities', 'Habilidades e poderes', 12, null, 'plain');
+const history = () => block('colecao_historico', 'history', 'Histórico do personagem', 12, null, 'plain');
+const highlight = (key: string, span = 3) => block(`campo_${key}`, 'field', '', span, key, 'accent');
+const note = (id: string, title: string, text: string): SheetBlock => ({ ...block(id, 'note', title, 12, null, 'plain'), text });
+type PageSpec = { id: string; title: string; items: (string | SheetBlock)[] };
 
-function makeLayout(fields: SystemField[], sections: { id: string; title: string; sections: string[] }[], resources: { key: string; title: string }[], skin: SheetLayout['skin'], accentColor: string): SheetLayout {
-  const pages: SheetPage[] = sections.map((page, index) => ({ id: page.id, title: page.title, blocks: [
-    ...(index === 0 ? [block('identidade', 'identity', 'Personagem', 8), block('retrato', 'portrait', 'Retrato', 4), ...resources.map(item => block(`recurso_${item.key}`, 'resource', item.title, resources.length === 3 ? 4 : 6, item.key))] : []),
-    ...fields.filter(field => page.sections.includes(field.section)).map(field => block(`campo_${field.key}`, 'field', field.label, field.span || 6, field.key))
-  ] }));
-  pages.push({ id: 'colecoes', title: 'Equipamento e habilidades', blocks: [block('colecao_inventario', 'inventory', 'Inventário', 12), block('colecao_habilidades', 'abilities', 'Habilidades e poderes', 12)] });
-  pages.push({ id: 'historico', title: 'Histórico', blocks: [block('colecao_historico', 'history', 'Histórico do personagem', 12)] });
-  return { accentColor, skin, pages };
+function makeLayout(fields: SystemField[], specs: PageSpec[], skin: SheetLayout['skin'], accentColor: string, headerLabel: string): SheetLayout {
+  const byKey = new Map(fields.map(field => [field.key, field]));
+  const pages: SheetPage[] = specs.map(spec => ({ id: spec.id, title: spec.title, blocks: spec.items.map(item => {
+    if (typeof item !== 'string') return item;
+    const field = byKey.get(item);
+    if (!field) throw new Error(`Campo ${item} não existe no modelo`);
+    return block(`campo_${item}`, 'field', field.label, field.span || 6, item);
+  }) }));
+  return { accentColor, skin, headerLabel, pages };
 }
+
+const sectionKeys = (fields: SystemField[], section: string) => fields.filter(field => field.section === section).map(field => field.key);
 
 const orderSkills: [string, string, string][] = [
   ['acrobacia', 'Acrobacia', 'agilidade'], ['adestramento', 'Adestramento', 'presenca'], ['artes', 'Artes', 'presenca'],
@@ -116,11 +128,37 @@ const cocFields: SystemField[] = [
 
 export const SHEET_TEMPLATES: SheetTemplate[] = [
   { id: 'ordem_paranormal', name: 'Ordem Paranormal RPG', summary: 'NEX, atributos, PV, PE, SAN, defesa e perícias com rolagens configuráveis.', sourceUrl: 'https://jamboeditora.com.br/wp-content/uploads/woocommerce_uploads/2023/02/jamboeditora-ordem-paranormal-ficha-de-personagem-oeuvst.pdf', fields: orderFields,
-    layout: makeLayout(orderFields, [{ id: 'principal', title: 'Investigador', sections: ['Identidade', 'Progressão', 'Combate'] }, { id: 'atributos', title: 'Atributos', sections: ['Atributos'] }, { id: 'pericias', title: 'Perícias', sections: ['Perícias'] }], [{ key: 'health', title: 'PV' }, { key: 'mana', title: 'PE' }, { key: 'sanity', title: 'SAN' }], 'investigation', '#9b8bc0') },
+    layout: makeLayout(orderFields, [
+      { id: 'dossie', title: 'Dossiê do agente', items: [identity(), portrait(), ...sectionKeys(orderFields, 'Identidade'), 'nex', resource('health', 'PV', 4), resource('mana', 'PE', 4), resource('sanity', 'SAN', 4), highlight('defesa', 4), 'deslocamento', 'equip_defesa', 'outros_defesa'] },
+      { id: 'aptidoes', title: 'Aptidões e ação', items: [note('nota_aptidoes', 'Rolagens', 'Ajuste os atributos e bônus de perícia conforme sua mesa.'), ...sectionKeys(orderFields, 'Atributos'), ...orderSkills.filter(([, , attribute]) => ['agilidade', 'forca', 'vigor'].includes(attribute)).map(([key]) => `per_${key}`)] },
+      { id: 'investigacao', title: 'Investigação e presença', items: orderSkills.filter(([, , attribute]) => ['intelecto', 'presenca'].includes(attribute)).map(([key]) => `per_${key}`) },
+      { id: 'arsenal', title: 'Arsenal e rituais', items: [inventory(), abilities()] },
+      { id: 'registros', title: 'Registros', items: [history()] }
+    ], 'investigation', '#9b8bc0', 'CRÔNICAS / DOSSIÊ DO AGENTE') },
   { id: 'dnd_5e', name: 'D&D 5e', summary: 'Atributos, modificadores, resistências, perícias, progressão e combate.', sourceUrl: 'https://media.dndbeyond.com/compendium-images/free-rules/downloads/2024-character-sheet.pdf', fields: dndFields,
-    layout: makeLayout(dndFields, [{ id: 'principal', title: 'Aventureiro', sections: ['Identidade', 'Progressão', 'Combate'] }, { id: 'atributos', title: 'Atributos e resistências', sections: ['Atributos', 'Modificadores', 'Resistências'] }, { id: 'pericias', title: 'Perícias', sections: ['Perícias'] }], [{ key: 'health', title: 'PV' }], 'fantasy', '#a99167') },
+    layout: makeLayout(dndFields, [
+      { id: 'aventura', title: 'Personagem e combate', items: [identity(), portrait(), ...sectionKeys(dndFields, 'Identidade'), 'nivel', 'experiencia', highlight('proficiencia', 4), resource('health', 'Pontos de vida', 8), highlight('classe_armadura', 4), 'iniciativa', 'deslocamento', 'pontos_temporarios'] },
+      { id: 'aptidoes', title: 'Atributos e resistências', items: dndAbilities.flatMap(([key]) => [key, `mod_${key}`, `treino_res_${key}`, `res_${key}`]) },
+      { id: 'pericias', title: 'Perícias e treino', items: [note('nota_treino', 'Treino', 'Use 0 para nenhum, 1 para proficiência e 2 para especialização. Os bônus são recalculados.'), ...dndSkills.flatMap(([key]) => [`treino_per_${key}`, `per_${key}`])] },
+      { id: 'equipamento', title: 'Equipamento', items: [inventory()] },
+      { id: 'recursos', title: 'Características e magias', items: [abilities()] },
+      { id: 'jornada', title: 'Jornada', items: [history()] }
+    ], 'fantasy', '#a99167', 'CRÔNICAS / AVENTURA') },
   { id: 'tormenta20', name: 'Tormenta20', summary: 'Raça, origem, classe, seis atributos, PV, PM e perícias.', sourceUrl: 'https://jamboeditora.com.br/wp-content/uploads/2023/06/Tormenta20-Resumo-de-Regras.pdf', fields: t20Fields,
-    layout: makeLayout(t20Fields, [{ id: 'principal', title: 'Herói', sections: ['Identidade', 'Progressão', 'Combate'] }, { id: 'atributos', title: 'Atributos', sections: ['Atributos'] }, { id: 'pericias', title: 'Perícias', sections: ['Perícias'] }], [{ key: 'health', title: 'PV' }, { key: 'mana', title: 'PM' }], 'fantasy', '#be825d') },
+    layout: makeLayout(t20Fields, [
+      { id: 'heroi', title: 'Herói de Arton', items: [identity(), portrait(), ...sectionKeys(t20Fields, 'Identidade'), 'nivel', 'experiencia', resource('health', 'PV', 6), resource('mana', 'PM', 6), highlight('defesa', 6), 'deslocamento'] },
+      { id: 'combate', title: 'Atributos e combate', items: [...sectionKeys(t20Fields, 'Atributos'), ...t20Skills.slice(0, 10).map(([key]) => `per_${key}`)] },
+      { id: 'oficios', title: 'Conhecimentos e ofícios', items: [note('nota_pericias', 'Perícias', 'Informe o bônus total de cada perícia para usar as rolagens da campanha.'), ...t20Skills.slice(10).map(([key]) => `per_${key}`)] },
+      { id: 'poderes', title: 'Poderes e magias', items: [abilities()] },
+      { id: 'mochila', title: 'Mochila', items: [inventory()] },
+      { id: 'cronica', title: 'Crônica', items: [history()] }
+    ], 'mythic', '#be825d', 'CRÔNICAS / LENDA') },
   { id: 'call_of_cthulhu_7e', name: 'Call of Cthulhu 7e', summary: 'Características percentuais, limiares calculados, perícias, PV, SAN e magia.', sourceUrl: 'https://www.chaosium.com/content/FreePDFs/CoC/CHA23131%20Call%20of%20Cthulhu%207th%20Edition%20Quick-Start%20Rules.pdf', fields: cocFields,
-    layout: makeLayout(cocFields, [{ id: 'principal', title: 'Investigador', sections: ['Identidade', 'Progressão'] }, { id: 'caracteristicas', title: 'Características', sections: ['Características'] }, { id: 'limiares', title: 'Metade e quinto', sections: ['Limiares'] }, { id: 'pericias', title: 'Perícias', sections: ['Perícias'] }], [{ key: 'health', title: 'PV' }, { key: 'sanity', title: 'SAN' }, { key: 'mana', title: 'Magia' }], 'investigation', '#748d85') }
+    layout: makeLayout(cocFields, [
+      { id: 'investigador', title: 'Arquivo do investigador', items: [identity(), portrait(), ...sectionKeys(cocFields, 'Identidade'), 'credito', resource('health', 'PV', 4), resource('sanity', 'SAN', 4), resource('mana', 'Magia', 4)] },
+      { id: 'caracteristicas', title: 'Características e limiares', items: [note('nota_limiares', 'Valores percentuais', 'Metade e quinto são calculados a partir de cada característica.'), ...cocCharacteristics.flatMap(([key]) => [key, `${key}_metade`, `${key}_quinto`])] },
+      { id: 'pericias', title: 'Perícias', items: sectionKeys(cocFields, 'Perícias') },
+      { id: 'pertences', title: 'Pertences e conhecimentos', items: [inventory(), abilities()] },
+      { id: 'anotacoes', title: 'Anotações', items: [history()] }
+    ], 'archive', '#748d85', 'CRÔNICAS / ARQUIVO DO INVESTIGADOR') }
 ];

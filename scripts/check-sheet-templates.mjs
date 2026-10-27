@@ -19,6 +19,9 @@ function load(file) {
 const { SHEET_TEMPLATES: templates } = load('system-templates.ts');
 const { calculateSheet, fieldRoll } = load('sheet-rules.ts');
 assert.equal(templates.length, 4);
+assert.equal(new Set(templates.map(template => template.layout.skin)).size, templates.length, 'Each template should have its own visual style');
+assert.equal(new Set(templates.map(template => template.layout.headerLabel)).size, templates.length, 'Each template should have its own heading');
+assert.equal(new Set(templates.map(template => template.layout.pages.map(page => page.id).join(','))).size, templates.length, 'Each template should have its own page composition');
 
 for (const template of templates) {
   const fields = template.fields;
@@ -29,6 +32,8 @@ for (const template of templates) {
   assert.ok(pages.reduce((total, page) => total + page.blocks.length, 0) <= 100, `${template.id}: too many blocks`);
   assert.equal(new Set(fields.map(field => field.key)).size, fields.length, `${template.id}: duplicate field key`);
   assert.equal(new Set(pages.flatMap(page => page.blocks.map(block => block.id))).size, pages.flatMap(page => page.blocks).length, `${template.id}: duplicate block id`);
+  assert.ok(pages.every(page => page.blocks.length > 0), `${template.id}: empty page`);
+  assert.ok(pages.flatMap(page => page.blocks).every(block => /^[a-z][a-z0-9_]{1,39}$/.test(block.id)), `${template.id}: invalid block id`);
   const placed = pages.flatMap(page => page.blocks.filter(block => block.kind === 'field').map(block => block.key));
   assert.deepEqual(new Set(placed), new Set(fields.map(field => field.key)), `${template.id}: missing or extra field block`);
   const values = {};

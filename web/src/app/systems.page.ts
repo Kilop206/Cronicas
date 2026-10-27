@@ -51,7 +51,7 @@ export class SystemsPage implements OnInit {
           <label [class.selected]="mode === 'free'"><input type="radio" name="mode" [checked]="mode === 'free'" (change)="mode = 'free'"><span><strong>Livre</strong><small>Jogadores adicionam campos manualmente à própria ficha.</small></span></label>
           <label [class.selected]="mode === 'structured'"><input type="radio" name="mode" [checked]="mode === 'structured'" (change)="mode = 'structured'"><span><strong>Diagramada</strong><small>Você define páginas, blocos, campos e recursos da ficha.</small></span></label>
         </fieldset>
-        <div *ngIf="mode === 'structured'" class="designer-fields"><div class="section-heading designer-field-heading"><h2>Diagrama da ficha</h2><button *ngIf="!readonly()" type="button" class="button" [disabled]="fields.length >= 100" (click)="addField()">Adicionar campo</button></div>
+        <div *ngIf="mode === 'structured'" class="designer-fields"><div class="section-heading designer-field-heading"><h2>Diagrama da ficha</h2><button *ngIf="!readonly() && matchingTemplate()" type="button" class="button button-small secondary" (click)="applyCatalogLayout()">Usar composição do modelo</button><button *ngIf="!readonly()" type="button" class="button" [disabled]="fields.length >= 100" (click)="addField()">Adicionar campo</button></div>
           <p class="muted">Defina os dados aqui e posicione cada campo no compositor de páginas abaixo.</p>
           <div class="editor-switch" role="group" aria-label="Modo de edição"><button type="button" [class.active]="editorMode === 'visual'" (click)="setEditorMode('visual')">Editor visual</button><button type="button" [class.active]="editorMode === 'json'" (click)="setEditorMode('json')">Definição JSON</button></div>
           <div *ngIf="editorMode === 'visual'"><div *ngFor="let field of fields; let i = index" class="system-field-editor">
@@ -115,6 +115,8 @@ export class SystemEditorPage implements OnInit {
   fields: SystemField[] = []; loading = signal(!this.isNew); busy = signal(false); saved = signal(false); error = signal('');
   ngOnInit() { if (this.isNew) { const preset = this.route.snapshot.queryParamMap.get('preset'); if (preset) this.applyPreset(preset); return; } this.api.system(this.id).pipe(finalize(() => this.loading.set(false))).subscribe({ next: system => { this.name = system.name; this.description = system.description; this.fields = system.fields.map(f => ({ ...f, span: f.span || 6, options: f.options?.slice() || null })); this.layout = system.layout || layoutFromFields(this.fields); this.selectedPreviewPage = this.layout.pages[0].id; this.mode = (system.layout || this.fields.length) ? 'structured' : 'free'; this.ownerId = system.ownerId; }, error: e => this.error.set(apiError(e)) }); }
   readonly() { return !this.isNew && this.ownerId !== this.api.user()?.id; }
+  matchingTemplate() { return this.isNew ? null : this.templates.find(template => template.name === this.name && template.fields.every(field => this.fields.some(current => current.key === field.key))) || null; }
+  applyCatalogLayout() { const template = this.matchingTemplate(); if (!template) return; this.layout = structuredClone(template.layout); this.selectedPreviewPage = this.layout.pages[0].id; this.saved.set(false); }
   setFieldType(field: SystemField, type: SystemField['type']) { field.type = type; field.defaultValue = null; if (type !== 'number') { field.formula = null; field.rollExpression = null; } }
   applyPreset(value: string) {
     this.preset = value;

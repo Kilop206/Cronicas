@@ -471,6 +471,13 @@ html:has(.obs-page), body:has(.obs-page), html:has(.obs-camera-page), body:has(.
 .sheet-skin-fantasy .sheet-canvas-block.accent { background: color-mix(in srgb, var(--sheet-accent) 10%, #2b2228); }
 .sheet-skin-fantasy .sheet-canvas-block.plain { border-color: transparent; border-bottom-color: #705b5c; background: transparent; }
 .sheet-skin-fantasy .sheet-canvas-block.kind-identity > strong { font-style: italic; }
+.sheet-skin-mythic { background: #201b19; border-color: #71594d; }
+.sheet-skin-mythic .sheet-masthead { border-bottom: 2px solid var(--sheet-accent); }
+.sheet-skin-mythic .sheet-page-heading { padding: 0 0 10px 13px; border-left: 3px solid var(--sheet-accent); }
+.sheet-skin-mythic .sheet-page-heading h3 { font-family: var(--font-editorial); font-weight: 700; letter-spacing: .03em; }
+.sheet-skin-mythic .sheet-canvas-block { border-color: #624f45; border-radius: 0 10px 0 10px; background: #302521; }
+.sheet-skin-mythic .sheet-canvas-block.accent { background: color-mix(in srgb, var(--sheet-accent) 18%, #302521); }
+.sheet-skin-mythic .sheet-canvas-block.plain { border-color: transparent; border-bottom-color: #71594d; background: transparent; }
 .designer-preview .sheet-canvas { padding: 17px; box-shadow: none; }
 .designer-preview .sheet-masthead { padding-bottom: 14px; }
 .designer-preview .sheet-masthead strong { font-size: 22px; }

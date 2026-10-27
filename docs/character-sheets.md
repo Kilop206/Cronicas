@@ -19,7 +19,9 @@ As opções iniciais de aventura fantástica e investigação são genéricas. O
 
 Em **Seus sistemas**, escolha um modelo e salve uma cópia editável. O mestre associa essa cópia à campanha. Personagens existentes seguem o sistema já escolhido para a campanha; criar um modelo novo não altera campanhas automaticamente.
 
-Os modelos ficam em `web/src/app/system-templates.ts`. Cada entrada define metadados, campos e layout, usando o mesmo esquema que o editor e a API validam. Para adicionar um sistema, acrescente uma entrada ao catálogo e execute `node scripts/check-sheet-templates.mjs`. O arquivo de teste verifica limites de campos, páginas e blocos, disposição dos campos, fórmulas e rolagens. O catálogo é um ponto de partida: custos, proficiências, bônus e progressão que dependem da classe, edição ou mesa podem ser ajustados no editor.
+Os modelos ficam em `web/src/app/system-templates.ts`. Cada entrada define metadados, campos e uma composição própria de páginas e blocos, usando o mesmo esquema que o editor e a API validam. Ordem Paranormal tem dossiê e áreas de investigação; D&D agrupa atributos, resistências e treino; Tormenta20 separa combate, poderes e mochila; Call of Cthulhu mostra cada característica junto aos limiares derivados. As aparências também são escolhidas por modelo, dentro da linguagem visual do Crônicas. Para adicionar um sistema, acrescente uma entrada com seus campos, páginas, blocos, recursos e aparência, e execute `node scripts/check-sheet-templates.mjs`. O arquivo de teste verifica limites, disposição dos campos, fórmulas e rolagens.
+
+Uma cópia já salva conserva sua composição até que o dono escolha **Usar composição do modelo** no editor e salve. Essa ação altera apenas layout e aparência; os campos e valores existentes permanecem. O catálogo é um ponto de partida: custos, proficiências, bônus e progressão que dependem da classe, edição ou mesa podem ser ajustados no editor.
 
 ## Como configurar
 

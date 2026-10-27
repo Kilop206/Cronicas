@@ -66,6 +66,9 @@ Check(SystemDefinition.ValidateLayout(canvas, []) is null, "Pagina livre com fun
 Check(SystemDefinition.ValidateLayout(canvas with { Pages = [canvas.Pages[0] with { Blocks = [canvas.Pages[0].Blocks[0] with { X = 70 }] }] }, []) is not null, "Bloco fora da pagina livre rejeitado");
 Check(SystemDefinition.ValidateLayout(canvas with { Pages = [canvas.Pages[0] with { BackgroundUrl = "javascript:alert(1)" }] }, []) is not null, "URL de fundo insegura rejeitada");
 Check(SystemDefinition.ValidateLayout(canvas with { Skin = "investigation" }, []) is null, "Aparencia de investigacao valida");
+Check(SystemDefinition.ValidateLayout(canvas with { Skin = "mythic" }, []) is null, "Aparencia de lenda valida");
+Check(SystemDefinition.ValidateLayout(canvas with { HeaderLabel = "CRÔNICAS / LENDA" }, []) is null, "Cabecalho proprio valido");
+Check(SystemDefinition.ValidateLayout(canvas with { HeaderLabel = "X" }, []) is not null, "Cabecalho curto rejeitado");
 Check(SystemDefinition.ValidateLayout(canvas with { Skin = "script" }, []) is not null, "Aparencia desconhecida rejeitada");
 
 var level = new SystemField("nivel", "Nível", "number", "Progressão", 0, 100, null);

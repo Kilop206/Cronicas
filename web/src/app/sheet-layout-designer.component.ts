@@ -13,7 +13,7 @@ const kinds: { value: SheetBlock['kind']; label: string }[] = [
   <section class="layout-designer">
     <div class="section-heading"><div><span class="overline">COMPOSIÇÃO</span><h2>Páginas e blocos</h2></div></div>
     <p class="room-note">Monte a ficha como um arquivo de páginas. Na grade, escolha a largura; na página livre, arraste os blocos na prévia ou ajuste as posições abaixo.</p>
-    <div class="sheet-appearance-controls"><label>Estilo da ficha<select [value]="layout.skin || 'archive'" (change)="setSkin($any($event.target).value)" [disabled]="readOnly"><option value="investigation">Investigação</option><option value="fantasy">Fantasia</option><option value="archive">Arquivo clássico</option></select></label><label>Cor de destaque<input type="color" [value]="layout.accentColor" (input)="layout.accentColor = $any($event.target).value" [disabled]="readOnly"></label></div>
+    <div class="sheet-appearance-controls"><label>Estilo da ficha<select [value]="layout.skin || 'archive'" (change)="setSkin($any($event.target).value)" [disabled]="readOnly"><option value="investigation">Investigação</option><option value="fantasy">Fantasia</option><option value="mythic">Lenda</option><option value="archive">Arquivo clássico</option></select></label><label>Cor de destaque<input type="color" [value]="layout.accentColor" (input)="layout.accentColor = $any($event.target).value" [disabled]="readOnly"></label><label>Identificação no cabeçalho<input [value]="layout.headerLabel || ''" (input)="layout.headerLabel = $any($event.target).value || null" maxlength="80" placeholder="CRÔNICAS / FICHA" [disabled]="readOnly"></label></div>
     <div class="layout-page-tabs" role="tablist" aria-label="Páginas da ficha">
       <button *ngFor="let page of layout.pages" type="button" role="tab" [attr.aria-selected]="selectedPage().id === page.id" [class.active]="selectedPage().id === page.id" (click)="selectPage(page.id)">{{ page.title || 'Página' }}</button>
       <button *ngIf="!readOnly" type="button" class="button" [disabled]="layout.pages.length >= 8" (click)="addPage()">Adicionar página</button>
@@ -37,7 +37,7 @@ const kinds: { value: SheetBlock['kind']; label: string }[] = [
     <details class="layout-json" (toggle)="showJson($event)"><summary>Editar layout em JSON</summary><p class="room-note">Formato avançado validado pelo servidor. Nenhum código é executado.</p><textarea [value]="jsonDraft()" (input)="jsonDraft.set($any($event.target).value)" rows="12" spellcheck="false" [disabled]="readOnly"></textarea><button *ngIf="!readOnly" type="button" class="button button-small secondary" (click)="applyJson()">Aplicar JSON</button><p *ngIf="jsonError()" class="form-error" role="alert">{{ jsonError() }}</p></details>
   </section>`, styles: [`
     .layout-designer { margin-top: 32px; border-top: 1px solid var(--border); padding-top: 28px; }
-    .sheet-appearance-controls { display: grid; grid-template-columns: minmax(0, 220px) minmax(0, 140px); gap: 12px; align-items: end; margin: 22px 0; }
+    .sheet-appearance-controls { display: grid; grid-template-columns: minmax(0, 220px) minmax(0, 140px) minmax(0, 1fr); gap: 12px; align-items: end; margin: 22px 0; }
     .sheet-appearance-controls label { margin: 0; }
     .sheet-appearance-controls input[type=color] { width: 72px; height: 40px; margin-top: 8px; }
     .layout-page-tabs { display: flex; flex-wrap: wrap; gap: 7px; margin: 24px 0; border-bottom: 1px solid var(--border); padding-bottom: 10px; }
@@ -81,8 +81,8 @@ export class SheetLayoutDesignerComponent {
   numericFields() { return this.fields.filter(field => field.type === 'number'); }
   isBuiltInResource(key: string | null) { return key === 'health' || key === 'sanity' || key === 'mana'; }
   setResourceKey(block: SheetBlock, key: string) { block.key = key; block.maxKey = null; }
-  setSkin(skin: 'archive' | 'investigation' | 'fantasy') {
-    const colors = { archive: '#b8a079', investigation: '#aa9acd', fantasy: '#c4a477' };
+  setSkin(skin: 'archive' | 'investigation' | 'fantasy' | 'mythic') {
+    const colors = { archive: '#b8a079', investigation: '#aa9acd', fantasy: '#c4a477', mythic: '#be825d' };
     const previous = this.layout.skin || 'archive';
     if (this.layout.accentColor.toLowerCase() === colors[previous]) this.layout.accentColor = colors[skin];
     this.layout.skin = skin;
@@ -111,7 +111,8 @@ export class SheetLayoutDesignerComponent {
     if (!value || typeof value !== 'object') return false;
     const layout = value as SheetLayout;
     if (!/^#[0-9a-fA-F]{6}$/.test(layout.accentColor) || !Array.isArray(layout.pages) || layout.pages.length < 1 || layout.pages.length > 8) return false;
-    if (layout.skin != null && !['archive', 'investigation', 'fantasy'].includes(layout.skin)) return false;
+    if (layout.skin != null && !['archive', 'investigation', 'fantasy', 'mythic'].includes(layout.skin)) return false;
+    if (layout.headerLabel != null && (typeof layout.headerLabel !== 'string' || layout.headerLabel.trim().length < 3 || layout.headerLabel.length > 80)) return false;
     const pages = new Set<string>(); const blocks = new Set<string>(); let total = 0;
     for (const page of layout.pages) {
       if (!page || typeof page.id !== 'string' || !/^[a-z][a-z0-9_]{1,39}$/.test(page.id) || pages.has(page.id)
@@ -147,8 +148,8 @@ export class SheetLayoutDesignerComponent {
 }
 
 @Component({ selector: 'app-sheet-layout-preview', standalone: true, imports: [CommonModule], template: `
-  <div class="sheet-canvas" [class.sheet-skin-investigation]="layout.skin === 'investigation'" [class.sheet-skin-fantasy]="layout.skin === 'fantasy'" [style.--sheet-accent]="layout.accentColor">
-    <header class="sheet-masthead"><div><span>CRÔNICAS / PRÉVIA DA FICHA</span><strong>Personagem de exemplo</strong></div><small>{{ layout.pages.length }} {{ layout.pages.length === 1 ? 'PÁGINA' : 'PÁGINAS' }}</small></header>
+  <div class="sheet-canvas" [class.sheet-skin-investigation]="layout.skin === 'investigation'" [class.sheet-skin-fantasy]="layout.skin === 'fantasy'" [class.sheet-skin-mythic]="layout.skin === 'mythic'" [style.--sheet-accent]="layout.accentColor">
+    <header class="sheet-masthead"><div><span>{{ layout.headerLabel || 'CRÔNICAS / PRÉVIA DA FICHA' }}</span><strong>Personagem de exemplo</strong></div><small>{{ layout.pages.length }} {{ layout.pages.length === 1 ? 'PÁGINA' : 'PÁGINAS' }}</small></header>
     <div *ngFor="let page of visiblePages()" class="sheet-canvas-page"><div class="sheet-page-heading"><span>CAPÍTULO {{ pageNumber(page) }}</span><h3>{{ page.title }}</h3></div><div class="sheet-canvas-grid" [class.free-canvas]="page.layoutMode === 'canvas'" [style.aspect-ratio]="page.layoutMode === 'canvas' ? page.aspectRatio || 0.75 : null" [style.background-image]="page.layoutMode === 'canvas' && page.backgroundUrl ? 'url(' + page.backgroundUrl + ')' : null">
       <div *ngFor="let block of page.blocks" class="sheet-canvas-block" [class.plain]="block.style === 'plain'" [class.accent]="block.style === 'accent'" [class.kind-identity]="block.kind === 'identity'" [class.kind-portrait]="block.kind === 'portrait'" [class.kind-resource]="block.kind === 'resource'" [class.kind-field]="block.kind === 'field'" [class.draggable]="page.layoutMode === 'canvas' && !readOnly" [style.grid-column]="'span ' + block.span" [style.left.%]="page.layoutMode === 'canvas' ? block.x : null" [style.top.%]="page.layoutMode === 'canvas' ? block.y : null" [style.width.%]="page.layoutMode === 'canvas' ? block.width : null" [style.height.%]="page.layoutMode === 'canvas' ? block.height : null" (pointerdown)="startDrag($event, page, block)" (pointermove)="dragBlock($event)" (pointerup)="stopDrag($event)" (pointercancel)="stopDrag($event)">
         <small>{{ block.title || blockLabel(block) }}</small>
