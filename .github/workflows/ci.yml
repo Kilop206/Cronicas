@@ -23,6 +23,7 @@ jobs:
       - run: npm run build
         working-directory: web
       - run: npm run test:pages-proxy
+      - run: npm run test:spa-routes
       - run: dotnet build api/Chronicles.Api/Chronicles.Api.csproj -c Release
       - run: dotnet run --project tests/Chronicles.Rules.Tests/Chronicles.Rules.Tests.csproj -c Release
       - name: Integration smoke test
