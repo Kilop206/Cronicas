@@ -29,7 +29,7 @@ fs.mkdirSync(out, { recursive: true });
 const sizes = [{ name: 'desktop', width: 1440, height: 900 }, { name: 'wide', width: 1920, height: 1080 }, { name: 'tablet', width: 768, height: 1024 }, { name: 'mobile', width: 390, height: 844 }];
 (async () => {
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
-  for (const sheetId of ['ordem_paranormal', 'dnd_5e', 'call_of_cthulhu_7e', 'tormenta20']) for (const size of sizes) {
+  for (const sheetId of ['ordem_paranormal', 'dnd_5e', 'call_of_cthulhu_7e', 'tormenta20'].filter(id => !process.argv[2] || process.argv[2] === id)) for (const size of sizes.filter(item => !process.argv[3] || process.argv[3] === item.name)) {
     let { character, system, campaign, name, selector } = fixture(sheetId);
     const page = await browser.newPage({ viewport: { width: size.width, height: size.height }, deviceScaleFactor: 1 });
     page.on('console', msg => { if (msg.type() === 'error') console.error(size.name, msg.text()); });
@@ -48,9 +48,10 @@ const sizes = [{ name: 'desktop', width: 1440, height: 900 }, { name: 'wide', wi
     await page.goto('http://127.0.0.1:4200/characters/char-visual', { waitUntil: 'networkidle' });
     await page.locator(`.custom-sheet-main ${selector}`).waitFor();
     await page.screenshot({ path: path.join(out, `${name}-${size.name}.png`), fullPage: true });
-    const dimensions = await page.evaluate(selector => ({ scrollWidth: document.documentElement.scrollWidth, viewport: innerWidth, sheet: document.querySelector(`.custom-sheet-main ${selector}`)?.getBoundingClientRect().toJSON() }), selector);
+    const dimensions = await page.evaluate(selector => { const skillTable = document.querySelector('.custom-sheet-main .paranormal-skills'); return { scrollWidth: document.documentElement.scrollWidth, viewport: innerWidth, sheet: document.querySelector(`.custom-sheet-main ${selector}`)?.getBoundingClientRect().toJSON(), skillTableOverflow: skillTable ? skillTable.scrollWidth - skillTable.clientWidth : 0 }; }, selector);
     console.log(name, size.name, dimensions);
     if (dimensions.scrollWidth > size.width) throw new Error(`${name} ${size.name}: horizontal page overflow`);
+    if (name === 'ordem' && size.name === 'mobile' && dimensions.skillTableOverflow > 1) throw new Error('Order mobile: skill controls are clipped');
     if (size.name === 'desktop') {
       const resourceLabel = name === 'ordem' ? 'Aumentar Vida' : name === 'coc' ? 'Aumentar Pontos de vida' : name === 't20' ? 'Aumentar PONTOS DE VIDA' : 'Aumentar Hit Points';
       const resource = page.locator('.custom-sheet-main').getByRole('button', { name: resourceLabel });

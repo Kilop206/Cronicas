@@ -134,7 +134,7 @@ function keyOf(key: ResourceKey): ResourceKey { return key; }
   .skill-head{height:31px;background:#40232b;color:#e8bbb4;font-size:8px;letter-spacing:.07em;font-weight:800;text-align:center}.skill-head span:first-child{text-align:left}
   .skill-row{min-height:29px;border-top:1px solid #3a2d34;font-size:11px;color:#e9ded9}.skill-row:nth-child(odd){background:#211c21}.skill-row:hover{background:#30242b}
   .skill-name{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;font-weight:650}.skill-attr,.skill-dice{color:#a7a1a9;text-align:center;font-size:10px}.skill-number{text-align:center;font-variant-numeric:tabular-nums}.skill-row input{width:100%;min-width:0;height:23px;padding:1px;color:#fff;background:#281e24;border:1px solid #745158;text-align:center;font-size:10px}.skill-row app-paranormal-roll{justify-self:center}
-  @media(max-width:620px){.skill-head,.skill-row{grid-template-columns:minmax(105px,1fr) 32px 43px 43px 43px 43px 31px;min-width:340px;padding-inline:4px}.skill-head{font-size:7px}}
+  @media(max-width:620px){.skill-head,.skill-row{grid-template-columns:minmax(90px,1fr) 27px 36px 34px 34px 34px 27px;min-width:0;gap:1px;padding-inline:3px}.skill-head{font-size:7px}}
 `]
 })
 export class ParanormalSkillTableComponent {
