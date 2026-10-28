@@ -4,6 +4,8 @@ O frontend Angular fica no Cloudflare Pages. A API ASP.NET Core roda como Web Se
 
 Instância atual: [Crônicas](https://cronicas-bsy.pages.dev/) e [saúde da API](https://cronicas-api-r4nx.onrender.com/health). A origem Pages precisa constar em `ALLOWED_ORIGINS` no Render. O proxy usa `API_ORIGIN` como secret de produção do Pages.
 
+Para redes que encerram a conexão TLS com `*.pages.dev`, existe o endereço alternativo [Crônicas no Workers](https://cronicas-fallback.guilhermextra118.workers.dev/). `web/fallback-worker.mjs` serve o mesmo build Angular e encaminha `/api/*` à API Render na mesma origem do navegador. Os cookies são separados por domínio: o usuário precisa entrar novamente ao trocar de endereço, mas os dados permanecem na mesma API e no mesmo banco. O host alternativo não é indexado. Após cada atualização do frontend, publique também esse host com `npm run deploy:fallback` em `web`.
+
 Cloudflare Containers exigem Workers Paid e não são usados neste projeto. O Render Free hiberna após 15 minutos sem tráfego; a primeira requisição pode demorar cerca de um minuto. O disco local do serviço é efêmero. Essa configuração serve a um grupo pequeno que aceite partidas ocasionais com início lento, sem garantia de disponibilidade contínua.
 
 ## Antes de publicar

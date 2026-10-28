@@ -5,6 +5,7 @@
   "scripts": {
     "start": "ng serve --host 127.0.0.1 --proxy-config proxy.conf.json",
     "build": "ng build",
+    "deploy:fallback": "npm run build && wrangler deploy --config wrangler.fallback.jsonc",
     "test:smoke": "node ../scripts/smoke.mjs",
     "visual:capture": "node visual-validation.mjs",
     "lint": "eslint .",
