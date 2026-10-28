@@ -17,7 +17,7 @@ function load(file) {
 }
 
 const { SHEET_TEMPLATES: templates } = load('system-templates.ts');
-const { calculateSheet, fieldRoll, paranormalFieldRoll } = load('sheet-rules.ts');
+const { calculateSheet, fieldRoll, paranormalFieldRoll, dnd2014NextLevelXp } = load('sheet-rules.ts');
 const { resolveSheetRenderer, sheetResources, sheetIndicators } = load('sheet-renderer-registry.ts');
 assert.equal(templates.length, 4);
 assert.equal(new Set(templates.map(template => template.layout.skin)).size, templates.length, 'Each template should have its own visual style');
@@ -48,6 +48,9 @@ for (const template of templates) {
 const dnd = templates.find(template => template.id === 'dnd_5e');
 assert.equal(dnd.version, 2);
 assert.equal(dnd.rulesetVersion, '2014', 'The supplied Player Handbook covers the 2014 rules');
+assert.equal(dnd2014NextLevelXp(4), 6500);
+assert.equal(dnd2014NextLevelXp(19), 355000);
+assert.equal(dnd2014NextLevelXp(20), null);
 const dndSystem = { id: 'system-guid', name: 'Nome alterado pela mesa', templateId: dnd.id, templateVersion: dnd.version,
   rendererMode: 'specialized', fields: dnd.fields, layout: dnd.layout };
 assert.equal(resolveSheetRenderer(dndSystem)?.id, 'dnd_5e', 'Renderer follows stable ID even when the system is renamed');

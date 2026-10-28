@@ -91,6 +91,15 @@ const sizes = [{ name: 'desktop', width: 1440, height: 900 }, { name: 'wide', wi
         await page.locator('.custom-sheet-main').getByRole('button', { name: 'Rolar Agilidade' }).click();
         if (JSON.parse((await rollRequest).postData() || '{}').expression !== '2d20kl1') throw new Error('Order attribute zero did not keep the lower die');
       }
+      if (name === 'dnd') {
+        if (!await page.locator('.dnd-topline').getByText('14000 XP').count()) throw new Error('D&D 2014 next level XP was not shown');
+        await page.getByRole('button', { name: 'Editar ficha' }).click();
+        const savedExperience = page.waitForResponse(response => response.url().endsWith('/api/characters/char-visual') && response.request().method() === 'PUT');
+        await page.locator('.custom-sheet-main').getByRole('spinbutton', { name: 'Experiência' }).fill('7000');
+        await savedExperience;
+        await page.reload({ waitUntil: 'networkidle' });
+        if (character.fields.experiencia !== 7000) throw new Error('D&D experience did not persist');
+      }
       if (name === 'coc') {
         await page.getByRole('button', { name: 'Editar ficha' }).click();
         const savedVitals = page.waitForResponse(response => response.url().endsWith('/api/characters/char-visual') && response.request().method() === 'PUT');

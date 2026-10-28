@@ -61,3 +61,9 @@ export function paranormalFieldRoll(expression: string, values: SheetValues): st
     return fieldRoll(expression.trim().replace(source[0], '2d20kl1'), values);
   return fieldRoll(expression, values);
 }
+
+const dnd2014LevelXp = [0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000, 85000, 100000, 120000, 140000, 165000, 195000, 225000, 265000, 305000, 355000];
+
+export function dnd2014NextLevelXp(level: number): number | null {
+  return Number.isInteger(level) && level >= 1 && level < 20 ? dnd2014LevelXp[level] : null;
+}
