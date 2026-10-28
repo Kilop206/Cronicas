@@ -1,6 +1,6 @@
-import { SystemField } from './api';
+import { SheetFieldValue, SystemField } from './api';
 
-export type SheetValues = Record<string, string | number | boolean>;
+export type SheetValues = Record<string, SheetFieldValue>;
 
 export function calculateSheet(fields: SystemField[], values: SheetValues): string | null {
   for (const field of fields) if (!field.formula?.trim() && values[field.key] === undefined && field.defaultValue !== undefined && field.defaultValue !== null) values[field.key] = field.defaultValue;

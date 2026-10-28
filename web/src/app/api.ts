@@ -11,8 +11,13 @@ export interface Dashboard { totalCampaigns: number; activeCampaigns: number; re
 export interface UpcomingSession { id: string; campaignId: string; title: string; eventAt: string; campaignName: string; }
 export interface FavoriteCharacter { characterId: string; name: string; portraitUrl: string | null; campaignId: string; campaignName: string; health: number; maxHealth: number; }
 export interface Page<T> { items: T[]; total: number; page: number; }
-export interface Character { id: string; campaignId: string; ownerId: string; canEdit: boolean; name: string; portraitUrl: string | null; backgroundUrl: string | null; health: number; maxHealth: number; sanity: number; maxSanity: number; mana: number; maxMana: number; fields: Record<string, string | number | boolean>; version: number; updatedAt: string; }
+export type SheetCellValue = string | number | boolean;
+export type SheetFieldValue = SheetCellValue | string[] | Record<string, SheetCellValue>[];
+export interface Character { id: string; campaignId: string; ownerId: string; canEdit: boolean; name: string; portraitUrl: string | null; backgroundUrl: string | null; health: number; maxHealth: number; sanity: number; maxSanity: number; mana: number; maxMana: number; fields: Record<string, SheetFieldValue>; version: number; updatedAt: string; }
 export type CharacterInput = Pick<Character, 'name' | 'portraitUrl' | 'backgroundUrl' | 'health' | 'maxHealth' | 'sanity' | 'maxSanity' | 'mana' | 'maxMana' | 'fields' | 'version'>;
+export interface OverlayResource { label: string; current: number; max: number; }
+export interface OverlayIndicator { label: string; value: string; }
+export type OverlayCharacter = Pick<CharacterInput, 'name' | 'portraitUrl' | 'backgroundUrl' | 'health' | 'maxHealth' | 'sanity' | 'maxSanity' | 'mana' | 'maxMana'> & { templateId: string | null; resources: OverlayResource[]; indicators: OverlayIndicator[]; };
 export interface CharacterRevision { id: string; version: number; createdAt: string; editedBy: string; }
 export interface CharacterSecret { notes: string; revision: number; updatedAt: string | null; }
 export interface Npc { id: string; campaignId: string; name: string; portraitUrl: string | null; appearance: string; personality: string; motivation: string; relationships: string; location: string; secrets?: string; status: 'active' | 'missing' | 'deceased' | 'unknown'; visibility: 'gm' | 'campaign'; health: number; maxHealth: number; version: number; createdAt: string; updatedAt: string; }
@@ -21,11 +26,13 @@ export interface InventoryItem { id: string; characterId: string; name: string; 
 export type InventoryInput = Pick<InventoryItem, 'name' | 'category' | 'quantity' | 'weight' | 'notes' | 'version'>;
 export interface CharacterAbility { id: string; characterId: string; name: string; description: string; cost: string; effect: string; duration: string; limitations: string; recharge: string; rollExpression: string | null; version: number; createdAt: string; updatedAt: string; }
 export type AbilityInput = Pick<CharacterAbility, 'name' | 'description' | 'cost' | 'effect' | 'duration' | 'limitations' | 'recharge' | 'rollExpression' | 'version'>;
-export interface SystemField { key: string; label: string; type: 'text' | 'longtext' | 'number' | 'boolean' | 'select'; section: string; min: number | null; max: number | null; options: string[] | null; span?: number | null; formula?: string | null; rollExpression?: string | null; defaultValue?: string | number | boolean | null; }
-export interface SheetBlock { id: string; kind: 'identity' | 'portrait' | 'resource' | 'field' | 'note' | 'inventory' | 'abilities' | 'history'; span: number; title: string | null; key: string | null; maxKey?: string | null; text: string | null; style: 'panel' | 'plain' | 'accent' | 'score' | 'compact' | null; x?: number | null; y?: number | null; width?: number | null; height?: number | null; }
+export interface SystemColumn { key: string; label: string; type: 'text' | 'number' | 'boolean'; }
+export interface SystemField { key: string; label: string; type: 'text' | 'longtext' | 'number' | 'boolean' | 'select' | 'list' | 'table'; section: string; min: number | null; max: number | null; options: string[] | null; span?: number | null; formula?: string | null; rollExpression?: string | null; defaultValue?: string | number | boolean | null; columns?: SystemColumn[] | null; editRole?: 'both' | 'gm' | null; }
+export interface SheetBlock { id: string; kind: 'identity' | 'portrait' | 'resource' | 'tracker' | 'section' | 'field' | 'note' | 'inventory' | 'abilities' | 'history'; span: number; title: string | null; key: string | null; maxKey?: string | null; text: string | null; style: 'panel' | 'plain' | 'accent' | 'score' | 'compact' | null; x?: number | null; y?: number | null; width?: number | null; height?: number | null; visibleWhenKey?: string | null; visibleWhenValue?: boolean | null; }
 export interface SheetPage { id: string; title: string; blocks: SheetBlock[]; layoutMode?: 'grid' | 'canvas' | null; backgroundUrl?: string | null; aspectRatio?: number | null; }
-export interface SheetLayout { accentColor: string; pages: SheetPage[]; skin?: 'archive' | 'investigation' | 'fantasy' | 'mythic' | null; headerLabel?: string | null; }
-export interface RpgSystem { id: string; ownerId: string | null; name: string; description: string; fields: SystemField[]; layout: SheetLayout | null; createdAt: string; updatedAt: string; }
+export interface SheetLayout { accentColor: string; pages: SheetPage[]; skin?: 'archive' | 'investigation' | 'fantasy' | 'mythic' | null; headerLabel?: string | null; fontStyle?: 'editorial' | 'modern' | 'typewriter' | null; density?: 'comfortable' | 'compact' | null; borderStyle?: 'soft' | 'sharp' | 'ornate' | null; }
+export interface SystemRevision { revision: number; savedAt: string; name: string; }
+export interface RpgSystem { id: string; ownerId: string | null; name: string; description: string; fields: SystemField[]; layout: SheetLayout | null; templateId: string | null; templateVersion: number; rulesetVersion: string | null; rendererMode: 'specialized' | 'layout' | null; revision: number; revisions: SystemRevision[]; createdAt: string; updatedAt: string; }
 export interface CampaignMember { userId: string; displayName: string; role: string; joinedAt: string; }
 export interface World { id: string; ownerId: string; name: string; description: string; createdAt: string; updatedAt: string; }
 export interface WorldDetail extends World { campaigns: { campaignId: string; name: string; role: string }[]; }
@@ -113,8 +120,9 @@ export class ApiService {
   deleteEncounter(id: string) { return this.http.delete<void>(`/api/encounters/${id}`, { withCredentials: true }); }
   systems() { return this.http.get<RpgSystem[]>('/api/systems', { withCredentials: true }); }
   system(id: string) { return this.http.get<RpgSystem>(`/api/systems/${id}`, { withCredentials: true }); }
-  createSystem(data: Pick<RpgSystem, 'name' | 'description' | 'fields' | 'layout'>) { return this.http.post<RpgSystem>('/api/systems', data, { withCredentials: true }); }
-  updateSystem(id: string, data: Pick<RpgSystem, 'name' | 'description' | 'fields' | 'layout'>) { return this.http.put<RpgSystem>(`/api/systems/${id}`, data, { withCredentials: true }); }
+  createSystem(data: Pick<RpgSystem, 'name' | 'description' | 'fields' | 'layout' | 'templateId' | 'templateVersion' | 'rulesetVersion' | 'rendererMode'>) { return this.http.post<RpgSystem>('/api/systems', data, { withCredentials: true }); }
+  updateSystem(id: string, data: Pick<RpgSystem, 'name' | 'description' | 'fields' | 'layout' | 'templateId' | 'templateVersion' | 'rulesetVersion' | 'rendererMode' | 'revision'> & { fieldRenames?: Record<string, string> }) { return this.http.put<RpgSystem>(`/api/systems/${id}`, data, { withCredentials: true }); }
+  restoreSystemRevision(id: string, revision: number, expectedRevision: number) { return this.http.post<RpgSystem>(`/api/systems/${id}/revisions/${revision}/restore`, { expectedRevision }, { withCredentials: true }); }
   deleteSystem(id: string) { return this.http.delete<void>(`/api/systems/${id}`, { withCredentials: true }); }
   characters(campaignId: string) { return this.http.get<Character[]>(`/api/campaigns/${campaignId}/characters`, { withCredentials: true }); }
   npcs(campaignId: string, page = 1, search = '') { return this.http.get<Page<Npc>>(`/api/campaigns/${campaignId}/npcs`, { params: { page, search }, withCredentials: true }); }
@@ -142,7 +150,7 @@ export class ApiService {
   addCharacterFavorite(id: string) { return this.http.put<void>(`/api/characters/${id}/favorite`, {}, { withCredentials: true }); }
   removeCharacterFavorite(id: string) { return this.http.delete<void>(`/api/characters/${id}/favorite`, { withCredentials: true }); }
   rotateOverlayKey(id: string) { return this.http.post<{ key: string }>(`/api/characters/${id}/overlay-key`, {}, { withCredentials: true }); }
-  overlay(key: string) { return this.http.get<Character>(`/api/overlay/${key}`); }
+  overlay(key: string) { return this.http.get<OverlayCharacter>(`/api/overlay/${key}`); }
   createInvite(campaignId: string, role: string) { return this.http.post<{ token: string; role: string; expiresAt: string }>(`/api/campaigns/${campaignId}/invites`, { role }, { withCredentials: true }); }
   invite(token: string) { return this.http.get<InvitePreview>(`/api/invites/${token}`, { withCredentials: true }); }
   acceptInvite(token: string) { return this.http.post<{ campaignId: string }>(`/api/invites/${token}/accept`, {}, { withCredentials: true }); }
@@ -154,6 +162,7 @@ export class ApiService {
   revealEntry(id: string) { return this.http.post<NarrativeEntry>(`/api/entries/${id}/reveal`, {}, { withCredentials: true }); }
   rolls(campaignId: string) { return this.http.get<DiceRoll[]>(`/api/campaigns/${campaignId}/rolls`, { withCredentials: true }); }
   roll(campaignId: string, expression: string, visibility: DiceRoll['visibility'], requestId: string) { return this.http.post<DiceRoll>(`/api/campaigns/${campaignId}/rolls`, { expression, visibility, requestId }, { withCredentials: true }); }
+  percentileRoll(campaignId: string, target: number, bonusDice: number, visibility: DiceRoll['visibility'], requestId: string) { return this.http.post<DiceRoll>(`/api/campaigns/${campaignId}/percentile-rolls`, { target, bonusDice, visibility, requestId }, { withCredentials: true }); }
   private setUser(user: User | null) {
     this.user.set(user);
     this.document.documentElement.dataset['accent'] = user?.accent || 'gold';

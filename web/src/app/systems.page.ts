@@ -1,11 +1,12 @@
-import { CommonModule } from '@angular/common';
+import { CommonModule, DOCUMENT } from '@angular/common';
 import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
-import { ApiService, RpgSystem, SheetLayout, SystemField, apiError } from './api';
+import { ApiService, RpgSystem, SheetLayout, SystemField, SystemRevision, apiError } from './api';
 import { SheetLayoutDesignerComponent, SheetLayoutPreviewComponent } from './sheet-layout-designer.component';
 import { SHEET_TEMPLATES } from './system-templates';
+import { canAssociateTemplate } from './sheet-renderer-registry';
 
 const newSheetLayout = (): SheetLayout => ({ accentColor: '#aa9acd', skin: 'investigation', pages: [
   { id: 'principal', title: 'Principal', blocks: [
@@ -46,6 +47,8 @@ export class SystemsPage implements OnInit {
       <section class="editor-panel designer-controls"><div class="panel-heading"><span>IDENTIDADE</span><h2>Definição do sistema</h2></div>
         <label>Nome<input name="name" [(ngModel)]="name" required minlength="3" maxlength="120" [disabled]="readonly()"></label>
         <label>Descrição<textarea name="description" [(ngModel)]="description" maxlength="2000" rows="3" [disabled]="readonly()"></textarea></label>
+        <label *ngIf="!isNew && !templateId && !readonly() && compatibleTemplates().length">Vincular ficha existente a um modelo<select name="associateTemplate" [ngModel]="''" (ngModelChange)="associateTemplate($event)"><option value="">Escolha um modelo</option><option *ngFor="let template of compatibleTemplates()" [value]="template.id">{{ template.name }}</option></select><small>Preserva campos e personagens; a ficha passa a usar a experiência do modelo após salvar.</small></label>
+        <label *ngIf="templateId && mode === 'structured'">Apresentação da ficha<select name="rendererMode" [(ngModel)]="rendererMode" [disabled]="readonly()"><option value="specialized">Ficha especializada do sistema</option><option value="layout">Composição visual personalizada</option></select><small>Use a composição visual se quiser posicionar livremente todos os blocos.</small></label>
         <label *ngIf="isNew">Ponto de partida<select name="preset" [ngModel]="preset" (ngModelChange)="applyPreset($event)"><option value="blank">Em branco</option><option value="fantasy">Aventura fantástica genérica</option><option value="mystery">Investigação genérica</option><option *ngFor="let template of templates" [value]="template.id">{{ template.name }} (não oficial)</option></select></label>
         <fieldset class="mode-choice" [disabled]="readonly()"><legend>Como criar a ficha</legend>
           <label [class.selected]="mode === 'free'"><input type="radio" name="mode" [checked]="mode === 'free'" (change)="mode = 'free'"><span><strong>Livre</strong><small>Jogadores adicionam campos manualmente à própria ficha.</small></span></label>
@@ -59,8 +62,9 @@ export class SystemsPage implements OnInit {
             <div class="system-field-grid"><label>Chave<input [name]="'key' + i" [ngModel]="field.key" (ngModelChange)="renameField(field, $event)" required pattern="[a-z][a-z0-9_]{1,39}" [disabled]="readonly()"></label>
               <label>Rótulo<input [name]="'label' + i" [(ngModel)]="field.label" required minlength="2" maxlength="80" [disabled]="readonly()"></label>
               <label>Seção<input [name]="'section' + i" [(ngModel)]="field.section" required minlength="2" maxlength="60" [disabled]="readonly()"></label>
-              <label>Tipo<select [name]="'type' + i" [ngModel]="field.type" (ngModelChange)="setFieldType(field, $event)" [disabled]="readonly()"><option value="text">Texto</option><option value="longtext">Texto longo</option><option value="number">Número</option><option value="boolean">Sim/não</option><option value="select">Seleção</option></select></label>
+              <label>Tipo<select [name]="'type' + i" [ngModel]="field.type" (ngModelChange)="setFieldType(field, $event)" [disabled]="readonly()"><option value="text">Texto</option><option value="longtext">Texto longo</option><option value="number">Número</option><option value="boolean">Sim/não</option><option value="select">Seleção</option><option value="list">Lista repetível</option><option value="table">Tabela repetível</option></select></label>
               <label>Largura<select [name]="'span' + i" [(ngModel)]="field.span" [disabled]="readonly()"><option [ngValue]="3">¼ da linha</option><option [ngValue]="4">⅓ da linha</option><option [ngValue]="6">½ linha</option><option [ngValue]="12">Linha inteira</option></select></label>
+              <label>Permissão de edição<select [name]="'editRole' + i" [ngModel]="field.editRole || 'both'" (ngModelChange)="field.editRole = $event" [disabled]="readonly()"><option value="both">Dono e mestre</option><option value="gm">Somente mestre</option></select></label>
               <label *ngIf="field.type === 'number'">Mínimo<input type="number" [name]="'min' + i" [(ngModel)]="field.min" [disabled]="readonly()"></label>
               <label *ngIf="field.type === 'number'">Máximo<input type="number" [name]="'max' + i" [(ngModel)]="field.max" [disabled]="readonly()"></label>
               <label *ngIf="field.type === 'number'">Valor inicial<input type="number" [name]="'default' + i" [ngModel]="field.defaultValue" (ngModelChange)="field.defaultValue = $event === '' || $event == null ? null : +$event" [disabled]="readonly() || !!field.formula"></label>
@@ -69,11 +73,15 @@ export class SystemsPage implements OnInit {
               <label *ngIf="field.type === 'number'" class="wide">Cálculo automático<input [name]="'formula' + i" [(ngModel)]="field.formula" maxlength="200" placeholder="nivel * 100 + experiencia" [disabled]="readonly()"><small>Use chaves de outros campos numéricos, +, -, *, / e parênteses. O resultado fica somente para leitura.</small></label>
               <label *ngIf="field.type === 'number'" class="wide">Rolagem do campo<input [name]="'roll' + i" [(ngModel)]="field.rollExpression" maxlength="80" placeholder="1d20+&#123;bonus&#125;" [disabled]="readonly()"><small>Ex.: 1d20+3 ou 1d20+&#123;bonus&#125;. O resultado aparece na campanha.</small></label>
               <label *ngIf="field.type === 'select'" class="wide">Opções separadas por vírgula<input [name]="'options' + i" [ngModel]="field.options?.join(', ') || ''" (ngModelChange)="field.options = parseOptions($event)" [disabled]="readonly()"></label></div>
+              <label *ngIf="field.type === 'table'">Colunas da tabela<input [name]="'columns' + i" [ngModel]="columnLabels(field)" (ngModelChange)="setColumns(field,$event)" placeholder="Nome, Tipo, Custo" [disabled]="readonly()"><small>Separe os títulos por vírgula. Até 8 colunas; cada ficha pode adicionar até 30 linhas.</small></label>
+              <div *ngIf="field.type === 'table'" class="system-field-grid"><label *ngFor="let column of field.columns; let c=index">{{ column.label }}<select [name]="'columnType' + i + '_' + c" [(ngModel)]="column.type" [disabled]="readonly()"><option value="text">Texto</option><option value="number">Número</option><option value="boolean">Sim/não</option></select></label></div>
           </div></div>
           <label *ngIf="editorMode === 'json'">Campos em JSON<textarea name="json" [(ngModel)]="jsonDraft" rows="18" spellcheck="false" [disabled]="readonly()"></textarea><small>Use um array de campos com key, label, type, section, span, min, max, options, defaultValue, formula e rollExpression. Nenhum script é executado.</small></label>
           <app-sheet-layout-designer [layout]="layout" [fields]="fields" [readOnly]="readonly()" (layoutChange)="layout = $event" (pageSelected)="selectedPreviewPage = $event" />
         </div>
         <p *ngIf="readonly()" class="room-note">Você pode consultar este sistema porque participa de uma campanha que o usa.</p>
+        <div *ngIf="!readonly()" class="form-actions"><button type="button" class="button button-small secondary" (click)="exportTemplate()">Exportar modelo JSON</button><label class="button button-small secondary" style="cursor:pointer">Importar modelo JSON<input type="file" accept="application/json,.json" (change)="importTemplate($event)" hidden></label></div>
+        <details *ngIf="!isNew && revisions.length" class="layout-json"><summary>Histórico do modelo · revisão {{ revision }}</summary><div *ngFor="let item of revisions" class="sheet-read-row"><span>Revisão {{ item.revision }} · {{ item.name }} · {{ item.savedAt | date:'short' }}</span><button type="button" class="button button-small secondary" [disabled]="busy() || readonly()" (click)="restoreRevision(item.revision)">Restaurar</button></div></details>
         <div *ngIf="!readonly()" class="form-actions"><button *ngIf="!isNew" type="button" class="text-link danger" (click)="remove()" [disabled]="busy()">Excluir sistema</button><button class="button" [disabled]="form.invalid || busy()">{{ busy() ? 'Salvando...' : 'Salvar sistema' }}</button></div>
         <p *ngIf="saved()" class="form-success" role="status">Sistema salvo.</p>
       </section>
@@ -106,22 +114,36 @@ export class SystemsPage implements OnInit {
     @media (max-width: 620px) { .mode-choice { grid-template-columns: 1fr; } }
   `] })
 export class SystemEditorPage implements OnInit {
-  private api = inject(ApiService); private route = inject(ActivatedRoute); private router = inject(Router);
+  private api = inject(ApiService); private route = inject(ActivatedRoute); private router = inject(Router); private document = inject(DOCUMENT);
   id = this.route.snapshot.paramMap.get('id') || 'new'; isNew = this.id === 'new'; ownerId: string | null = null;
   templates = SHEET_TEMPLATES;
   name = ''; description = ''; preset = 'blank'; mode: 'free' | 'structured' = 'structured'; editorMode: 'visual' | 'json' = 'visual'; jsonDraft = '[]';
+  templateId: string | null = null; templateVersion = 1; rulesetVersion: string | null = null;
+  rendererMode: 'specialized' | 'layout' = 'specialized'; revision = 1; revisions: SystemRevision[] = [];
+  private originalFieldKeys = new Set<string>(); private fieldRenames: Record<string, string> = {};
   layout = newSheetLayout();
   selectedPreviewPage = 'principal';
   fields: SystemField[] = []; loading = signal(!this.isNew); busy = signal(false); saved = signal(false); error = signal('');
-  ngOnInit() { if (this.isNew) { const preset = this.route.snapshot.queryParamMap.get('preset'); if (preset) this.applyPreset(preset); return; } this.api.system(this.id).pipe(finalize(() => this.loading.set(false))).subscribe({ next: system => { this.name = system.name; this.description = system.description; this.fields = system.fields.map(f => ({ ...f, span: f.span || 6, options: f.options?.slice() || null })); this.layout = system.layout || layoutFromFields(this.fields); this.selectedPreviewPage = this.layout.pages[0].id; this.mode = (system.layout || this.fields.length) ? 'structured' : 'free'; this.ownerId = system.ownerId; }, error: e => this.error.set(apiError(e)) }); }
+  ngOnInit() { if (this.isNew) { const preset = this.route.snapshot.queryParamMap.get('preset'); if (preset) this.applyPreset(preset); return; } this.api.system(this.id).pipe(finalize(() => this.loading.set(false))).subscribe({ next: system => this.useSystem(system), error: e => this.error.set(apiError(e)) }); }
+  private useSystem(system: RpgSystem) { this.name = system.name; this.description = system.description; this.fields = system.fields.map(f => ({ ...f, span: f.span || 6, options: f.options?.slice() || null })); this.layout = system.layout || layoutFromFields(this.fields); this.selectedPreviewPage = this.layout.pages[0].id; this.mode = (system.layout || this.fields.length) ? 'structured' : 'free'; this.ownerId = system.ownerId; this.templateId = system.templateId; this.templateVersion = system.templateVersion || 1; this.rulesetVersion = system.rulesetVersion; this.rendererMode = system.rendererMode || 'specialized'; this.revision = system.revision || 1; this.revisions = system.revisions || []; this.originalFieldKeys = new Set(system.fields.map(field => field.key)); this.fieldRenames = {}; }
   readonly() { return !this.isNew && this.ownerId !== this.api.user()?.id; }
-  matchingTemplate() { return this.isNew ? null : this.templates.find(template => template.name === this.name && template.fields.every(field => this.fields.some(current => current.key === field.key))) || null; }
-  applyCatalogLayout() { const template = this.matchingTemplate(); if (!template) return; this.layout = structuredClone(template.layout); this.selectedPreviewPage = this.layout.pages[0].id; this.saved.set(false); }
-  setFieldType(field: SystemField, type: SystemField['type']) { field.type = type; field.defaultValue = null; if (type !== 'number') { field.formula = null; field.rollExpression = null; } }
+  matchingTemplate() { return this.templates.find(template => template.id === this.templateId && template.version === this.templateVersion) || null; }
+  compatibleTemplates() { return this.templates.filter(template => canAssociateTemplate(template.id, this.fields)); }
+  private mergeTemplateFields(template: (typeof SHEET_TEMPLATES)[number]) {
+    const missing = template.fields.filter(field => !this.fields.some(current => current.key === field.key));
+    if (this.fields.length + missing.length > 100) { this.error.set('Remova campos antes de aplicar este modelo: o limite é de 100.'); return false; }
+    this.fields.push(...structuredClone(missing)); return true;
+  }
+  associateTemplate(id: string) { const template = this.compatibleTemplates().find(item => item.id === id); if (!template || !this.mergeTemplateFields(template)) return; this.templateId = template.id; this.templateVersion = template.version; this.rulesetVersion = template.rulesetVersion; this.rendererMode = 'specialized'; this.saved.set(false); }
+  applyCatalogLayout() { const template = this.matchingTemplate(); if (!template || !this.mergeTemplateFields(template)) return; this.layout = structuredClone(template.layout); this.selectedPreviewPage = this.layout.pages[0].id; this.saved.set(false); }
+  setFieldType(field: SystemField, type: SystemField['type']) { field.type = type; field.defaultValue = null; field.columns = type === 'table' ? [{ key: 'nome', label: 'Nome', type: 'text' }] : null; if (type !== 'number') { field.formula = null; field.rollExpression = null; } }
+  columnLabels(field: SystemField) { return field.columns?.map(column => column.label).join(', ') || ''; }
+  setColumns(field: SystemField, value: string) { const names = value.split(',').map(item => item.trim()).filter(Boolean).slice(0, 8); const previous = field.columns || []; const keys = new Set<string>(); field.columns = names.map((label, index) => { let key = previous[index]?.key || label.normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '_').replace(/^_+|_+$/g, '').slice(0, 36); if (!/^[a-z][a-z0-9_]{1,39}$/.test(key)) key = `coluna_${index + 1}`; while (keys.has(key)) key = `${key.slice(0, 35)}_${index + 1}`; keys.add(key); return { key, label, type: previous[index]?.type || 'text' as const }; }); }
   applyPreset(value: string) {
     this.preset = value;
     const template = this.templates.find(item => item.id === value);
     if (template) {
+      this.templateId = template.id; this.templateVersion = template.version; this.rulesetVersion = template.rulesetVersion; this.rendererMode = 'specialized';
       this.name = template.name;
       this.description = `Modelo não oficial para ${template.name}. Personalize regras e campos para sua mesa.`;
       this.fields = structuredClone(template.fields);
@@ -130,6 +152,7 @@ export class SystemEditorPage implements OnInit {
       this.selectedPreviewPage = this.layout.pages[0].id;
       return;
     }
+    this.templateId = null; this.templateVersion = 1; this.rulesetVersion = null; this.rendererMode = 'layout';
     if (value === 'blank') { this.fields = []; this.layout = newSheetLayout(); return; }
     const basic = (key: string, label: string, section: string, formula: string | null = null, rollExpression: string | null = null): SystemField =>
       ({ key, label, section, type: 'number', min: null, max: null, options: null, span: 6, formula, rollExpression });
@@ -147,16 +170,21 @@ export class SystemEditorPage implements OnInit {
   addField() { if (this.fields.length >= 100) return; let number = 1; while (this.fields.some(field => field.key === `campo_${number}`)) number++; const key = `campo_${number}`; this.fields.push({ key, label: '', section: 'Geral', type: 'text', min: null, max: null, options: null, span: 6 }); const page = this.layout.pages.find(item => item.blocks.length < 40); if (page && this.layout.pages.reduce((count, item) => count + item.blocks.length, 0) < 100) { const index = page.blocks.length; page.blocks.push({ id: `bloco_${key}`, kind: 'field', span: 6, title: null, key, text: null, style: 'panel', ...(page.layoutMode === 'canvas' ? { x: (index % 2) * 51, y: Math.min(Math.floor(index / 2) * 20, 80), width: 49, height: 18 } : {}) }); } }
   renameField(field: SystemField, key: string) {
     const previous = field.key; field.key = key;
+    const origin = Object.keys(this.fieldRenames).find(from => this.fieldRenames[from] === previous) || previous;
+    if (this.originalFieldKeys.has(origin)) {
+      if (origin === key) delete this.fieldRenames[origin]; else this.fieldRenames[origin] = key;
+    }
     for (const item of this.fields) {
       if (item.formula) item.formula = item.formula.replace(/\b[a-z][a-z0-9_]*\b/g, token => token === previous ? key : token);
       if (item.rollExpression) item.rollExpression = item.rollExpression.replaceAll(`{${previous}}`, `{${key}}`);
     }
     for (const page of this.layout.pages) for (const block of page.blocks) {
-      if ((block.kind === 'field' || block.kind === 'resource') && block.key === previous) block.key = key;
-      if (block.kind === 'resource' && block.maxKey === previous) block.maxKey = key;
+      if ((block.kind === 'field' || block.kind === 'resource' || block.kind === 'tracker') && block.key === previous) block.key = key;
+      if ((block.kind === 'resource' || block.kind === 'tracker') && block.maxKey === previous) block.maxKey = key;
+      if (block.visibleWhenKey === previous) block.visibleWhenKey = key;
     }
   }
-  removeField(index: number) { const [field] = this.fields.splice(index, 1); for (const page of this.layout.pages) page.blocks = page.blocks.filter(block => block.kind !== 'field' || block.key !== field.key); }
+  removeField(index: number) { const [field] = this.fields.splice(index, 1); for (const [from, to] of Object.entries(this.fieldRenames)) if (to === field.key) delete this.fieldRenames[from]; for (const page of this.layout.pages) { page.blocks = page.blocks.filter(block => !(['field', 'resource', 'tracker'].includes(block.kind) && block.key === field.key)); for (const block of page.blocks) { if (block.visibleWhenKey === field.key) { block.visibleWhenKey = null; block.visibleWhenValue = null; } if (block.maxKey === field.key) block.maxKey = null; } } }
   moveField(index: number, step: number) { const [item] = this.fields.splice(index, 1); this.fields.splice(index + step, 0, item); }
   sections() { return [...new Set(this.fields.map(field => field.section || 'Geral'))]; }
   sectionFields(section: string) { return this.fields.filter(field => (field.section || 'Geral') === section); }
@@ -172,7 +200,7 @@ export class SystemEditorPage implements OnInit {
       const parsed: unknown = JSON.parse(this.jsonDraft);
       if (!Array.isArray(parsed) || parsed.length > 100 || !parsed.every(field => field && typeof field === 'object'
         && typeof field.key === 'string' && typeof field.label === 'string' && typeof field.section === 'string'
-        && ['text', 'longtext', 'number', 'boolean', 'select'].includes(field.type)
+        && ['text', 'longtext', 'number', 'boolean', 'select', 'list', 'table'].includes(field.type)
         && (field.options == null || Array.isArray(field.options))
         && (field.formula == null || typeof field.formula === 'string')
         && (field.rollExpression == null || typeof field.rollExpression === 'string')
@@ -184,10 +212,60 @@ export class SystemEditorPage implements OnInit {
     this.error.set(''); this.saved.set(false);
     if (this.mode === 'structured' && this.editorMode === 'json' && !this.parseJson()) return;
     this.busy.set(true);
-    const fields = this.mode === 'free' ? [] : this.fields.map(f => ({ ...f, options: f.type === 'select' ? f.options : null, min: f.type === 'number' ? f.min : null, max: f.type === 'number' ? f.max : null, defaultValue: f.formula ? null : f.defaultValue ?? null }));
-    const payload = { name: this.name, description: this.description, fields, layout: this.mode === 'structured' ? this.layout : null };
+    const fields = this.mode === 'free' ? [] : this.fields.map(f => ({ ...f, options: f.type === 'select' ? f.options : null, min: f.type === 'number' ? f.min : null, max: f.type === 'number' ? f.max : null, columns: f.type === 'table' ? f.columns : null, defaultValue: f.formula ? null : f.defaultValue ?? null }));
+    const payload = { name: this.name, description: this.description, fields, layout: this.mode === 'structured' ? this.layout : null, templateId: this.mode === 'free' ? null : this.templateId, templateVersion: this.templateVersion, rulesetVersion: this.rulesetVersion, rendererMode: this.rendererMode, revision: this.revision, fieldRenames: this.fieldRenames };
     const request = this.isNew ? this.api.createSystem(payload) : this.api.updateSystem(this.id, payload);
-    request.pipe(finalize(() => this.busy.set(false))).subscribe({ next: system => { this.fields = system.fields; this.layout = system.layout || newSheetLayout(); this.saved.set(true); this.ownerId = system.ownerId; this.id = system.id; this.isNew = false; void this.router.navigate(['/systems', system.id], { replaceUrl: true }); }, error: e => this.error.set(apiError(e)) });
+    request.pipe(finalize(() => this.busy.set(false))).subscribe({ next: system => { this.useSystem(system); this.saved.set(true); this.id = system.id; this.isNew = false; void this.router.navigate(['/systems', system.id], { replaceUrl: true }); }, error: e => this.error.set(apiError(e)) });
+  }
+  exportTemplate() {
+    const payload = { format: 'cronicas.sheet-template', formatVersion: 1, name: this.name, description: this.description,
+      templateId: this.templateId, templateVersion: this.templateVersion, rulesetVersion: this.rulesetVersion,
+      rendererMode: this.rendererMode, fields: this.mode === 'free' ? [] : this.fields,
+      layout: this.mode === 'free' ? null : this.layout };
+    const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
+    const url = URL.createObjectURL(blob);
+    const link = this.document.createElement('a'); link.href = url;
+    link.download = `${(this.name || 'modelo').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-')}.json`;
+    link.click(); URL.revokeObjectURL(url);
+  }
+  async importTemplate(event: Event) {
+    const input = event.target as HTMLInputElement; const file = input.files?.[0]; input.value = '';
+    if (!file) return;
+    if (file.size > 100_000) { this.error.set('O arquivo excede 100 KB.'); return; }
+    try {
+      const value: unknown = JSON.parse(await file.text());
+      if (!value || typeof value !== 'object') throw new Error();
+      const model = value as Record<string, unknown>;
+      if (model['format'] !== 'cronicas.sheet-template' || model['formatVersion'] !== 1
+        || typeof model['name'] !== 'string' || typeof model['description'] !== 'string'
+        || !Array.isArray(model['fields']) || model['fields'].length > 100
+        || !model['fields'].every(field => field && typeof field.key === 'string' && /^[a-z][a-z0-9_]{1,39}$/.test(field.key)
+          && typeof field.label === 'string' && typeof field.section === 'string'
+          && ['text','longtext','number','boolean','select','list','table'].includes(field.type))) throw new Error();
+      const layout = model['layout'] as SheetLayout | null;
+      if (layout && (!/^#[0-9a-fA-F]{6}$/.test(layout.accentColor) || !Array.isArray(layout.pages)
+        || layout.pages.length < 1 || layout.pages.length > 8
+        || !layout.pages.every(page => page && typeof page.id === 'string' && /^[a-z][a-z0-9_]{1,39}$/.test(page.id)
+          && typeof page.title === 'string' && Array.isArray(page.blocks) && page.blocks.length >= 1 && page.blocks.length <= 40
+          && page.blocks.every(block => block && typeof block.id === 'string' && typeof block.kind === 'string'
+            && typeof block.span === 'number' && block.span >= 1 && block.span <= 12)))) throw new Error();
+      this.name = model['name']; this.description = model['description']; this.fields = model['fields'] as SystemField[];
+      this.fieldRenames = {};
+      this.layout = layout || newSheetLayout(); this.mode = layout || this.fields.length ? 'structured' : 'free';
+      this.selectedPreviewPage = this.layout.pages[0].id;
+      this.templateId = typeof model['templateId'] === 'string' && canAssociateTemplate(model['templateId'], this.fields) ? model['templateId'] : null;
+      this.templateVersion = typeof model['templateVersion'] === 'number' ? model['templateVersion'] : 1;
+      this.rulesetVersion = typeof model['rulesetVersion'] === 'string' ? model['rulesetVersion'] : null;
+      this.rendererMode = model['rendererMode'] === 'specialized' && this.templateId ? 'specialized' : 'layout';
+      this.editorMode = 'visual'; this.saved.set(false); this.error.set('');
+    } catch { this.error.set('Arquivo de modelo inválido. Importe um JSON exportado pelo Crônicas.'); }
+  }
+  restoreRevision(revision: number) {
+    if (this.isNew || this.readonly()) return;
+    this.busy.set(true); this.error.set('');
+    this.api.restoreSystemRevision(this.id, revision, this.revision).pipe(finalize(() => this.busy.set(false))).subscribe({
+      next: system => { this.useSystem(system); this.saved.set(true); }, error: e => this.error.set(apiError(e))
+    });
   }
   remove() { if (!confirm('Excluir este sistema?')) return; this.busy.set(true); this.api.deleteSystem(this.id).pipe(finalize(() => this.busy.set(false))).subscribe({ next: () => void this.router.navigateByUrl('/systems'), error: e => this.error.set(apiError(e)) }); }
 }

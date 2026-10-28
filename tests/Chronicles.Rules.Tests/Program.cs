@@ -26,6 +26,13 @@ Check(result.Total == 10 && result.KeptIndexes.SequenceEqual([0, 1, 2, 3]), "Som
 
 Check(DiceExpression.TryParse("1d100", out var percentile) && percentile is not null, "Analisa d100");
 Check(percentile!.Roll(_ => 100).Total == 100, "Limite superior d100");
+var percentileDraws = new Queue<int>([0, 0, 4]);
+var bonusRoll = PercentileDice.Roll(1, () => percentileDraws.Dequeue());
+Check(bonusRoll.Total == 40 && bonusRoll.KeptIndexes.SequenceEqual([0, 2]), "Dado de bonus escolhe menor dezena e zero duplo vale 100");
+percentileDraws = new Queue<int>([7, 1, 8]);
+var penalty = PercentileDice.Roll(-1, () => percentileDraws.Dequeue());
+Check(penalty.Total == 87 && penalty.KeptIndexes.SequenceEqual([0, 2]), "Dado de penalidade escolhe maior dezena");
+Check(new PercentileResult(12, [], []).Degree(65) == "extreme" && new PercentileResult(33, [], []).Degree(65) == "regular", "Graus de sucesso percentuais");
 
 var rooms = new RoomRegistry();
 var campaign = Guid.NewGuid();
@@ -71,6 +78,39 @@ Check(SystemDefinition.ValidateLayout(canvas with { Skin = "mythic" }, []) is nu
 Check(SystemDefinition.ValidateLayout(canvas with { HeaderLabel = "CRÔNICAS / LENDA" }, []) is null, "Cabecalho proprio valido");
 Check(SystemDefinition.ValidateLayout(canvas with { HeaderLabel = "X" }, []) is not null, "Cabecalho curto rejeitado");
 Check(SystemDefinition.ValidateLayout(canvas with { Skin = "script" }, []) is not null, "Aparencia desconhecida rejeitada");
+
+var visible = new SystemField("mostrar", "Mostrar", "boolean", "Geral", null, null, null);
+var trackerLayout = new SheetLayout("#8d6c9e", [new SheetPage("principal", "Principal", [
+    new SheetBlock("circulos", "tracker", 6, Key: "health", VisibleWhenKey: "mostrar", VisibleWhenValue: true),
+    new SheetBlock("subsecao", "section", 12, Title: "Detalhes")
+])], FontStyle: "typewriter", Density: "compact", BorderStyle: "ornate");
+Check(SystemDefinition.ValidateLayout(trackerLayout, [visible]) is null, "Marcadores, secoes, tema e visibilidade validos");
+Check(SystemDefinition.ValidateLayout(trackerLayout, []) is not null, "Visibilidade com campo ausente rejeitada");
+Check(SystemDefinition.ValidateLayout(trackerLayout with { FontStyle = "script" }, [visible]) is not null, "Fonte nao permitida rejeitada");
+var versioned = new SystemDefinition([field], layout, "dnd_5e", 1, "2024", "specialized", 2,
+    [new SystemRevision(1, DateTime.UtcNow, "Antigo", "", [field], layout, "dnd_5e", 1, "2024", "specialized")]);
+var versionedCopy = SystemDefinition.Read(System.Text.Json.JsonSerializer.Serialize(versioned));
+Check(versionedCopy.TemplateId == "dnd_5e" && versionedCopy.TemplateVersion == 1 && versionedCopy.Revision == 2
+    && versionedCopy.History?.Length == 1, "Identidade estavel e historico do modelo persistem");
+var listField = new SystemField("condicoes", "Condicoes", "list", "Combate", null, null, null);
+var tableField = new SystemField("ataques", "Ataques", "table", "Combate", null, null, null,
+    Columns: [new SystemColumn("nome", "Nome", "text"), new SystemColumn("bonus", "Bonus", "number")]);
+Check(SheetCollectionValues.ValidField(listField, System.Text.Json.JsonSerializer.SerializeToElement(new[] { "Atordoado" })), "Lista validada");
+Check(!SheetCollectionValues.ValidField(listField, System.Text.Json.JsonSerializer.SerializeToElement(new[] { 42 })), "Lista rejeita tipo errado");
+Check(SheetCollectionValues.ValidField(tableField, System.Text.Json.JsonSerializer.SerializeToElement(new[] { new { nome = "Espada", bonus = 4 } })), "Tabela validada");
+Check(!SheetCollectionValues.ValidField(tableField, System.Text.Json.JsonSerializer.SerializeToElement(new[] { new { desconhecida = "x" } })), "Tabela rejeita coluna desconhecida");
+var oldValues = new Dictionary<string, System.Text.Json.JsonElement> { ["forca"] = System.Text.Json.JsonSerializer.SerializeToElement(17) };
+var renamed = field with { Key = "potencia", Label = "Potencia" };
+var migration = SheetSchemaMigration.Apply(oldValues, new Dictionary<string, string> { ["forca"] = "potencia" }, [renamed]);
+Check(migration.Error is null && migration.Changed && migration.Values["potencia"].GetInt32() == 17 && !migration.Values.ContainsKey("forca") && oldValues.ContainsKey("forca"), "Migracao preserva valor e origem");
+Check(SheetSchemaMigration.Apply(oldValues, new Dictionary<string, string> { ["forca"] = "potencia" }, [renamed with { Max = 10 }]).Error is not null, "Migracao invalida rejeitada");
+var gmField = renamed with { EditRole = "gm" };
+var afterGmEdit = new Dictionary<string, System.Text.Json.JsonElement> { ["potencia"] = System.Text.Json.JsonSerializer.SerializeToElement(18) };
+var beforeGmEdit = new Dictionary<string, System.Text.Json.JsonElement> { ["potencia"] = System.Text.Json.JsonSerializer.SerializeToElement(17) };
+Check(SheetFieldAccess.RestrictedChange([gmField], beforeGmEdit, afterGmEdit, false) is not null, "Jogador nao edita campo do mestre");
+Check(SheetFieldAccess.RestrictedChange([gmField], beforeGmEdit, afterGmEdit, true) is null, "Mestre edita campo reservado");
+Check(SheetFieldAccess.RestrictedChange([gmField], beforeGmEdit, new Dictionary<string, System.Text.Json.JsonElement>(), false) is not null, "Jogador nao apaga campo do mestre");
+Check(SheetFieldAccess.RestrictedChange([gmField], beforeGmEdit, beforeGmEdit, false) is null, "Jogador preserva campo do mestre em outros salvamentos");
 
 var level = new SystemField("nivel", "Nível", "number", "Progressão", 0, 100, null);
 var experience = new SystemField("experiencia", "Experiência", "number", "Progressão", 0, null, null);

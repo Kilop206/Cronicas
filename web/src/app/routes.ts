@@ -4,10 +4,8 @@ import { map } from 'rxjs';
 import { ApiService } from './api';
 import { ForgotPasswordPage, PreferencesPage, ResetPasswordPage } from './account-pages';
 import { AuthPage, CampaignDetailPage, CampaignFormPage, CampaignsPage, DashboardPage, LandingPage, NotFoundPage, PlannedPage, ProfilePage, ShellComponent } from './views';
-import { CharacterEditorPage, CharactersPage, ObsOverlayPage } from './studio-pages';
 import { InvitePage } from './invite.page';
 import { NarrativePage } from './narrative.page';
-import { SystemsPage, SystemEditorPage } from './systems.page';
 import { WorldsPage, WorldDetailPage } from './worlds.page';
 import { SearchPage } from './search.page';
 import { EncountersPage } from './encounters.page';
@@ -28,7 +26,7 @@ export const routes: Routes = [
   { path: 'register', component: AuthPage, data: { mode: 'register' }, canActivate: [guestRoute] },
   { path: 'forgot-password', component: ForgotPasswordPage },
   { path: 'reset-password', component: ResetPasswordPage },
-  { path: 'obs/:key', component: ObsOverlayPage },
+  { path: 'obs/:key', loadComponent: () => import('./studio-pages').then(m => m.ObsOverlayPage) },
   { path: 'obs-camera/:campaignId/:characterId', loadComponent: () => import('./obs-camera.page').then(m => m.ObsCameraPage), canActivate: [protectedRoute] },
   { path: '', component: ShellComponent, canActivate: [protectedRoute], children: [
     { path: 'dashboard', component: DashboardPage },
@@ -36,7 +34,7 @@ export const routes: Routes = [
     { path: 'campaigns', component: CampaignsPage },
     { path: 'campaigns/new', component: CampaignFormPage },
     { path: 'campaigns/:id', component: CampaignDetailPage },
-    { path: 'campaigns/:id/characters', component: CharactersPage },
+    { path: 'campaigns/:id/characters', loadComponent: () => import('./studio-pages').then(m => m.CharactersPage) },
     { path: 'campaigns/:id/npcs', component: NpcsPage },
     { path: 'campaigns/:id/sessions', component: NarrativePage, data: { section: 'sessions' } },
     { path: 'campaigns/:id/documents', component: NarrativePage, data: { section: 'documents' } },
@@ -45,11 +43,11 @@ export const routes: Routes = [
     { path: 'campaigns/:id/room', loadComponent: () => import('./media-room.page').then(m => m.MediaRoomPage) },
     { path: 'invites/:token', component: InvitePage },
     { path: 'campaigns/:id/:section', component: PlannedPage },
-    { path: 'characters/:id', component: CharacterEditorPage },
+    { path: 'characters/:id', loadComponent: () => import('./studio-pages').then(m => m.CharacterEditorPage) },
     { path: 'worlds', component: WorldsPage },
     { path: 'worlds/:id', component: WorldDetailPage },
-    { path: 'systems', component: SystemsPage },
-    { path: 'systems/:id', component: SystemEditorPage },
+    { path: 'systems', loadComponent: () => import('./systems.page').then(m => m.SystemsPage) },
+    { path: 'systems/:id', loadComponent: () => import('./systems.page').then(m => m.SystemEditorPage) },
     { path: 'profile', component: ProfilePage },
     { path: 'settings', component: PreferencesPage }
   ] },

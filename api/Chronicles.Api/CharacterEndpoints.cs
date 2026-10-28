@@ -32,7 +32,7 @@ public static class CharacterEndpoints
             var error = Validate(input);
             if (error is not null) return Results.ValidationProblem(error);
             var values = input.Fields ?? [];
-            var fieldErrors = await ValidateFields(db, campaignId, values);
+            var fieldErrors = await ValidateFields(db, campaignId, values, allowGm: role is "owner" or "gm" or "co-gm");
             if (fieldErrors is not null) return Results.ValidationProblem(fieldErrors);
             var character = new Character { CampaignId = campaignId, OwnerId = userId, Name = input.Name.Trim() };
             Apply(character, input with { Fields = values });
@@ -61,7 +61,9 @@ public static class CharacterEndpoints
             var error = Validate(input);
             if (error is not null) return Results.ValidationProblem(error);
             var values = input.Fields ?? JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(character.FieldsJson) ?? [];
-            var fieldErrors = await ValidateFields(db, character.CampaignId, values, character.FieldsJson);
+            var editorRole = character.Campaign.Memberships.Single(x => x.UserId == userId).Role;
+            var fieldErrors = await ValidateFields(db, character.CampaignId, values, character.FieldsJson,
+                allowGm: editorRole is "owner" or "gm" or "co-gm", authorizationJson: character.FieldsJson);
             if (fieldErrors is not null) return Results.ValidationProblem(fieldErrors);
             CharacterHistory.Capture(db, character, userId);
             Apply(character, input with { Fields = values });
@@ -95,7 +97,8 @@ public static class CharacterEndpoints
             var snapshot = JsonSerializer.Deserialize<CharacterSnapshot>(revision.SnapshotJson);
             if (snapshot is null) return Results.Problem("Revisão inválida.", statusCode: 500);
             var restoredValues = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(snapshot.FieldsJson) ?? [];
-            var fieldErrors = await ValidateFields(db, character.CampaignId, restoredValues, snapshot.FieldsJson);
+            var fieldErrors = await ValidateFields(db, character.CampaignId, restoredValues, snapshot.FieldsJson,
+                allowGm: role is "owner" or "gm" or "co-gm", authorizationJson: character.FieldsJson);
             if (fieldErrors is not null) return Results.ValidationProblem(fieldErrors);
             CharacterHistory.Capture(db, character, userId);
             CharacterHistory.Restore(character, snapshot with { FieldsJson = JsonSerializer.Serialize(restoredValues) });
@@ -223,11 +226,49 @@ public static class CharacterEndpoints
             if (key.Length != 64 || !key.All(Uri.IsHexDigit)) return Results.NotFound();
             var hash = Hash(key.ToLowerInvariant());
             var character = await db.Characters.AsNoTracking().SingleOrDefaultAsync(x => x.OverlayKeyHash == hash);
-            return character is null ? Results.NotFound() : Results.Ok(new
+            if (character is null) return Results.NotFound();
+            var systemId = await db.Campaigns.AsNoTracking().Where(x => x.Id == character.CampaignId).Select(x => x.SystemId).SingleAsync();
+            var schema = systemId is null ? null : await db.RpgSystems.AsNoTracking().Where(x => x.Id == systemId).Select(x => x.SchemaJson).SingleOrDefaultAsync();
+            var definition = schema is null ? null : SystemDefinition.Read(schema);
+            var values = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(character.FieldsJson) ?? [];
+            var customRenderer = definition?.RendererMode == "layout" || definition?.TemplateVersion != 1 || definition?.TemplateId is not ("ordem_paranormal" or "dnd_5e" or "tormenta20" or "call_of_cthulhu_7e");
+            var resourceKeys = (customRenderer ? null : definition?.TemplateId) switch
+            {
+                "ordem_paranormal" => new[] { (Key: "health", Label: "PV"), (Key: "mana", Label: "PE"), (Key: "sanity", Label: "SAN") },
+                "dnd_5e" => [("health", "HP")],
+                "tormenta20" => [("health", "PV"), ("mana", "PM")],
+                "call_of_cthulhu_7e" => [("health", "HP"), ("sanity", "SAN"), ("mana", "Magic Points")],
+                _ => definition?.Layout is { } layout
+                    ? layout.Pages.SelectMany(page => page.Blocks).Where(block => block.Kind == "resource" && block.Key is "health" or "sanity" or "mana")
+                        .GroupBy(block => block.Key).Select(group => (Key: group.Key!, Label: group.First().Title ?? "Recurso")).ToArray()
+                    : [("health", "Vida"), ("sanity", "Sanidade"), ("mana", "Mana")]
+            };
+            var indicatorKeys = (customRenderer ? null : definition?.TemplateId) switch
+            {
+                "ordem_paranormal" => new[] { (Key: "nex", Label: "NEX"), (Key: "defesa", Label: "Defesa") },
+                "dnd_5e" => [("nivel", "Nível"), ("classe_armadura", "AC"), ("iniciativa", "Iniciativa")],
+                "tormenta20" => [("nivel", "Nível"), ("defesa", "Defesa")],
+                "call_of_cthulhu_7e" => [("sorte", "Sorte")],
+                _ => definition?.Layout is { } indicatorLayout
+                    ? indicatorLayout.Pages.SelectMany(page => page.Blocks)
+                        .Where(block => block.Kind == "field" && block.Style == "score" && block.Key is not null)
+                        .GroupBy(block => block.Key).Select(group => (Key: group.Key!, Label: group.First().Title ?? definition.Fields.FirstOrDefault(field => field.Key == group.Key)?.Label ?? "Indicador")).Take(6).ToArray()
+                    : []
+            };
+            var resources = customRenderer && definition?.Layout is { } customLayout
+                ? customLayout.Pages.SelectMany(page => page.Blocks)
+                    .Where(block => block.Kind is "resource" or "tracker" && block.Key is not null)
+                    .GroupBy(block => block.Key!).Select(group => group.First())
+                    .Select(block => new { Label = block.Title ?? definition.Fields.FirstOrDefault(field => field.Key == block.Key)?.Label ?? "Recurso",
+                        current = ResourceValue(character, values, block.Key!), max = block.MaxKey is { } maxKey ? ResourceValue(character, values, maxKey) : ResourceMax(character, block.Key!) })
+                : resourceKeys.Select(item => new { item.Label, current = ResourceValue(character, values, item.Key), max = ResourceMax(character, item.Key) });
+            var indicators = indicatorKeys.Where(item => values.ContainsKey(item.Key)).Select(item => new { item.Label, value = values[item.Key].ToString() });
+            return Results.Ok(new
             {
                 character.Name, character.PortraitUrl, character.BackgroundUrl,
                 character.Health, character.MaxHealth, character.Sanity, character.MaxSanity,
-                character.Mana, character.MaxMana, character.UpdatedAt
+                character.Mana, character.MaxMana, character.UpdatedAt, templateId = definition?.TemplateId,
+                resources, indicators
             });
         });
     }
@@ -236,6 +277,8 @@ public static class CharacterEndpoints
     private static Task<bool> Member(AppDbContext db, Guid campaignId, Guid userId) => db.CampaignMemberships.AnyAsync(x => x.CampaignId == campaignId && x.UserId == userId);
     private static object View(Character x, bool canEdit = false) => new { x.Id, x.CampaignId, x.OwnerId, x.Name, x.PortraitUrl, x.BackgroundUrl, x.Health, x.MaxHealth, x.Sanity, x.MaxSanity, x.Mana, x.MaxMana, fields = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(x.FieldsJson), x.Version, x.UpdatedAt, canEdit };
     private static string Hash(string key) => Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(key))).ToLowerInvariant();
+    private static int ResourceValue(Character character, Dictionary<string, JsonElement> values, string key) => key switch { "health" => character.Health, "sanity" => character.Sanity, "mana" => character.Mana, _ => values.TryGetValue(key, out var value) && value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var number) ? number : 0 };
+    private static int ResourceMax(Character character, string key) => key switch { "health" => character.MaxHealth, "sanity" => character.MaxSanity, "mana" => character.MaxMana, _ => 1 };
     private static Dictionary<string, string[]>? Validate(CharacterInput input)
     {
         var errors = new Dictionary<string, string[]>();
@@ -246,7 +289,8 @@ public static class CharacterEndpoints
     }
     private static bool ValidUrl(string? value) => string.IsNullOrWhiteSpace(value) || value.Length <= 2048 && Uri.TryCreate(value, UriKind.Absolute, out var url) && url.Scheme == Uri.UriSchemeHttps;
     private static bool ValidResource(int value, int max) => max is >= 1 and <= 9999 && value >= 0 && value <= max;
-    private static async Task<Dictionary<string, string[]>?> ValidateFields(AppDbContext db, Guid campaignId, Dictionary<string, JsonElement>? values, string? previousJson = null)
+    private static async Task<Dictionary<string, string[]>?> ValidateFields(AppDbContext db, Guid campaignId, Dictionary<string, JsonElement>? values, string? previousJson = null,
+        bool allowGm = false, string? authorizationJson = null)
     {
         if (values is null) return null;
         if (values.Count > 100 || JsonSerializer.Serialize(values).Length > 20000) return new() { ["fields"] = ["Campos excedem o limite."] };
@@ -255,6 +299,9 @@ public static class CharacterEndpoints
         SystemField[] fields = schema is null ? [] : SystemDefinition.Read(schema).Fields;
         var byKey = fields.ToDictionary(x => x.Key);
         var previous = previousJson is null ? new Dictionary<string, JsonElement>() : JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(previousJson) ?? [];
+        var authorizedPrevious = authorizationJson is null ? previous : JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(authorizationJson) ?? [];
+        var accessError = SheetFieldAccess.RestrictedChange(fields, authorizedPrevious, values, allowGm);
+        if (accessError is not null) return new() { ["fields"] = [accessError] };
         foreach (var (key, value) in values)
         {
             if (fields.Length == 0)
@@ -272,15 +319,7 @@ public static class CharacterEndpoints
                 return new() { ["fields"] = [$"Campo desconhecido: {key}."] };
             }
             if (!string.IsNullOrWhiteSpace(field.Formula)) continue;
-            var valid = field.Type switch
-            {
-                "number" => value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var number) && (field.Min is null || number >= field.Min) && (field.Max is null || number <= field.Max),
-                "boolean" => value.ValueKind is JsonValueKind.True or JsonValueKind.False,
-                "select" => value.ValueKind == JsonValueKind.String && field.Options?.Contains(value.GetString()) == true,
-                "longtext" => value.ValueKind == JsonValueKind.String && value.GetString()?.Length <= 10000,
-                "text" => value.ValueKind == JsonValueKind.String && value.GetString()?.Length <= 300,
-                _ => false
-            };
+            var valid = SheetCollectionValues.ValidField(field, value);
             if (!valid) return new() { ["fields"] = [$"Valor inválido para {field.Label}."] };
         }
         var calculationError = SheetFormula.Apply(fields, values);

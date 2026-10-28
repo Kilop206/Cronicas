@@ -18,6 +18,7 @@ function load(file) {
 
 const { SHEET_TEMPLATES: templates } = load('system-templates.ts');
 const { calculateSheet, fieldRoll } = load('sheet-rules.ts');
+const { resolveSheetRenderer, sheetResources, sheetIndicators } = load('sheet-renderer-registry.ts');
 assert.equal(templates.length, 4);
 assert.equal(new Set(templates.map(template => template.layout.skin)).size, templates.length, 'Each template should have its own visual style');
 assert.equal(new Set(templates.map(template => template.layout.headerLabel)).size, templates.length, 'Each template should have its own heading');
@@ -45,6 +46,13 @@ for (const template of templates) {
 }
 
 const dnd = templates.find(template => template.id === 'dnd_5e');
+const dndSystem = { id: 'system-guid', name: 'Nome alterado pela mesa', templateId: dnd.id, templateVersion: dnd.version,
+  rendererMode: 'specialized', fields: dnd.fields, layout: dnd.layout };
+assert.equal(resolveSheetRenderer(dndSystem)?.id, 'dnd_5e', 'Renderer follows stable ID even when the system is renamed');
+assert.equal(resolveSheetRenderer({ ...dndSystem, templateVersion: 99 }), null, 'Unknown template version uses custom layout');
+assert.equal(resolveSheetRenderer({ ...dndSystem, rendererMode: 'layout' }), null, 'Owner can select custom layout');
+assert.equal(sheetResources(dndSystem).map(item => item.key).join(','), 'health', 'D&D does not display sanity or mana');
+assert.equal(sheetIndicators(dndSystem, { nivel: 3, classe_armadura: 15 })[1].value, '15');
 const dndValues = { forca: 9, treino_per_atletismo: 1, treino_res_forca: 1 };
 assert.equal(calculateSheet(dnd.fields, dndValues), null);
 assert.equal(dndValues.mod_forca, -1);

@@ -4,7 +4,8 @@ import { SheetBlock, SheetLayout, SheetPage, SystemField } from './api';
 
 const kinds: { value: SheetBlock['kind']; label: string }[] = [
   { value: 'identity', label: 'Identidade' }, { value: 'portrait', label: 'Retrato' },
-  { value: 'resource', label: 'Recurso' }, { value: 'field', label: 'Campo' },
+  { value: 'resource', label: 'Recurso' }, { value: 'tracker', label: 'Marcadores circulares' },
+  { value: 'section', label: 'Seção' }, { value: 'field', label: 'Campo' },
   { value: 'note', label: 'Texto' }, { value: 'inventory', label: 'Inventário' },
   { value: 'abilities', label: 'Habilidades' }, { value: 'history', label: 'Histórico' }
 ];
@@ -14,6 +15,7 @@ const kinds: { value: SheetBlock['kind']; label: string }[] = [
     <div class="section-heading"><div><span class="overline">COMPOSIÇÃO</span><h2>Páginas e blocos</h2></div></div>
     <p class="room-note">Monte a ficha como um arquivo de páginas. Na grade, escolha a largura; na página livre, arraste os blocos na prévia ou ajuste as posições abaixo.</p>
     <div class="sheet-appearance-controls"><label>Estilo da ficha<select [value]="layout.skin || 'archive'" (change)="setSkin($any($event.target).value)" [disabled]="readOnly"><option value="investigation">Investigação</option><option value="fantasy">Fantasia</option><option value="mythic">Lenda</option><option value="archive">Arquivo clássico</option></select></label><label>Cor de destaque<input type="color" [value]="layout.accentColor" (input)="layout.accentColor = $any($event.target).value" [disabled]="readOnly"></label><label>Identificação no cabeçalho<input [value]="layout.headerLabel || ''" (input)="layout.headerLabel = $any($event.target).value || null" maxlength="80" placeholder="CRÔNICAS / FICHA" [disabled]="readOnly"></label></div>
+    <div class="sheet-appearance-controls"><label>Tipografia<select [value]="layout.fontStyle || 'editorial'" (change)="layout.fontStyle = $any($event.target).value" [disabled]="readOnly"><option value="editorial">Editorial</option><option value="modern">Moderna</option><option value="typewriter">Datilografada</option></select></label><label>Densidade<select [value]="layout.density || 'comfortable'" (change)="layout.density = $any($event.target).value" [disabled]="readOnly"><option value="comfortable">Confortável</option><option value="compact">Compacta</option></select></label><label>Bordas<select [value]="layout.borderStyle || 'soft'" (change)="layout.borderStyle = $any($event.target).value" [disabled]="readOnly"><option value="soft">Suaves</option><option value="sharp">Retas</option><option value="ornate">Ornamentadas</option></select></label></div>
     <div class="layout-page-tabs" role="tablist" aria-label="Páginas da ficha">
       <button *ngFor="let page of layout.pages" type="button" role="tab" [attr.aria-selected]="selectedPage().id === page.id" [class.active]="selectedPage().id === page.id" (click)="selectPage(page.id)">{{ page.title || 'Página' }}</button>
       <button *ngIf="!readOnly" type="button" class="button" [disabled]="layout.pages.length >= 8" (click)="addPage()">Adicionar página</button>
@@ -26,9 +28,11 @@ const kinds: { value: SheetBlock['kind']; label: string }[] = [
         <div class="layout-block-options"><label>Título<input [value]="block.title || ''" (input)="block.title = $any($event.target).value" maxlength="80" [disabled]="readOnly"></label><label *ngIf="page.layoutMode !== 'canvas'">Largura<select [value]="block.span" (change)="block.span = +$any($event.target).value" [disabled]="readOnly"><option *ngFor="let width of widths" [value]="width">{{ width }} / 12</option></select></label><label>Visual<select [value]="block.style || 'panel'" (change)="block.style = $any($event.target).value" [disabled]="readOnly"><option value="panel">Painel</option><option value="plain">Limpo</option><option value="accent">Destaque</option><option value="score">Atributo em destaque</option><option value="compact">Linha compacta</option></select></label>
           <ng-container *ngIf="page.layoutMode === 'canvas'"><label>Esquerda %<input type="number" [value]="block.x ?? 0" (change)="block.x = +$any($event.target).value" min="0" max="95" [disabled]="readOnly"></label><label>Topo %<input type="number" [value]="block.y ?? 0" (change)="block.y = +$any($event.target).value" min="0" max="95" [disabled]="readOnly"></label><label>Largura %<input type="number" [value]="block.width ?? 49" (change)="block.width = +$any($event.target).value" min="5" max="100" [disabled]="readOnly"></label><label>Altura %<input type="number" [value]="block.height ?? 18" (change)="block.height = +$any($event.target).value" min="5" max="100" [disabled]="readOnly"></label></ng-container>
           <label *ngIf="block.kind === 'field'">Campo<select [value]="block.key || ''" (change)="block.key = $any($event.target).value" [disabled]="readOnly"><option *ngFor="let field of fields" [value]="field.key">{{ field.label || field.key }}</option></select></label>
-          <label *ngIf="block.kind === 'resource'">Valor atual<select [value]="block.key || 'health'" (change)="setResourceKey(block, $any($event.target).value)" [disabled]="readOnly"><option value="health">Vida</option><option value="sanity">Sanidade</option><option value="mana">Mana</option><option *ngFor="let field of numericFields()" [value]="field.key">{{ field.label || field.key }}</option></select></label>
-          <label *ngIf="block.kind === 'resource'">Valor máximo<select [value]="block.maxKey || ''" (change)="block.maxKey = $any($event.target).value || null" [disabled]="readOnly"><option value="">{{ isBuiltInResource(block.key) ? 'Automático' : 'Escolha um campo' }}</option><option value="maxHealth">Vida máxima</option><option value="maxSanity">Sanidade máxima</option><option value="maxMana">Mana máxima</option><option *ngFor="let field of numericFields()" [value]="field.key">{{ field.label || field.key }}</option></select></label>
-          <label *ngIf="block.kind === 'note'" class="wide">Conteúdo<textarea [value]="block.text || ''" (input)="block.text = $any($event.target).value" maxlength="2000" rows="3" [disabled]="readOnly"></textarea></label>
+          <label *ngIf="block.kind === 'resource' || block.kind === 'tracker'">Valor atual<select [value]="block.key || 'health'" (change)="setResourceKey(block, $any($event.target).value)" [disabled]="readOnly"><option value="health">Vida</option><option value="sanity">Sanidade</option><option value="mana">Mana</option><option *ngFor="let field of numericFields()" [value]="field.key">{{ field.label || field.key }}</option></select></label>
+          <label *ngIf="block.kind === 'resource' || block.kind === 'tracker'">Valor máximo<select [value]="block.maxKey || ''" (change)="block.maxKey = $any($event.target).value || null" [disabled]="readOnly"><option value="">{{ isBuiltInResource(block.key) ? 'Automático' : 'Escolha um campo' }}</option><option value="maxHealth">Vida máxima</option><option value="maxSanity">Sanidade máxima</option><option value="maxMana">Mana máxima</option><option *ngFor="let field of numericFields()" [value]="field.key">{{ field.label || field.key }}</option></select></label>
+          <label *ngIf="block.kind === 'note' || block.kind === 'section'" class="wide">Conteúdo<textarea [value]="block.text || ''" (input)="block.text = $any($event.target).value" maxlength="2000" rows="3" [disabled]="readOnly"></textarea></label>
+          <label>Mostrar se<select [value]="block.visibleWhenKey || ''" (change)="block.visibleWhenKey = $any($event.target).value || null; block.visibleWhenValue = block.visibleWhenKey ? true : null" [disabled]="readOnly"><option value="">Sempre visível</option><option *ngFor="let field of booleanFields()" [value]="field.key">{{ field.label }}</option></select></label>
+          <label *ngIf="block.visibleWhenKey">Valor exigido<select [value]="block.visibleWhenValue === false ? 'false' : 'true'" (change)="block.visibleWhenValue = $any($event.target).value === 'true'" [disabled]="readOnly"><option value="true">Marcado</option><option value="false">Desmarcado</option></select></label>
           <label *ngIf="layout.pages.length > 1 && !readOnly">Mover para página<select [value]="page.id" (change)="moveToPage(page, block, $any($event.target).value)"><option *ngFor="let destination of layout.pages" [value]="destination.id">{{ destination.title }}</option></select></label>
         </div>
       </div>
@@ -79,6 +83,7 @@ export class SheetLayoutDesignerComponent {
   totalBlocks() { return this.layout.pages.reduce((sum, page) => sum + page.blocks.length, 0); }
   kindLabel(kind: SheetBlock['kind']) { return kinds.find(x => x.value === kind)?.label || kind; }
   numericFields() { return this.fields.filter(field => field.type === 'number'); }
+  booleanFields() { return this.fields.filter(field => field.type === 'boolean'); }
   isBuiltInResource(key: string | null) { return key === 'health' || key === 'sanity' || key === 'mana'; }
   setResourceKey(block: SheetBlock, key: string) { block.key = key; block.maxKey = null; }
   setSkin(skin: 'archive' | 'investigation' | 'fantasy' | 'mythic') {
@@ -93,7 +98,7 @@ export class SheetLayoutDesignerComponent {
   addPage() { const page: SheetPage = { id: this.id('pagina'), title: 'Nova página', blocks: [{ id: this.id('bloco'), kind: 'note', span: 12, title: 'Introdução', key: null, text: 'Descreva esta página.', style: 'plain' }] }; this.layout.pages.push(page); this.selectPage(page.id); }
   removePage(page: SheetPage) { this.layout.pages.splice(this.pageIndex(page), 1); this.selectPage(this.layout.pages[0].id); }
   movePage(page: SheetPage, step: number) { const index = this.pageIndex(page); this.layout.pages.splice(index, 1); this.layout.pages.splice(index + step, 0, page); }
-  addBlock(page: SheetPage) { const kind = this.kindToAdd; const block: SheetBlock = { id: this.id('bloco'), kind, span: kind === 'inventory' || kind === 'abilities' || kind === 'history' ? 12 : 6, title: this.kindLabel(kind), key: kind === 'field' ? this.fields[0]?.key || null : kind === 'resource' ? 'health' : null, text: kind === 'note' ? 'Novo texto' : null, style: 'panel' }; if (page.layoutMode === 'canvas') this.placeBlock(block, page.blocks.length); page.blocks.push(block); }
+  addBlock(page: SheetPage) { const kind = this.kindToAdd; const block: SheetBlock = { id: this.id('bloco'), kind, span: kind === 'inventory' || kind === 'abilities' || kind === 'history' || kind === 'section' ? 12 : 6, title: this.kindLabel(kind), key: kind === 'field' ? this.fields[0]?.key || null : kind === 'resource' || kind === 'tracker' ? 'health' : null, text: kind === 'note' ? 'Novo texto' : null, style: kind === 'section' ? 'plain' : 'panel' }; if (page.layoutMode === 'canvas') this.placeBlock(block, page.blocks.length); page.blocks.push(block); }
   removeBlock(page: SheetPage, index: number) { page.blocks.splice(index, 1); }
   moveBlock(page: SheetPage, index: number, step: number) { const [block] = page.blocks.splice(index, 1); page.blocks.splice(index + step, 0, block); }
   moveToPage(page: SheetPage, block: SheetBlock, targetId: string) { if (page.id === targetId) return; const target = this.layout.pages.find(x => x.id === targetId); if (!target || target.blocks.length >= 40) return; page.blocks.splice(page.blocks.indexOf(block), 1); if (target.layoutMode === 'canvas') this.placeBlock(block, target.blocks.length); target.blocks.push(block); this.selectPage(target.id); }
@@ -112,6 +117,9 @@ export class SheetLayoutDesignerComponent {
     const layout = value as SheetLayout;
     if (!/^#[0-9a-fA-F]{6}$/.test(layout.accentColor) || !Array.isArray(layout.pages) || layout.pages.length < 1 || layout.pages.length > 8) return false;
     if (layout.skin != null && !['archive', 'investigation', 'fantasy', 'mythic'].includes(layout.skin)) return false;
+    if (layout.fontStyle != null && !['editorial', 'modern', 'typewriter'].includes(layout.fontStyle)) return false;
+    if (layout.density != null && !['comfortable', 'compact'].includes(layout.density)) return false;
+    if (layout.borderStyle != null && !['soft', 'sharp', 'ornate'].includes(layout.borderStyle)) return false;
     if (layout.headerLabel != null && (typeof layout.headerLabel !== 'string' || layout.headerLabel.trim().length < 3 || layout.headerLabel.length > 80)) return false;
     const pages = new Set<string>(); const blocks = new Set<string>(); let total = 0;
     for (const page of layout.pages) {
@@ -130,13 +138,16 @@ export class SheetLayoutDesignerComponent {
           || (block.title != null && (typeof block.title !== 'string' || block.title.length > 80))) return false;
         blocks.add(block.id);
         if (block.kind === 'field' && !this.fields.some(field => field.key === block.key)) return false;
-        if (block.kind === 'resource') {
+        if (block.visibleWhenKey != null && !this.booleanFields().some(field => field.key === block.visibleWhenKey)) return false;
+        if (block.visibleWhenKey == null && block.visibleWhenValue != null) return false;
+        if (block.kind === 'resource' || block.kind === 'tracker') {
           const builtIn = this.isBuiltInResource(block.key);
           const numeric = this.numericFields().some(field => field.key === block.key);
           const maxValid = ['maxHealth', 'maxSanity', 'maxMana'].includes(block.maxKey || '') || this.numericFields().some(field => field.key === block.maxKey);
           if ((!builtIn && !numeric) || (!builtIn && !block.maxKey) || (block.maxKey && !maxValid) || block.key === block.maxKey) return false;
         }
         if (block.kind === 'note' && (typeof block.text !== 'string' || !block.text.trim() || block.text.length > 2000)) return false;
+        if (block.kind === 'section' && (!block.title || block.title.trim().length < 2 || block.span < 6)) return false;
         if (['inventory', 'abilities', 'history'].includes(block.kind) && block.span < 6) return false;
         if (page.layoutMode === 'canvas' && (![block.x, block.y, block.width, block.height].every(Number.isFinite)
           || block.x! < 0 || block.y! < 0 || block.width! < 5 || block.height! < 5
@@ -155,9 +166,11 @@ export class SheetLayoutDesignerComponent {
         <small>{{ block.title || blockLabel(block) }}</small>
         <strong *ngIf="block.kind === 'identity'">Nome da personagem</strong>
         <div *ngIf="block.kind === 'portrait'" class="sheet-canvas-portrait">Retrato</div>
-        <strong *ngIf="block.kind === 'resource'">{{ block.title || resourceLabel(block.key) }} · 10 / 20</strong>
+        <strong *ngIf="block.kind === 'resource' || block.kind === 'tracker'">{{ block.title || resourceLabel(block.key) }} · 10 / 20</strong>
+        <span *ngIf="block.kind === 'tracker'" aria-hidden="true">● ● ● ○ ○</span>
+        <strong *ngIf="block.kind === 'section'">{{ block.title }}</strong>
         <strong *ngIf="block.kind === 'field'">{{ fieldLabel(block.key) }}</strong>
-        <p *ngIf="block.kind === 'note'">{{ block.text }}</p>
+        <p *ngIf="block.kind === 'note' || block.kind === 'section'">{{ block.text }}</p>
         <span *ngIf="block.kind === 'inventory' || block.kind === 'abilities' || block.kind === 'history'">Lista de {{ blockLabel(block).toLowerCase() }}</span>
       </div>
     </div></div>

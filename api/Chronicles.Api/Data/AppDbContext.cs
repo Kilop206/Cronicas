@@ -215,7 +215,7 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.HasIndex(x => new { x.OwnerId, x.Name });
             entity.Property(x => x.Name).HasMaxLength(120);
             entity.Property(x => x.Description).HasMaxLength(2000);
-            entity.Property(x => x.SchemaJson).HasColumnType("jsonb");
+            entity.Property(x => x.SchemaJson).HasColumnType("jsonb").IsConcurrencyToken();
             entity.HasOne(x => x.Owner).WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
         });
         model.Entity<World>(entity =>

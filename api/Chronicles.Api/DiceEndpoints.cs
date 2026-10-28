@@ -53,6 +53,31 @@ public static class DiceEndpoints
             roll.User = await db.Users.SingleAsync(x => x.Id == userId);
             return Results.Created($"/api/campaigns/{campaignId}/rolls", View(roll));
         }).RequireRateLimiting("rolls");
+
+        api.MapPost("/campaigns/{campaignId:guid}/percentile-rolls", async Task<IResult> (Guid campaignId, PercentileRollInput input, HttpContext http, AppDbContext db) =>
+        {
+            if (UserId(http) is not { } userId) return Results.Unauthorized();
+            var role = await Role(db, campaignId, userId);
+            if (role is null) return Results.NotFound();
+            if (role == "spectator" || input.Visibility == "gm" && !Master(role)) return Results.Problem("Sem permissão para esta rolagem.", statusCode: 403);
+            if (input.RequestId == Guid.Empty || input.Visibility is not ("campaign" or "private" or "gm") || input.BonusDice is < -2 or > 2 || input.Target is < 0 or > 100)
+                return Results.ValidationProblem(new Dictionary<string, string[]> { ["roll"] = ["Informe alvo entre 0 e 100, de 0 a 2 dados de bônus ou penalidade, visibilidade e ID válido."] });
+            var existing = await db.DiceRolls.Include(x => x.User).AsNoTracking().SingleOrDefaultAsync(x => x.CampaignId == campaignId && x.UserId == userId && x.RequestId == input.RequestId);
+            if (existing is not null) return Results.Ok(View(existing));
+            var result = PercentileDice.Roll(input.BonusDice, () => RandomNumberGenerator.GetInt32(0, 10));
+            var expression = input.BonusDice == 0 ? $"d100 alvo {input.Target}" : $"d100 {input.BonusDice:+#;-#} alvo {input.Target}";
+            var roll = new DiceRoll { CampaignId = campaignId, UserId = userId, RequestId = input.RequestId, Expression = expression, RollsJson = JsonSerializer.Serialize(result.Rolls), KeptIndexesJson = JsonSerializer.Serialize(result.KeptIndexes), Modifier = 0, Total = result.Total, Visibility = input.Visibility };
+            db.DiceRolls.Add(roll);
+            try { await db.SaveChangesAsync(); }
+            catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
+            {
+                db.Entry(roll).State = EntityState.Detached;
+                var duplicate = await db.DiceRolls.Include(x => x.User).AsNoTracking().SingleAsync(x => x.CampaignId == campaignId && x.UserId == userId && x.RequestId == input.RequestId);
+                return Results.Ok(View(duplicate));
+            }
+            roll.User = await db.Users.SingleAsync(x => x.Id == userId);
+            return Results.Created($"/api/campaigns/{campaignId}/rolls", View(roll));
+        }).RequireRateLimiting("rolls");
     }
 
     private static Guid? UserId(HttpContext http) => Guid.TryParse(http.User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : null;
@@ -60,4 +85,5 @@ public static class DiceEndpoints
     private static bool Master(string role) => role is "owner" or "gm" or "co-gm";
     private static object View(DiceRoll roll) => new { roll.Id, roll.CampaignId, roll.UserId, userName = roll.User.DisplayName, roll.Expression, rolls = JsonSerializer.Deserialize<int[]>(roll.RollsJson), keptIndexes = JsonSerializer.Deserialize<int[]>(roll.KeptIndexesJson), roll.Modifier, roll.Total, roll.Visibility, roll.CreatedAt };
     public sealed record RollInput(Guid RequestId, string Expression, string Visibility);
+    public sealed record PercentileRollInput(Guid RequestId, int Target, int BonusDice, string Visibility);
 }
