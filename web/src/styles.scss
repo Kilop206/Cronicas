@@ -532,6 +532,19 @@ html:has(.obs-page), body:has(.obs-page), html:has(.obs-camera-page), body:has(.
 .designer-preview .sheet-canvas-portrait { min-height: 80px; }
 .page.narrow:has(.custom-character-editor) { max-width: 1440px; }
 .custom-character-editor { grid-template-columns: minmax(0, 1fr) 300px; }
+.immersive-sheet-page { max-width: 1920px; padding: 12px clamp(8px, 1.5vw, 25px) 60px; }
+.immersive-sheet-page > .back-link { display: inline-block; margin: 0 0 5px; font-size: 11px; }
+.immersive-sheet-page > .character-favorite { font-size: 11px; }
+.immersive-sheet-page > .obs-actions { margin: 0 0 6px; font-size: 11px; }
+.immersive-sheet-page > .obs-actions:not([open]) { padding: 4px 9px; min-height: 28px; }
+.immersive-sheet-page > .obs-actions:not([open]) summary { padding: 0; }
+.immersive-sheet-page > .sheet-tabs { margin: 0 0 6px; }
+.immersive-sheet-page > .sheet-tabs button { padding: 7px 10px; font-size: 11px; }
+.immersive-sheet-page .custom-character-editor { grid-template-columns: minmax(0, 1fr); gap: 8px; }
+.immersive-sheet-page .sheet-play-toolbar { margin-bottom: 5px; }
+.immersive-sheet-page .sheet-utilities { position: static; padding: 7px 12px; border: 1px solid var(--border); background: var(--surface); }
+.immersive-sheet-page .sheet-utilities > summary { cursor: pointer; font-size: 11px; color: var(--muted); }
+.immersive-sheet-page .sheet-utilities[open] > app-overlay-card { display: block; max-width: 500px; margin: 12px 0; }
 .custom-sheet-main { min-width: 0; }
 .sheet-play-toolbar { display: flex; align-items: center; justify-content: flex-end; flex-wrap: wrap; gap: 10px; margin-bottom: 12px; }
 .sheet-play-toolbar > span { margin-right: auto; color: var(--muted); font-size: 12px; font-weight: 700; letter-spacing: .08em; text-transform: uppercase; }

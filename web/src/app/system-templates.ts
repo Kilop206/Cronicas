@@ -77,9 +77,12 @@ const orderFields: SystemField[] = [
   numberField('nex', 'NEX (%)', 'Progressão'), numberField('deslocamento', 'Deslocamento', 'Combate'),
   numberField('equip_defesa', 'Bônus do equipamento', 'Combate'), numberField('outros_defesa', 'Outros bônus de defesa', 'Combate'),
   numberField('defesa', 'Defesa', 'Combate', 0, null, '10 + agilidade + equip_defesa + outros_defesa'),
+  numberField('bloqueio', 'Bloqueio', 'Combate'), numberField('esquiva', 'Esquiva', 'Combate'),
   ...([['agilidade', 'Agilidade'], ['intelecto', 'Intelecto'], ['vigor', 'Vigor'], ['presenca', 'Presença'], ['forca', 'Força']] as const)
     .map(([key, label]) => numberField(key, label, 'Atributos', 1, `{${key}}d20kh1`)),
-  ...orderSkills.map(([key, label, attribute]) => numberField(`per_${key}`, label, 'Perícias', 0, `{${attribute}}d20kh1+{per_${key}}`))
+  ...orderSkills.map(([key, label, attribute]) => numberField(`per_${key}`, label, 'Perícias', 0, `{${attribute}}d20kh1+{per_${key}}`)),
+  { ...tableField('pericias_detalhes', 'Treino e outros modificadores', 'Perícias', [['chave', 'Perícia', 'text'], ['treino', 'Treino', 'number'], ['outros', 'Outros', 'number']]),
+    defaultValue: orderSkills.map(([key]) => ({ chave: `per_${key}`, treino: 0, outros: 0 })) }
 ];
 
 const dndAbilities: [string, string][] = [['forca', 'Força'], ['destreza', 'Destreza'], ['constituicao', 'Constituição'], ['inteligencia', 'Inteligência'], ['sabedoria', 'Sabedoria'], ['carisma', 'Carisma']];
@@ -166,11 +169,11 @@ const cocFields: SystemField[] = [
 ];
 
 export const SHEET_TEMPLATES: SheetTemplate[] = [
-  { id: 'ordem_paranormal', version: 2, rulesetVersion: null, name: 'Ordem Paranormal RPG', summary: 'NEX, atributos, PV, PE, SAN, defesa, perícias, ataques e rituais configuráveis.', sourceUrl: 'https://jamboeditora.com.br/wp-content/uploads/woocommerce_uploads/2023/02/jamboeditora-ordem-paranormal-ficha-de-personagem-oeuvst.pdf', fields: orderFields,
+  { id: 'ordem_paranormal', version: 3, rulesetVersion: null, name: 'Ordem Paranormal RPG', summary: 'Painel de agente com atributos, perícias detalhadas, recursos, defesa, ataques e rituais.', sourceUrl: 'https://jamboeditora.com.br/wp-content/uploads/woocommerce_uploads/2023/02/jamboeditora-ordem-paranormal-ficha-de-personagem-oeuvst.pdf', fields: orderFields,
     layout: makeLayout(orderFields, [
-      { id: 'dossie', title: 'Dossiê do agente', items: [identity(), portrait(), ...sectionKeys(orderFields, 'Identidade'), 'nex', resource('health', 'PV', 4), resource('mana', 'PE', 4), resource('sanity', 'SAN', 4), highlight('defesa', 4), 'iniciativa', 'deslocamento', 'equip_defesa', 'outros_defesa'] },
+      { id: 'dossie', title: 'Dossiê do agente', items: [identity(), portrait(), ...sectionKeys(orderFields, 'Identidade'), 'nex', resource('health', 'PV', 4), resource('mana', 'PE', 4), resource('sanity', 'SAN', 4), highlight('defesa', 4), 'bloqueio', 'esquiva', 'iniciativa', 'deslocamento', 'equip_defesa', 'outros_defesa'] },
       { id: 'aptidoes', title: 'Aptidões e ação', items: [note('nota_aptidoes', 'Rolagens', 'Ajuste os atributos e bônus de perícia conforme sua mesa.'), ...sectionKeys(orderFields, 'Atributos'), ...orderSkills.filter(([, , attribute]) => ['agilidade', 'forca', 'vigor'].includes(attribute)).map(([key]) => `per_${key}`)] },
-      { id: 'investigacao', title: 'Investigação e presença', items: orderSkills.filter(([, , attribute]) => ['intelecto', 'presenca'].includes(attribute)).map(([key]) => `per_${key}`) },
+      { id: 'investigacao', title: 'Investigação e presença', items: [...orderSkills.filter(([, , attribute]) => ['intelecto', 'presenca'].includes(attribute)).map(([key]) => `per_${key}`), 'pericias_detalhes'] },
       { id: 'arsenal', title: 'Arsenal e rituais', items: ['protecao', 'resistencias', 'proficiencias', 'ataques', 'condicoes', 'rituais', 'carga_atual', 'carga_limite', inventory(), abilities()] },
       { id: 'registros', title: 'Registros', items: [history()] }
     ], 'investigation', '#9b8bc0', 'CRÔNICAS / DOSSIÊ DO AGENTE', { Atributos: { style: 'score', span: 3 }, Perícias: { style: 'compact', span: 6 } }) },

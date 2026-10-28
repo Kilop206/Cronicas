@@ -13,6 +13,7 @@ interface SheetRendererDefinition {
 const renderers: SheetRendererDefinition[] = [
   { id: 'ordem_paranormal', version: 1, required: ['nex', 'agilidade', 'forca', 'intelecto', 'presenca', 'vigor', 'defesa'], resources: [{ key: 'health', label: 'PV' }, { key: 'mana', label: 'PE' }, { key: 'sanity', label: 'SAN' }] },
   { id: 'ordem_paranormal', version: 2, required: ['nex', 'agilidade', 'forca', 'intelecto', 'presenca', 'vigor', 'defesa'], resources: [{ key: 'health', label: 'PV' }, { key: 'mana', label: 'PE' }, { key: 'sanity', label: 'SAN' }] },
+  { id: 'ordem_paranormal', version: 3, required: ['nex', 'agilidade', 'forca', 'intelecto', 'presenca', 'vigor', 'defesa'], resources: [{ key: 'health', label: 'PV' }, { key: 'mana', label: 'PE' }, { key: 'sanity', label: 'SAN' }] },
   { id: 'dnd_5e', version: 1, required: ['nivel', 'forca', 'destreza', 'constituicao', 'inteligencia', 'sabedoria', 'carisma', 'classe_armadura'], resources: [{ key: 'health', label: 'HP' }] },
   { id: 'tormenta20', version: 1, required: ['nivel', 'forca', 'destreza', 'defesa'], resources: [{ key: 'health', label: 'PV' }, { key: 'mana', label: 'PM' }] },
   { id: 'call_of_cthulhu_7e', version: 1, required: ['ocupacao', 'forca', 'poder', 'per_escutar'], resources: [{ key: 'health', label: 'HP' }, { key: 'sanity', label: 'SAN' }] }

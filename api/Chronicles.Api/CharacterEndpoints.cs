@@ -284,7 +284,7 @@ public static class CharacterEndpoints
         if (definition is null || definition.RendererMode == "layout") return false;
         return definition.TemplateId switch
         {
-            "ordem_paranormal" => definition.TemplateVersion is 1 or 2,
+            "ordem_paranormal" => definition.TemplateVersion is 1 or 2 or 3,
             "dnd_5e" or "tormenta20" or "call_of_cthulhu_7e" => definition.TemplateVersion == 1,
             _ => false
         };
