@@ -21,13 +21,13 @@ export function calculateSheet(fields: SystemField[], values: SheetValues): stri
       if (token === '-') return -atom();
       if (token === '+') return atom();
       if (token === '(') { const value = sum(); if (tokens[cursor++] !== ')') throw new Error('Parênteses inválidos.'); return value; }
-      if (token === 'floordiv') {
+      if (token === 'floordiv' || token === 'min') {
         if (tokens[cursor++] !== '(') throw new Error('Função inválida.');
         const numerator = sum();
         if (tokens[cursor++] !== ',') throw new Error('Função inválida.');
         const denominator = sum();
         if (tokens[cursor++] !== ')') throw new Error('Função inválida.');
-        return Math.floor(numerator / denominator);
+        return token === 'min' ? Math.min(numerator, denominator) : Math.floor(numerator / denominator);
       }
       if (/^\d+$/.test(token || '')) return Number(token);
       if (/^[a-z][a-z0-9_]*$/.test(token || '')) return resolve(token);
@@ -52,4 +52,12 @@ export function fieldRoll(expression: string, values: SheetValues): string | nul
   if (!Number.isInteger(count) || count < 1 || count > 40 || !Number.isInteger(modifier) || Math.abs(modifier) > 9999) return null;
   const keep = count > 1 ? match[3] || '' : '';
   return `${count}d${match[2]}${keep}${modifier < 0 ? modifier : modifier > 0 ? `+${modifier}` : ''}`;
+}
+
+// Ordem Paranormal 1.3: atributo 0 rola 2d20 e conserva o menor resultado.
+export function paranormalFieldRoll(expression: string, values: SheetValues): string | null {
+  const source = /^\{([a-z][a-z0-9_]*)\}d20kh1(?=[+-]|$)/.exec(expression.trim());
+  if (source && values[source[1]] === 0)
+    return fieldRoll(expression.trim().replace(source[0], '2d20kl1'), values);
+  return fieldRoll(expression, values);
 }

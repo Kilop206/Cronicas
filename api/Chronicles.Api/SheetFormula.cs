@@ -60,7 +60,7 @@ public static class SheetFormula
     }
 
     private static IEnumerable<string> References(string? expression) =>
-        expression is null ? [] : Regex.Matches(expression, @"[a-z][a-z0-9_]*").Select(x => x.Value).Where(x => x != "floordiv");
+        expression is null ? [] : Regex.Matches(expression, @"[a-z][a-z0-9_]*").Select(x => x.Value).Where(x => x is not ("floordiv" or "min"));
 
     private static bool ValidRoll(string expression, Dictionary<string, SystemField> fields)
     {
@@ -90,14 +90,14 @@ public static class SheetFormula
             if (token == "-") { var operand = Atom(); return syntaxOnly ? 1 : checked(-operand); }
             if (token == "+") return Atom();
             if (token == "(") { var nested = Sum(); if (index >= tokens.Count || tokens[index++] != ")") throw new FormatException(); return nested; }
-            if (token == "floordiv")
+            if (token is "floordiv" or "min")
             {
                 if (index >= tokens.Count || tokens[index++] != "(") throw new FormatException();
                 var numerator = Sum();
                 if (index >= tokens.Count || tokens[index++] != ",") throw new FormatException();
                 var denominator = Sum();
                 if (index >= tokens.Count || tokens[index++] != ")") throw new FormatException();
-                return syntaxOnly ? 1 : checked((int)Math.Floor((double)numerator / denominator));
+                return syntaxOnly ? 1 : token == "min" ? Math.Min(numerator, denominator) : checked((int)Math.Floor((double)numerator / denominator));
             }
             if (int.TryParse(token, out var constant)) return syntaxOnly ? 1 : constant;
             if (Regex.IsMatch(token, @"^[a-z][a-z0-9_]*$")) return resolve(token);

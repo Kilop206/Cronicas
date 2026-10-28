@@ -17,7 +17,7 @@ function load(file) {
 }
 
 const { SHEET_TEMPLATES: templates } = load('system-templates.ts');
-const { calculateSheet, fieldRoll } = load('sheet-rules.ts');
+const { calculateSheet, fieldRoll, paranormalFieldRoll } = load('sheet-rules.ts');
 const { resolveSheetRenderer, sheetResources, sheetIndicators } = load('sheet-renderer-registry.ts');
 assert.equal(templates.length, 4);
 assert.equal(new Set(templates.map(template => template.layout.skin)).size, templates.length, 'Each template should have its own visual style');
@@ -46,10 +46,13 @@ for (const template of templates) {
 }
 
 const dnd = templates.find(template => template.id === 'dnd_5e');
+assert.equal(dnd.version, 2);
+assert.equal(dnd.rulesetVersion, '2014', 'The supplied Player Handbook covers the 2014 rules');
 const dndSystem = { id: 'system-guid', name: 'Nome alterado pela mesa', templateId: dnd.id, templateVersion: dnd.version,
   rendererMode: 'specialized', fields: dnd.fields, layout: dnd.layout };
 assert.equal(resolveSheetRenderer(dndSystem)?.id, 'dnd_5e', 'Renderer follows stable ID even when the system is renamed');
 assert.equal(resolveSheetRenderer({ ...dndSystem, templateVersion: 99 }), null, 'Unknown template version uses custom layout');
+assert.equal(resolveSheetRenderer({ ...dndSystem, templateVersion: 1 })?.id, 'dnd_5e', 'Existing 2024 sheets remain available');
 assert.equal(resolveSheetRenderer({ ...dndSystem, rendererMode: 'layout' }), null, 'Owner can select custom layout');
 assert.equal(sheetResources(dndSystem).map(item => item.key).join(','), 'health', 'D&D does not display sanity or mana');
 assert.equal(sheetIndicators(dndSystem, { nivel: 3, classe_armadura: 15 })[1].value, '15');
@@ -66,14 +69,36 @@ const cocValues = { inteligencia: 65 };
 assert.equal(calculateSheet(coc.fields, cocValues), null);
 assert.equal(cocValues.inteligencia_metade, 32);
 assert.equal(cocValues.inteligencia_quinto, 13);
+assert.equal(coc.version, 2);
+const cocVitals = { constituicao: 60, tamanho: 50, poder: 65 };
+assert.equal(calculateSheet(coc.fields, cocVitals), null);
+assert.equal(cocVitals.pv_inicial, 11);
+assert.equal(cocVitals.pm_inicial, 13);
+assert.equal(cocVitals.san_inicial, 65);
+assert.equal(resolveSheetRenderer({ ...dndSystem, templateId: coc.id, templateVersion: 1, fields: coc.fields })?.id, coc.id, 'Existing CoC 7e sheets remain available');
+
+const t20 = templates.find(template => template.id === 'tormenta20');
+assert.equal(t20.version, 2);
+assert.equal(t20.rulesetVersion, 'jogo-do-ano-2024-v1.3');
+for (const [level, training] of [[1, 2], [6, 2], [7, 4], [14, 4], [15, 6], [20, 6]]) {
+  const values = { nivel: level, forca: 4, destreza: 2, treino_per_atletismo: 1 };
+  assert.equal(calculateSheet(t20.fields, values), null);
+  assert.equal(values.bonus_treinamento, training);
+  assert.equal(values.per_atletismo, Math.floor(level / 2) + 4 + training);
+  assert.equal(values.defesa, 12);
+}
+assert.equal(resolveSheetRenderer({ ...dndSystem, templateId: t20.id, templateVersion: 1, fields: t20.fields })?.id, t20.id, 'Existing Tormenta20 sheets remain available');
 
 const order = templates.find(template => template.id === 'ordem_paranormal');
-assert.equal(order.version, 3, 'New Order templates are versioned without replacing existing sheets');
+assert.equal(order.version, 4, 'New Order templates are versioned without replacing existing sheets');
+assert.equal(order.rulesetVersion, '1.3');
 assert.equal(resolveSheetRenderer({ ...dndSystem, templateId: order.id, templateVersion: 1, fields: order.fields, layout: order.layout })?.id, order.id, 'Existing Order v1 still resolves');
 assert.equal(resolveSheetRenderer({ ...dndSystem, templateId: order.id, templateVersion: 2, fields: order.fields, layout: order.layout })?.id, order.id, 'Existing Order v2 still resolves');
 assert.equal(resolveSheetRenderer({ ...dndSystem, templateId: order.id, templateVersion: 3, fields: order.fields, layout: order.layout })?.id, order.id, 'New Order v3 resolves');
+assert.equal(resolveSheetRenderer({ ...dndSystem, templateId: order.id, templateVersion: 4, fields: order.fields, layout: order.layout })?.id, order.id, 'Order v4 resolves');
 const orderValues = {};
 assert.equal(calculateSheet(order.fields, orderValues), null);
 assert.equal(orderValues.defesa, 11);
 assert.equal(fieldRoll('{agilidade}d20kh1+{per_luta}', orderValues), '1d20');
+assert.equal(paranormalFieldRoll('{agilidade}d20kh1+{per_luta}', { agilidade: 0, per_luta: 5 }), '2d20kl1+5', 'Order attribute zero keeps the lower die');
 console.log(`Validated ${templates.length} sheet templates and representative formulas/rolls.`);

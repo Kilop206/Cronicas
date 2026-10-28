@@ -73,6 +73,32 @@ const sizes = [{ name: 'desktop', width: 1440, height: 900 }, { name: 'wide', wi
       await savedField;
       await page.reload({ waitUntil: 'networkidle' });
       if (character.fields[fieldKey] !== nextValue) throw new Error(`${name}: attribute autosave failed`);
+      if (name === 't20') {
+        await page.getByRole('button', { name: 'Editar ficha' }).click();
+        const savedTraining = page.waitForResponse(response => response.url().endsWith('/api/characters/char-visual') && response.request().method() === 'PUT');
+        await page.getByRole('button', { name: 'Alternar treino de Atletismo' }).click();
+        await savedTraining;
+        await page.reload({ waitUntil: 'networkidle' });
+        if (character.fields.treino_per_atletismo !== 1 || character.fields.per_atletismo !== Math.floor(character.fields.nivel / 2) + character.fields.forca + character.fields.bonus_treinamento) throw new Error('T20 training did not persist or recalculate');
+      }
+      if (name === 'ordem') {
+        await page.getByRole('button', { name: 'Editar ficha' }).click();
+        const savedZero = page.waitForResponse(response => response.url().endsWith('/api/characters/char-visual') && response.request().method() === 'PUT');
+        await page.locator('.custom-sheet-main').getByRole('spinbutton', { name: 'Agilidade' }).fill('0');
+        await savedZero;
+        await page.reload({ waitUntil: 'networkidle' });
+        const rollRequest = page.waitForRequest(request => request.url().endsWith('/api/campaigns/camp-visual/rolls') && request.method() === 'POST');
+        await page.locator('.custom-sheet-main').getByRole('button', { name: 'Rolar Agilidade' }).click();
+        if (JSON.parse((await rollRequest).postData() || '{}').expression !== '2d20kl1') throw new Error('Order attribute zero did not keep the lower die');
+      }
+      if (name === 'coc') {
+        await page.getByRole('button', { name: 'Editar ficha' }).click();
+        const savedVitals = page.waitForResponse(response => response.url().endsWith('/api/characters/char-visual') && response.request().method() === 'PUT');
+        await page.getByRole('button', { name: 'Aplicar à criação' }).click();
+        await savedVitals;
+        await page.reload({ waitUntil: 'networkidle' });
+        if (character.maxHealth !== character.fields.pv_inicial || character.maxMana !== character.fields.pm_inicial || character.sanity !== character.fields.san_inicial) throw new Error('CoC initial vitals did not persist');
+      }
       console.log(name, 'resource, roll and attribute persistence passed');
     }
     await page.close();

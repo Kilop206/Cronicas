@@ -98,7 +98,7 @@ const dndFields: SystemField[] = [
   textField('alinhamento', 'Alinhamento', 'Identidade'),
   listField('condicoes', 'Conditions', 'Combate'),
   listField('magias_preparadas', 'Magias preparadas ou conhecidas', 'Magias'),
-  textField('classe', 'Classe', 'Identidade'), textField('subclasse', 'Subclasse', 'Identidade'), textField('especie', 'Espécie', 'Identidade'), textField('antecedente', 'Antecedente', 'Identidade'),
+  textField('classe', 'Classe', 'Identidade'), textField('subclasse', 'Subclasse', 'Identidade'), textField('especie', 'Raça', 'Identidade'), textField('antecedente', 'Antecedente', 'Identidade'),
   { ...numberField('nivel', 'Nível', 'Progressão', 1), min: 1, max: 20 }, numberField('experiencia', 'Experiência', 'Progressão'),
   numberField('proficiencia', 'Bônus de proficiência', 'Progressão', 0, null, '2 + floordiv(nivel - 1, 4)'),
   numberField('classe_armadura', 'Classe de armadura', 'Combate', 10), numberField('iniciativa', 'Iniciativa', 'Combate', 0, '1d20+{iniciativa}'),
@@ -122,24 +122,29 @@ const dndFields: SystemField[] = [
   textField('moedas', 'Moedas', 'Equipamento')
 ];
 
-const t20Skills: [string, string][] = [
-  ['acrobacia', 'Acrobacia'], ['adestramento', 'Adestramento'], ['atletismo', 'Atletismo'], ['atuacao', 'Atuação'],
-  ['cavalgar', 'Cavalgar'], ['conhecimento', 'Conhecimento'], ['cura', 'Cura'], ['diplomacia', 'Diplomacia'],
-  ['enganacao', 'Enganação'], ['fortitude', 'Fortitude'], ['furtividade', 'Furtividade'], ['guerra', 'Guerra'],
-  ['iniciativa', 'Iniciativa'], ['intimidacao', 'Intimidação'], ['intuicao', 'Intuição'], ['investigacao', 'Investigação'],
-  ['jogatina', 'Jogatina'], ['ladinagem', 'Ladinagem'], ['luta', 'Luta'], ['misticismo', 'Misticismo'],
-  ['nobreza', 'Nobreza'], ['oficio', 'Ofício'], ['percepcao', 'Percepção'], ['pontaria', 'Pontaria'],
-  ['reflexos', 'Reflexos'], ['religiao', 'Religião'], ['sobrevivencia', 'Sobrevivência'], ['vontade', 'Vontade']
+const t20Skills: [string, string, string][] = [
+  ['acrobacia', 'Acrobacia', 'destreza'], ['adestramento', 'Adestramento', 'carisma'], ['atletismo', 'Atletismo', 'forca'], ['atuacao', 'Atuação', 'carisma'],
+  ['cavalgar', 'Cavalgar', 'destreza'], ['conhecimento', 'Conhecimento', 'inteligencia'], ['cura', 'Cura', 'sabedoria'], ['diplomacia', 'Diplomacia', 'carisma'],
+  ['enganacao', 'Enganação', 'carisma'], ['fortitude', 'Fortitude', 'constituicao'], ['furtividade', 'Furtividade', 'destreza'], ['guerra', 'Guerra', 'inteligencia'],
+  ['iniciativa', 'Iniciativa', 'destreza'], ['intimidacao', 'Intimidação', 'carisma'], ['intuicao', 'Intuição', 'sabedoria'], ['investigacao', 'Investigação', 'inteligencia'],
+  ['jogatina', 'Jogatina', 'carisma'], ['ladinagem', 'Ladinagem', 'destreza'], ['luta', 'Luta', 'forca'], ['misticismo', 'Misticismo', 'inteligencia'],
+  ['nobreza', 'Nobreza', 'inteligencia'], ['oficio', 'Ofício', 'inteligencia'], ['percepcao', 'Percepção', 'sabedoria'], ['pontaria', 'Pontaria', 'destreza'],
+  ['reflexos', 'Reflexos', 'destreza'], ['religiao', 'Religião', 'sabedoria'], ['sobrevivencia', 'Sobrevivência', 'sabedoria'], ['vontade', 'Vontade', 'sabedoria']
 ];
 const t20Fields: SystemField[] = [
   listField('condicoes', 'Condições', 'Combate'),
   tableField('ataques', 'Ataques', 'Combate', [['nome', 'Ataque', 'text'], ['bonus', 'Bônus', 'number'], ['dano', 'Dano', 'text']]),
   textField('raca', 'Raça', 'Identidade'), textField('origem', 'Origem', 'Identidade'), textField('classe', 'Classe', 'Identidade'), textField('divindade', 'Divindade', 'Identidade'),
-  numberField('nivel', 'Nível', 'Progressão', 1), numberField('experiencia', 'Experiência', 'Progressão'),
-  numberField('defesa', 'Defesa', 'Combate', 10), numberField('deslocamento', 'Deslocamento', 'Combate'),
+  { ...numberField('nivel', 'Nível', 'Progressão', 1), min: 1, max: 20 }, numberField('experiencia', 'Experiência', 'Progressão'),
+  numberField('bonus_treinamento', 'Bônus de treinamento', 'Progressão', 0, null, '2 + 2 * min(1, floordiv(nivel, 7)) + 2 * min(1, floordiv(nivel, 15))'),
+  numberField('bonus_armadura', 'Bônus da armadura', 'Combate'), numberField('bonus_escudo', 'Bônus do escudo', 'Combate'), numberField('outros_defesa', 'Outros bônus de Defesa', 'Combate'),
+  numberField('defesa', 'Defesa', 'Combate', 0, null, '10 + destreza + bonus_armadura + bonus_escudo + outros_defesa'), numberField('deslocamento', 'Deslocamento', 'Combate'),
   ...([['forca', 'Força'], ['destreza', 'Destreza'], ['constituicao', 'Constituição'], ['inteligencia', 'Inteligência'], ['sabedoria', 'Sabedoria'], ['carisma', 'Carisma']] as const)
     .map(([key, label]) => numberField(key, label, 'Atributos', 0, `1d20+{${key}}`)),
-  ...t20Skills.map(([key, label]) => numberField(`per_${key}`, label, 'Perícias', 0, `1d20+{per_${key}}`))
+  ...t20Skills.flatMap(([key, label, attribute]) => [
+    { ...numberField(`treino_per_${key}`, `Treinado: ${label}`, 'Treinamento'), min: 0, max: 1 },
+    numberField(`per_${key}`, label, 'Perícias', 0, `1d20+{per_${key}}`, `floordiv(nivel, 2) + ${attribute} + bonus_treinamento * treino_per_${key}`)
+  ])
 ];
 
 const cocCharacteristics: [string, string][] = [
@@ -160,6 +165,9 @@ const cocFields: SystemField[] = [
   listField('desenvolvimento', 'Desenvolvimento', 'Progressão'),
   textField('ocupacao', 'Ocupação', 'Identidade'), textField('local', 'Residência', 'Identidade'), textField('epoca', 'Época', 'Identidade'),
   numberField('idade', 'Idade', 'Identidade'), numberField('credito', 'Crédito', 'Progressão'),
+  numberField('pv_inicial', 'PV inicial sugerido', 'Valores derivados', 0, null, 'floordiv(constituicao + tamanho, 10)'),
+  numberField('pm_inicial', 'PM inicial sugerido', 'Valores derivados', 0, null, 'floordiv(poder, 5)'),
+  numberField('san_inicial', 'SAN inicial sugerida', 'Valores derivados', 0, null, 'poder'),
   ...cocCharacteristics.flatMap(([key, label]) => [
     numberField(key, label, 'Características', 0, '1d100'),
     numberField(`${key}_metade`, `${label} · metade`, 'Limiares', 0, null, `floordiv(${key}, 2)`),
@@ -169,7 +177,7 @@ const cocFields: SystemField[] = [
 ];
 
 export const SHEET_TEMPLATES: SheetTemplate[] = [
-  { id: 'ordem_paranormal', version: 3, rulesetVersion: null, name: 'Ordem Paranormal RPG', summary: 'Painel de agente com atributos, perícias detalhadas, recursos, defesa, ataques e rituais.', sourceUrl: 'https://jamboeditora.com.br/wp-content/uploads/woocommerce_uploads/2023/02/jamboeditora-ordem-paranormal-ficha-de-personagem-oeuvst.pdf', fields: orderFields,
+  { id: 'ordem_paranormal', version: 4, rulesetVersion: '1.3', name: 'Ordem Paranormal RPG', summary: 'Painel de agente com atributos, perícias detalhadas, recursos, defesa, ataques e rituais.', sourceUrl: 'https://jamboeditora.com.br/wp-content/uploads/woocommerce_uploads/2023/02/jamboeditora-ordem-paranormal-ficha-de-personagem-oeuvst.pdf', fields: orderFields,
     layout: makeLayout(orderFields, [
       { id: 'dossie', title: 'Dossiê do agente', items: [identity(), portrait(), ...sectionKeys(orderFields, 'Identidade'), 'nex', resource('health', 'PV', 4), resource('mana', 'PE', 4), resource('sanity', 'SAN', 4), highlight('defesa', 4), 'bloqueio', 'esquiva', 'iniciativa', 'deslocamento', 'equip_defesa', 'outros_defesa'] },
       { id: 'aptidoes', title: 'Aptidões e ação', items: [note('nota_aptidoes', 'Rolagens', 'Ajuste os atributos e bônus de perícia conforme sua mesa.'), ...sectionKeys(orderFields, 'Atributos'), ...orderSkills.filter(([, , attribute]) => ['agilidade', 'forca', 'vigor'].includes(attribute)).map(([key]) => `per_${key}`)] },
@@ -177,7 +185,7 @@ export const SHEET_TEMPLATES: SheetTemplate[] = [
       { id: 'arsenal', title: 'Arsenal e rituais', items: ['protecao', 'resistencias', 'proficiencias', 'ataques', 'condicoes', 'rituais', 'carga_atual', 'carga_limite', inventory(), abilities()] },
       { id: 'registros', title: 'Registros', items: [history()] }
     ], 'investigation', '#9b8bc0', 'CRÔNICAS / DOSSIÊ DO AGENTE', { Atributos: { style: 'score', span: 3 }, Perícias: { style: 'compact', span: 6 } }) },
-  { id: 'dnd_5e', version: 1, rulesetVersion: '2024', name: 'D&D 5e', summary: 'Atributos, modificadores, resistências, perícias, progressão e combate.', sourceUrl: 'https://media.dndbeyond.com/compendium-images/free-rules/downloads/2024-character-sheet.pdf', fields: dndFields,
+  { id: 'dnd_5e', version: 2, rulesetVersion: '2014', name: 'D&D 5e (2014)', summary: 'Atributos, modificadores, resistências, perícias, progressão e combate da edição 2014.', sourceUrl: '', fields: dndFields,
     layout: makeLayout(dndFields, [
       { id: 'aventura', title: 'Personagem e combate', items: [identity(), portrait(), ...sectionKeys(dndFields, 'Identidade'), 'nivel', 'experiencia', highlight('proficiencia', 4), resource('health', 'Pontos de vida', 8), highlight('classe_armadura', 4), 'iniciativa', 'deslocamento', 'pontos_temporarios', 'dados_vida', 'salvaguardas_sucesso', 'salvaguardas_falha', 'condicoes'] },
       { id: 'aptidoes', title: 'Atributos e resistências', items: [...dndAbilities.flatMap(([key]) => [key, `mod_${key}`]), ...dndAbilities.flatMap(([key]) => [`treino_res_${key}`, `res_${key}`])] },
@@ -186,18 +194,18 @@ export const SHEET_TEMPLATES: SheetTemplate[] = [
       { id: 'recursos', title: 'Características e magias', items: [...sectionKeys(dndFields, 'Magias'), abilities()] },
       { id: 'jornada', title: 'Jornada', items: [history()] }
     ], 'fantasy', '#b56d63', 'CRÔNICAS / AVENTURA', { Atributos: { style: 'score', span: 3 }, Modificadores: { style: 'score', span: 3 }, Resistências: { style: 'compact', span: 6 }, Perícias: { style: 'compact', span: 6 } }) },
-  { id: 'tormenta20', version: 1, rulesetVersion: null, name: 'Tormenta20', summary: 'Raça, origem, classe, seis atributos, PV, PM e perícias.', sourceUrl: 'https://jamboeditora.com.br/wp-content/uploads/2023/06/Tormenta20-Resumo-de-Regras.pdf', fields: t20Fields,
+  { id: 'tormenta20', version: 2, rulesetVersion: 'jogo-do-ano-2024-v1.3', name: 'Tormenta20 — Jogo do Ano', summary: 'Raça, origem, classe, atributos, PV, PM, Defesa e perícias calculadas.', sourceUrl: 'https://jamboeditora.com.br/wp-content/uploads/2023/06/Tormenta20-Resumo-de-Regras.pdf', fields: t20Fields,
     layout: makeLayout(t20Fields, [
-      { id: 'heroi', title: 'Herói de Arton', items: [identity(), portrait(), ...sectionKeys(t20Fields, 'Identidade'), 'nivel', 'experiencia', resource('health', 'PV', 6), resource('mana', 'PM', 6), highlight('defesa', 6), 'deslocamento'] },
-      { id: 'combate', title: 'Atributos e combate', items: [...sectionKeys(t20Fields, 'Atributos'), 'ataques', 'condicoes', ...t20Skills.slice(0, 10).map(([key]) => `per_${key}`)] },
-      { id: 'oficios', title: 'Conhecimentos e ofícios', items: [note('nota_pericias', 'Perícias', 'Informe o bônus total de cada perícia para usar as rolagens da campanha.'), ...t20Skills.slice(10).map(([key]) => `per_${key}`)] },
+      { id: 'heroi', title: 'Herói de Arton', items: [identity(), portrait(), ...sectionKeys(t20Fields, 'Identidade'), 'nivel', 'experiencia', 'bonus_treinamento', resource('health', 'PV', 6), resource('mana', 'PM', 6), highlight('defesa', 6), 'deslocamento', 'bonus_armadura', 'bonus_escudo', 'outros_defesa'] },
+      { id: 'combate', title: 'Atributos e combate', items: [...sectionKeys(t20Fields, 'Atributos'), 'ataques', 'condicoes', ...t20Skills.slice(0, 10).flatMap(([key]) => [`treino_per_${key}`, `per_${key}`])] },
+      { id: 'oficios', title: 'Conhecimentos e ofícios', items: [note('nota_pericias', 'Perícias', 'Total = metade do nível + atributo + treino. Outros bônus podem ser configurados no editor.'), ...t20Skills.slice(10).flatMap(([key]) => [`treino_per_${key}`, `per_${key}`])] },
       { id: 'poderes', title: 'Poderes e magias', items: [abilities()] },
       { id: 'mochila', title: 'Mochila', items: [inventory()] },
       { id: 'cronica', title: 'Crônica', items: [history()] }
     ], 'mythic', '#be825d', 'CRÔNICAS / LENDA', { Atributos: { style: 'score', span: 4 }, Perícias: { style: 'compact', span: 6 } }) },
-  { id: 'call_of_cthulhu_7e', version: 1, rulesetVersion: '7e', name: 'Call of Cthulhu 7e', summary: 'Características percentuais, limiares calculados, perícias, PV, SAN e magia.', sourceUrl: 'https://www.chaosium.com/content/FreePDFs/CoC/CHA23131%20Call%20of%20Cthulhu%207th%20Edition%20Quick-Start%20Rules.pdf', fields: cocFields,
+  { id: 'call_of_cthulhu_7e', version: 2, rulesetVersion: '7e', name: 'Call of Cthulhu 7e', summary: 'Características percentuais, limiares, recursos derivados e investigação.', sourceUrl: 'https://www.chaosium.com/content/FreePDFs/CoC/CHA23131%20Call%20of%20Cthulhu%207th%20Edition%20Quick-Start%20Rules.pdf', fields: cocFields,
     layout: makeLayout(cocFields, [
-      { id: 'investigador', title: 'Arquivo do investigador', items: [identity(), portrait(), ...sectionKeys(cocFields, 'Identidade'), 'credito', 'sorte', 'desenvolvimento', resource('health', 'PV', 4), resource('sanity', 'SAN', 4), resource('mana', 'Magia', 4)] },
+      { id: 'investigador', title: 'Arquivo do investigador', items: [identity(), portrait(), ...sectionKeys(cocFields, 'Identidade'), 'credito', 'sorte', 'desenvolvimento', resource('health', 'PV', 4), resource('sanity', 'SAN', 4), resource('mana', 'Magia', 4), ...sectionKeys(cocFields, 'Valores derivados')] },
       { id: 'caracteristicas', title: 'Características e limiares', items: [note('nota_limiares', 'Valores percentuais', 'Metade e quinto são calculados a partir de cada característica.'), ...cocCharacteristics.flatMap(([key]) => [key, `${key}_metade`, `${key}_quinto`])] },
       { id: 'pericias', title: 'Perícias', items: sectionKeys(cocFields, 'Perícias') },
       { id: 'pertences', title: 'Pertences e conhecimentos', items: [inventory(), abilities()] },

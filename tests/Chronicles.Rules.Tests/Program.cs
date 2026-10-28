@@ -138,6 +138,9 @@ Check(SheetFormula.Apply([level, bonus with { Formula = "10 / (nivel - 1)" }], n
 Check(SheetFormula.Validate([level, bonus with { RollExpression = "1d20+{ausente}" }]) is not null, "Modificador desconhecido rejeitado");
 Check(SheetFormula.Evaluate("8 / 3 - 5", _ => 0) == -3, "Divisão inteira e precedência");
 Check(SheetFormula.Evaluate("floordiv(9 - 10, 2)", _ => 0) == -1, "Modificador arredondado para baixo");
+Check(SheetFormula.Evaluate("2 + 2 * min(1, floordiv(6, 7))", _ => 0) == 2, "Treinamento antes do nível 7");
+Check(SheetFormula.Evaluate("2 + 2 * min(1, floordiv(15, 7)) + 2 * min(1, floordiv(15, 15))", _ => 0) == 6, "Treinamento no nível 15");
+Check(SheetFormula.Validate([level, bonus with { Formula = "min(1, floordiv(nivel, 7))" }]) is null, "Função min validada no servidor");
 Check(SheetFormula.Validate([level, bonus with { Formula = "floordiv(nivel - 10, 2)", RollExpression = "{nivel}d20kh1+{bonus}" }]) is null, "Fórmula de modificador e quantidade dinâmica de dados");
 var defaultLevel = level with { DefaultValue = System.Text.Json.JsonSerializer.SerializeToElement(1) };
 var defaults = new Dictionary<string, System.Text.Json.JsonElement>();

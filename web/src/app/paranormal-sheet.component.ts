@@ -8,7 +8,7 @@ import { CharacterHistoryPanelComponent } from './character-history.component';
 import { CharacterInventoryComponent } from './character-inventory.component';
 import { SheetCollectionFieldComponent } from './sheet-collection-field.component';
 import { SystemFieldComponent } from './specialized-sheet.component';
-import { fieldRoll } from './sheet-rules';
+import { paranormalFieldRoll } from './sheet-rules';
 import { SHEET_TEMPLATES } from './system-templates';
 
 type SheetMode = 'read' | 'edit' | 'print';
@@ -29,7 +29,7 @@ export class ParanormalRollComponent {
   private api = inject(ApiService);
   busy = signal(false);
   roll() {
-    const expression = fieldRoll(this.expression, this.values);
+    const expression = paranormalFieldRoll(this.expression, this.values);
     if (!expression) { this.rolled.emit(`${this.label}: confira os atributos e a expressão da rolagem.`); return; }
     this.busy.set(true);
     this.api.roll(this.campaignId, expression, this.visibility, crypto.randomUUID()).pipe(finalize(() => this.busy.set(false))).subscribe({
@@ -118,7 +118,7 @@ function keyOf(key: ResourceKey): ResourceKey { return key; }
   <div class="paranormal-skills" role="region" aria-label="Perícias do agente">
     <div class="skill-head"><span>PERÍCIA</span><span>ATR</span><span>DADOS</span><span>BÔNUS</span><span>TREINO</span><span>OUTROS</span><span>ROLAR</span></div>
     <div *ngFor="let skill of skills()" class="skill-row">
-      <span class="skill-name">{{ skill.label }}</span><span class="skill-attr">{{ attributeShort(skill) }}</span><span class="skill-dice">{{ attributeValue(skill) }}d20</span>
+      <span class="skill-name">{{ skill.label }}</span><span class="skill-attr">{{ attributeShort(skill) }}</span><span class="skill-dice">{{ skillDiceLabel(skill) }}</span>
       <input *ngIf="canEdit(skill); else baseValue" type="number" [attr.aria-label]="'Bônus base de ' + skill.label" [ngModel]="number(skill.key)" (ngModelChange)="setBase(skill,$event)" [ngModelOptions]="{standalone:true}" min="-999" max="999">
       <ng-template #baseValue><strong class="skill-number">{{ signed(number(skill.key)) }}</strong></ng-template>
       <input *ngIf="canEditDetail(); else trainingValue" type="number" [attr.aria-label]="'Treino de ' + skill.label" [ngModel]="detail(skill.key,'treino')" (ngModelChange)="setDetail(skill.key,'treino',$event)" [ngModelOptions]="{standalone:true}" min="-99" max="99">
@@ -151,6 +151,7 @@ export class ParanormalSkillTableComponent {
   attributeKey(skill: SystemField) { return /^\{([a-z][a-z0-9_]*)\}d20/.exec(skill.rollExpression || '')?.[1] || ''; }
   attributeShort(skill: SystemField) { return ({ agilidade:'AGI', forca:'FOR', intelecto:'INT', presenca:'PRE', vigor:'VIG' } as Record<string,string>)[this.attributeKey(skill)] || '—'; }
   attributeValue(skill: SystemField) { return this.number(this.attributeKey(skill)); }
+  skillDiceLabel(skill: SystemField) { const count = this.attributeValue(skill); return count === 0 ? '2d20↓' : `${count}d20`; }
   private details(): Record<string, SheetCellValue>[] { const value = this.draft.fields['pericias_detalhes']; return Array.isArray(value) && value.every(row => row && typeof row === 'object' && !Array.isArray(row)) ? value as Record<string, SheetCellValue>[] : []; }
   detail(key: string, column: 'treino' | 'outros') { const row = this.details().find(item => item['chave'] === key); return typeof row?.[column] === 'number' ? row[column] as number : 0; }
   canEdit(skill: SystemField) { return this.mode === 'edit' && this.character.canEdit && !skill.formula && skill.editRole !== 'gm'; }

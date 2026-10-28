@@ -16,3 +16,4 @@ web/npm-cache/
 .dotnet-local/
 .dotnet-install.ps1
 .dotnet-tools/
+/*.pdf
