@@ -8,6 +8,8 @@ O frontend escolhe o renderizador em `sheet-renderer-registry.ts` usando **ID + 
 
 `system-templates.ts` contém as definições iniciais **somente para sistemas já presentes no catálogo do projeto**. As fichas usam nomenclatura e campos estruturais consultados em fontes oficiais, sem texto de livros, arte, fontes ou regras presumidas. Fórmulas só são cadastradas quando a regra está identificada. O template não é uma implementação integral de todas as opções de criação de personagem publicadas em cada livro. A versão das regras é guardada para permitir diferenças futuras.
 
+Ordem Paranormal tem o template v2 para novas fichas, com perícias adicionais, proteção, resistências, ataques, rituais e carga configurável. Fichas que já usam v1 continuam resolvidas pelo renderizador v1; o criador do sistema pode associar o v2 e salvar a migração quando desejar.
+
 ## Adicionar um sistema especializado
 
 1. Identifique edição e base de regras disponível. Crie uma definição em `system-templates.ts` com `id` estável, `version`, `rulesetVersion`, campos e layout. Não reutilize um ID para mecânicas incompatíveis; publique uma nova versão.
@@ -16,7 +18,7 @@ O frontend escolhe o renderizador em `sheet-renderer-registry.ts` usando **ID + 
 4. Acrescente indicadores do OBS no registro do frontend e na projeção controlada de `/api/overlay/{key}`. Essa rota retorna somente retrato, recursos e indicadores configurados; não exponha `FieldsJson` inteiro por uma chave de OBS.
 5. Faça teste de resolução por ID e versão em `scripts/check-sheet-templates.mjs`, teste de regras em `tests/Chronicles.Rules.Tests`, compile API e web e confira ficha em desktop e celular.
 
-O servidor aceita campos `text`, `longtext`, `number`, `select`, `boolean`, `list` e `table`. Listas e tabelas têm limites de linhas e colunas. `editRole: "gm"` torna o campo somente leitura para jogadores; a API verifica a mudança inclusive em exclusões, importações e restauração de versões. A permissão geral de editar a ficha continua sendo validada pela campanha e pelo proprietário. Dados secretos do mestre vivem no endpoint separado de segredos, fora da ficha pública e do OBS.
+O servidor aceita campos `text`, `longtext`, `number`, `select`, `boolean`, `list` e `table`. Listas e tabelas têm limites de linhas e colunas. Colunas `dice` aceitam expressões estáticas seguras e mostram um botão de rolagem em cada linha; o resultado entra na campanha com a visibilidade selecionada. `editRole: "gm"` torna o campo somente leitura para jogadores; a API verifica a mudança inclusive em exclusões, importações e restauração de versões. A permissão geral de editar a ficha continua sendo validada pela campanha e pelo proprietário. Dados secretos do mestre vivem no endpoint separado de segredos, fora da ficha pública e do OBS.
 
 ## Editor universal
 

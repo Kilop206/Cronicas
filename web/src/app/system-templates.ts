@@ -19,7 +19,7 @@ const longField = (key: string, label: string, section: string): SystemField =>
   ({ key, label, section, type: 'longtext', min: null, max: null, options: null, span: 12 });
 const listField = (key: string, label: string, section: string): SystemField =>
   ({ key, label, section, type: 'list', min: null, max: null, options: null, span: 12 });
-const tableField = (key: string, label: string, section: string, columns: [string, string, 'text' | 'number' | 'boolean'][]): SystemField =>
+const tableField = (key: string, label: string, section: string, columns: [string, string, 'text' | 'number' | 'boolean' | 'dice'][]): SystemField =>
   ({ key, label, section, type: 'table', min: null, max: null, options: null, span: 12,
     columns: columns.map(([columnKey, columnLabel, type]) => ({ key: columnKey, label: columnLabel, type })) });
 
@@ -53,6 +53,8 @@ const sectionKeys = (fields: SystemField[], section: string) => fields.filter(fi
 const orderSkills: [string, string, string][] = [
   ['acrobacia', 'Acrobacia', 'agilidade'], ['adestramento', 'Adestramento', 'presenca'], ['artes', 'Artes', 'presenca'],
   ['atletismo', 'Atletismo', 'forca'], ['ciencias', 'Ciências', 'intelecto'], ['crime', 'Crime', 'agilidade'],
+  ['atualidades', 'Atualidades', 'intelecto'], ['pilotagem', 'Pilotagem', 'agilidade'],
+  ['profissao_1', 'Profissão I', 'intelecto'], ['profissao_2', 'Profissão II', 'intelecto'],
   ['diplomacia', 'Diplomacia', 'presenca'], ['enganacao', 'Enganação', 'presenca'], ['fortitude', 'Fortitude', 'vigor'],
   ['furtividade', 'Furtividade', 'agilidade'], ['iniciativa', 'Iniciativa', 'agilidade'], ['intimidacao', 'Intimidação', 'presenca'],
   ['intuicao', 'Intuição', 'presenca'], ['investigacao', 'Investigação', 'intelecto'], ['luta', 'Luta', 'forca'],
@@ -65,6 +67,11 @@ const orderFields: SystemField[] = [
   textField('aparencia', 'Aparência', 'Identidade'), textField('afinidade', 'Afinidade', 'Identidade'),
   longField('vinculos', 'Vínculos e histórico', 'Identidade'),
   listField('condicoes', 'Condições e estados', 'Combate'),
+  listField('proficiencias', 'Proficiências', 'Combate'),
+  tableField('ataques', 'Ataques', 'Combate', [['nome', 'Ataque', 'text'], ['teste', 'Teste', 'dice'], ['dano', 'Dano', 'text'], ['especial', 'Especial', 'text']]),
+  tableField('rituais', 'Rituais', 'Paranormal', [['nome', 'Ritual', 'text'], ['elemento', 'Elemento', 'text'], ['custo', 'Custo', 'text'], ['efeito', 'Efeito', 'text']]),
+  textField('protecao', 'Proteção', 'Combate'), longField('resistencias', 'Resistências', 'Combate'),
+  numberField('carga_atual', 'Espaços usados', 'Inventário'), numberField('carga_limite', 'Limite de carga', 'Inventário'),
   numberField('iniciativa', 'Iniciativa', 'Combate'),
   textField('origem', 'Origem', 'Identidade'), textField('classe', 'Classe', 'Identidade'), textField('trilha', 'Trilha', 'Identidade'),
   numberField('nex', 'NEX (%)', 'Progressão'), numberField('deslocamento', 'Deslocamento', 'Combate'),
@@ -159,12 +166,12 @@ const cocFields: SystemField[] = [
 ];
 
 export const SHEET_TEMPLATES: SheetTemplate[] = [
-  { id: 'ordem_paranormal', version: 1, rulesetVersion: null, name: 'Ordem Paranormal RPG', summary: 'NEX, atributos, PV, PE, SAN, defesa e perícias com rolagens configuráveis.', sourceUrl: 'https://jamboeditora.com.br/wp-content/uploads/woocommerce_uploads/2023/02/jamboeditora-ordem-paranormal-ficha-de-personagem-oeuvst.pdf', fields: orderFields,
+  { id: 'ordem_paranormal', version: 2, rulesetVersion: null, name: 'Ordem Paranormal RPG', summary: 'NEX, atributos, PV, PE, SAN, defesa, perícias, ataques e rituais configuráveis.', sourceUrl: 'https://jamboeditora.com.br/wp-content/uploads/woocommerce_uploads/2023/02/jamboeditora-ordem-paranormal-ficha-de-personagem-oeuvst.pdf', fields: orderFields,
     layout: makeLayout(orderFields, [
       { id: 'dossie', title: 'Dossiê do agente', items: [identity(), portrait(), ...sectionKeys(orderFields, 'Identidade'), 'nex', resource('health', 'PV', 4), resource('mana', 'PE', 4), resource('sanity', 'SAN', 4), highlight('defesa', 4), 'iniciativa', 'deslocamento', 'equip_defesa', 'outros_defesa'] },
       { id: 'aptidoes', title: 'Aptidões e ação', items: [note('nota_aptidoes', 'Rolagens', 'Ajuste os atributos e bônus de perícia conforme sua mesa.'), ...sectionKeys(orderFields, 'Atributos'), ...orderSkills.filter(([, , attribute]) => ['agilidade', 'forca', 'vigor'].includes(attribute)).map(([key]) => `per_${key}`)] },
       { id: 'investigacao', title: 'Investigação e presença', items: orderSkills.filter(([, , attribute]) => ['intelecto', 'presenca'].includes(attribute)).map(([key]) => `per_${key}`) },
-      { id: 'arsenal', title: 'Arsenal e rituais', items: ['condicoes', inventory(), abilities()] },
+      { id: 'arsenal', title: 'Arsenal e rituais', items: ['protecao', 'resistencias', 'proficiencias', 'ataques', 'condicoes', 'rituais', 'carga_atual', 'carga_limite', inventory(), abilities()] },
       { id: 'registros', title: 'Registros', items: [history()] }
     ], 'investigation', '#9b8bc0', 'CRÔNICAS / DOSSIÊ DO AGENTE', { Atributos: { style: 'score', span: 3 }, Perícias: { style: 'compact', span: 6 } }) },
   { id: 'dnd_5e', version: 1, rulesetVersion: '2024', name: 'D&D 5e', summary: 'Atributos, modificadores, resistências, perícias, progressão e combate.', sourceUrl: 'https://media.dndbeyond.com/compendium-images/free-rules/downloads/2024-character-sheet.pdf', fields: dndFields,

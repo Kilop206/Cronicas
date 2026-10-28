@@ -2,10 +2,11 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { CharacterInput, SheetCellValue, SystemColumn, SystemField } from './api';
+import { SheetRollComponent } from './sheet-roll.component';
 
 type SheetRow = Record<string, SheetCellValue>;
 
-@Component({ selector: 'app-sheet-collection-field', standalone: true, imports: [CommonModule, FormsModule], template: `
+@Component({ selector: 'app-sheet-collection-field', standalone: true, imports: [CommonModule, FormsModule, SheetRollComponent], template: `
   <div class="sheet-collection-field" [attr.aria-label]="field.label">
     <ul *ngIf="field.type === 'list'" class="sheet-custom-list"><li *ngFor="let item of items(); let index=index">
       <input *ngIf="mode === 'edit'; else readItem" [attr.aria-label]="field.label + ' item ' + (index + 1)" [ngModel]="item" (ngModelChange)="setItem(index,$event)" [ngModelOptions]="{standalone:true}" maxlength="300">
@@ -16,6 +17,7 @@ type SheetRow = Record<string, SheetCellValue>;
       <tbody><tr *ngFor="let row of rows(); let index=index"><td *ngFor="let column of field.columns">
         <ng-container *ngIf="mode === 'edit'; else readCell"><input [type]="column.type === 'boolean' ? 'checkbox' : column.type === 'number' ? 'number' : 'text'" [attr.aria-label]="column.label + ' linha ' + (index + 1)" [ngModel]="cell(row,column)" (ngModelChange)="setCell(index,column,$event)" [ngModelOptions]="{standalone:true}" [attr.maxlength]="column.type === 'text' ? 300 : null"></ng-container>
         <ng-template #readCell>{{ column.type === 'boolean' ? cell(row,column) === true ? 'Sim' : 'Não' : cell(row,column) }}</ng-template>
+        <app-sheet-roll *ngIf="mode !== 'print' && column.type === 'dice' && cell(row,column)" [campaignId]="campaignId" [expression]="String(cell(row,column))" [values]="draft.fields" [label]="field.label + ' ' + (index + 1)" [compact]="true" />
       </td><td *ngIf="mode === 'edit'"><button type="button" [attr.aria-label]="'Remover linha ' + (index + 1)" (click)="removeRow(index)">×</button></td></tr></tbody></table></div>
     <p *ngIf="mode !== 'edit' && !(field.type === 'list' ? items().length : rows().length)" class="muted">Nenhum registro.</p>
     <button *ngIf="mode === 'edit'" type="button" class="button button-small secondary" [disabled]="(field.type === 'list' ? items().length : rows().length) >= 30" (click)="add()">{{ field.type === 'list' ? 'Adicionar item' : 'Adicionar linha' }}</button>
@@ -35,11 +37,13 @@ type SheetRow = Record<string, SheetCellValue>;
 export class SheetCollectionFieldComponent {
   @Input({ required: true }) field!: SystemField;
   @Input({ required: true }) draft!: CharacterInput;
+  @Input() campaignId = '';
   @Input() mode: 'read' | 'edit' | 'print' = 'read';
   @Output() changed = new EventEmitter<void>();
   items(): string[] { const value = this.draft.fields[this.field.key]; return Array.isArray(value) && value.every(item => typeof item === 'string') ? value as string[] : []; }
   rows(): SheetRow[] { const value = this.draft.fields[this.field.key]; return Array.isArray(value) && value.every(item => item && typeof item === 'object' && !Array.isArray(item)) ? value as SheetRow[] : []; }
   cell(row: SheetRow, column: SystemColumn): SheetCellValue { return row[column.key] ?? (column.type === 'boolean' ? false : column.type === 'number' ? 0 : ''); }
+  String(value: SheetCellValue) { return String(value); }
   private set(value: string[] | SheetRow[]) { this.draft.fields[this.field.key] = value; this.changed.emit(); }
   setItem(index: number, value: string) { const items = [...this.items()]; items[index] = value; this.set(items); }
   removeItem(index: number) { this.set(this.items().filter((_, position) => position !== index)); }

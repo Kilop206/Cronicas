@@ -99,6 +99,9 @@ Check(SheetCollectionValues.ValidField(listField, System.Text.Json.JsonSerialize
 Check(!SheetCollectionValues.ValidField(listField, System.Text.Json.JsonSerializer.SerializeToElement(new[] { 42 })), "Lista rejeita tipo errado");
 Check(SheetCollectionValues.ValidField(tableField, System.Text.Json.JsonSerializer.SerializeToElement(new[] { new { nome = "Espada", bonus = 4 } })), "Tabela validada");
 Check(!SheetCollectionValues.ValidField(tableField, System.Text.Json.JsonSerializer.SerializeToElement(new[] { new { desconhecida = "x" } })), "Tabela rejeita coluna desconhecida");
+var attackTable = tableField with { Columns = [new SystemColumn("nome", "Nome", "text"), new SystemColumn("teste", "Teste", "dice")] };
+Check(SheetCollectionValues.ValidField(attackTable, System.Text.Json.JsonSerializer.SerializeToElement(new[] { new { nome = "Lâmina", teste = "1d20+5" } })), "Tabela aceita rolagem segura");
+Check(!SheetCollectionValues.ValidField(attackTable, System.Text.Json.JsonSerializer.SerializeToElement(new[] { new { nome = "Lâmina", teste = "1d20;process.exit()" } })), "Tabela rejeita expressao executavel");
 var oldValues = new Dictionary<string, System.Text.Json.JsonElement> { ["forca"] = System.Text.Json.JsonSerializer.SerializeToElement(17) };
 var renamed = field with { Key = "potencia", Label = "Potencia" };
 var migration = SheetSchemaMigration.Apply(oldValues, new Dictionary<string, string> { ["forca"] = "potencia" }, [renamed]);

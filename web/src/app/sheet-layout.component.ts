@@ -52,7 +52,7 @@ const resources: Record<ResourceKey, { label: string; max: MaxResourceKey }> = {
           <label *ngIf="fieldEditable(field) && field.type === 'select'">{{ field.label }}<select [ngModel]="fieldValue(field)" (ngModelChange)="setField(field, $event)" [ngModelOptions]="{standalone: true}"><option value="">Selecione</option><option *ngFor="let option of field.options" [value]="option">{{ option }}</option></select></label>
           <label *ngIf="fieldEditable(field) && field.type === 'boolean'" class="checkbox-field"><input type="checkbox" [ngModel]="fieldValue(field) === true" (ngModelChange)="setField(field, $event)" [ngModelOptions]="{standalone: true}"> {{ field.label }}</label>
           <strong *ngIf="!fieldEditable(field) && field.type !== 'list' && field.type !== 'table'" class="sheet-value"><span class="sheet-field-caption">{{ field.label }}</span>{{ displayField(field) }}</strong>
-          <app-sheet-collection-field *ngIf="field.type === 'list' || field.type === 'table'" [field]="field" [draft]="draft" [mode]="fieldEditable(field) ? 'edit' : mode === 'print' ? 'print' : 'read'" (changed)="changed.emit()" />
+          <app-sheet-collection-field *ngIf="field.type === 'list' || field.type === 'table'" [field]="field" [draft]="draft" [campaignId]="character.campaignId" [mode]="fieldEditable(field) ? 'edit' : mode === 'print' ? 'print' : 'read'" (changed)="changed.emit()" />
           <app-sheet-roll *ngIf="mode !== 'print' && field.rollExpression" [campaignId]="character.campaignId" [expression]="field.rollExpression" [values]="draft.fields" [label]="field.label" [compact]="block.style === 'compact' || block.style === 'score'" />
         </ng-container></ng-container>
         <p *ngIf="block.kind === 'note'">{{ block.text }}</p>
@@ -67,7 +67,7 @@ const resources: Record<ResourceKey, { label: string; max: MaxResourceKey }> = {
       <label *ngIf="fieldEditable(field) && field.type === 'select'">{{ field.label }}<select [ngModel]="fieldValue(field)" (ngModelChange)="setField(field, $event)" [ngModelOptions]="{standalone: true}"><option value="">Selecione</option><option *ngFor="let option of field.options" [value]="option">{{ option }}</option></select></label>
       <label *ngIf="fieldEditable(field) && field.type === 'boolean'" class="checkbox-field"><input type="checkbox" [ngModel]="fieldValue(field) === true" (ngModelChange)="setField(field, $event)" [ngModelOptions]="{standalone: true}"> {{ field.label }}</label>
       <strong *ngIf="!fieldEditable(field) && field.type !== 'list' && field.type !== 'table'">{{ field.label }}: {{ displayField(field) }}</strong>
-      <app-sheet-collection-field *ngIf="field.type === 'list' || field.type === 'table'" [field]="field" [draft]="draft" [mode]="fieldEditable(field) ? 'edit' : mode === 'print' ? 'print' : 'read'" (changed)="changed.emit()" />
+      <app-sheet-collection-field *ngIf="field.type === 'list' || field.type === 'table'" [field]="field" [draft]="draft" [campaignId]="character.campaignId" [mode]="fieldEditable(field) ? 'edit' : mode === 'print' ? 'print' : 'read'" (changed)="changed.emit()" />
       <app-sheet-roll *ngIf="mode !== 'print' && field.rollExpression" [campaignId]="character.campaignId" [expression]="field.rollExpression" [values]="draft.fields" [label]="field.label" />
     </div></div></section>
   </div>`, styles: [`

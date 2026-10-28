@@ -231,7 +231,7 @@ public static class CharacterEndpoints
             var schema = systemId is null ? null : await db.RpgSystems.AsNoTracking().Where(x => x.Id == systemId).Select(x => x.SchemaJson).SingleOrDefaultAsync();
             var definition = schema is null ? null : SystemDefinition.Read(schema);
             var values = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(character.FieldsJson) ?? [];
-            var customRenderer = definition?.RendererMode == "layout" || definition?.TemplateVersion != 1 || definition?.TemplateId is not ("ordem_paranormal" or "dnd_5e" or "tormenta20" or "call_of_cthulhu_7e");
+            var customRenderer = !SpecializedRenderer(definition);
             var resourceKeys = (customRenderer ? null : definition?.TemplateId) switch
             {
                 "ordem_paranormal" => new[] { (Key: "health", Label: "PV"), (Key: "mana", Label: "PE"), (Key: "sanity", Label: "SAN") },
@@ -279,6 +279,16 @@ public static class CharacterEndpoints
     private static string Hash(string key) => Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(key))).ToLowerInvariant();
     private static int ResourceValue(Character character, Dictionary<string, JsonElement> values, string key) => key switch { "health" => character.Health, "sanity" => character.Sanity, "mana" => character.Mana, _ => values.TryGetValue(key, out var value) && value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var number) ? number : 0 };
     private static int ResourceMax(Character character, string key) => key switch { "health" => character.MaxHealth, "sanity" => character.MaxSanity, "mana" => character.MaxMana, _ => 1 };
+    private static bool SpecializedRenderer(SystemDefinition? definition)
+    {
+        if (definition is null || definition.RendererMode == "layout") return false;
+        return definition.TemplateId switch
+        {
+            "ordem_paranormal" => definition.TemplateVersion is 1 or 2,
+            "dnd_5e" or "tormenta20" or "call_of_cthulhu_7e" => definition.TemplateVersion == 1,
+            _ => false
+        };
+    }
     private static Dictionary<string, string[]>? Validate(CharacterInput input)
     {
         var errors = new Dictionary<string, string[]>();

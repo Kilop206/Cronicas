@@ -68,6 +68,9 @@ assert.equal(cocValues.inteligencia_metade, 32);
 assert.equal(cocValues.inteligencia_quinto, 13);
 
 const order = templates.find(template => template.id === 'ordem_paranormal');
+assert.equal(order.version, 2, 'New Order templates are versioned without replacing existing sheets');
+assert.equal(resolveSheetRenderer({ ...dndSystem, templateId: order.id, templateVersion: 1, fields: order.fields, layout: order.layout })?.id, order.id, 'Existing Order v1 still resolves');
+assert.equal(resolveSheetRenderer({ ...dndSystem, templateId: order.id, templateVersion: 2, fields: order.fields, layout: order.layout })?.id, order.id, 'New Order v2 resolves');
 const orderValues = {};
 assert.equal(calculateSheet(order.fields, orderValues), null);
 assert.equal(orderValues.defesa, 11);

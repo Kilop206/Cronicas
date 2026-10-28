@@ -19,7 +19,7 @@ import { SheetCollectionFieldComponent } from './sheet-collection-field.componen
       <input *ngIf="field.type === 'boolean'" type="checkbox" [attr.aria-label]="field.label" [ngModel]="draft.fields[field.key] === true" (ngModelChange)="set($event)" [ngModelOptions]="{standalone:true}">
     </ng-container>
     <ng-template #value><strong *ngIf="field.type !== 'list' && field.type !== 'table'" class="field-value">{{ display() }}</strong></ng-template>
-    <app-sheet-collection-field *ngIf="field.type === 'list' || field.type === 'table'" [field]="field" [draft]="draft" [mode]="fieldMode()" (changed)="changed.emit()" />
+    <app-sheet-collection-field *ngIf="field.type === 'list' || field.type === 'table'" [field]="field" [draft]="draft" [campaignId]="campaignId" [mode]="fieldMode()" (changed)="changed.emit()" />
     <app-sheet-roll *ngIf="mode !== 'print' && field.rollExpression" [campaignId]="campaignId" [expression]="field.rollExpression" [values]="draft.fields" [label]="field.label" [compact]="style !== 'default'" [percentileTarget]="field.rollExpression === '1d100' ? percentileTarget() : null" />
   </div>`, styles: [`
     .system-field { min-width:0; display:grid; gap:5px; padding:10px 12px; border:1px solid var(--border); background:color-mix(in srgb,var(--surface) 88%,transparent); }
@@ -114,6 +114,7 @@ export class SystemResourceComponent {
         <section *ngIf="show('arquivo')" class="system-panel"><div class="system-section-title"><small>CASE FILE / 004</small><h3>Arquivo pessoal</h3></div><app-system-field [isMaster]="isMaster" [field]="field('condicoes')" [draft]="draft" [campaignId]="character.campaignId" [mode]="mode" (changed)="changed.emit()" /><app-character-inventory [character]="character" /><app-character-abilities [character]="character" /><app-character-history *ngIf="mode !== 'print'" [character]="character" (restored)="restored.emit($event)" /></section>
       </ng-container>
     </ng-container>
+    <section *ngIf="system.templateId === 'ordem_paranormal' && show('arsenal') && field('ataques')" class="system-panel order-combat"><div class="system-section-title"><small>ARQUIVO / 03A</small><h3>Proteção, ataques e rituais</h3></div><div class="system-fields-grid"><app-system-field [isMaster]="isMaster" *ngFor="let key of ['protecao','resistencias','carga_atual','carga_limite']" [field]="field(key)" [draft]="draft" [campaignId]="character.campaignId" [mode]="mode" (changed)="changed.emit()" /></div><app-system-field [isMaster]="isMaster" *ngFor="let key of ['proficiencias','ataques','rituais']" [field]="field(key)" [draft]="draft" [campaignId]="character.campaignId" [mode]="mode" (changed)="changed.emit()" /></section>
     <section *ngIf="extraFields().length && show('extras')" class="system-panel"><div class="system-section-title"><small>CRÔNICAS / CAMPANHA</small><h3>Campos da mesa</h3></div><div class="system-two-col"><app-system-field [isMaster]="isMaster" *ngFor="let item of extraFields()" [field]="item" [draft]="draft" [campaignId]="character.campaignId" [mode]="mode" (changed)="changed.emit()" /></div></section>
   </article>`, styles: [`
     .system-sheet { --system-accent:#a89b83; --system-tint:rgba(168,155,131,.08); color:var(--text); border:1px solid var(--border); background:linear-gradient(150deg,var(--system-tint),transparent 33%),var(--surface); overflow:hidden; }
@@ -147,6 +148,7 @@ export class SystemResourceComponent {
     .order-sheet .system-sheet-title h2 { font-family:var(--font-ui); font-weight:750; letter-spacing:.03em; }
     .order-dossier { background:repeating-linear-gradient(0deg,transparent 0 39px,rgba(196,90,96,.055) 40px); }
     .order-evidence .system-two-col { border-top:2px solid var(--system-accent); padding-top:12px; }
+    .order-combat { border-top:1px dashed var(--system-accent); background:linear-gradient(90deg,rgba(130,28,34,.11),transparent 40%); }
     .dnd-sheet { --system-accent:#c99769; --system-tint:rgba(185,133,76,.12); }
     .dnd-sheet .system-sheet-head { background:radial-gradient(circle at right top,rgba(201,151,105,.16),transparent 50%); }
     .dnd-hero .system-resources { border-block:1px solid var(--system-accent); padding-block:12px; }
@@ -171,7 +173,7 @@ export class SpecializedSheetComponent {
   @Output() changed = new EventEmitter<void>();
   @Output() restored = new EventEmitter<Character>();
   active = signal('');
-  extraFields() { const template = SHEET_TEMPLATES.find(item => item.id === this.system.templateId && item.version === this.system.templateVersion); if (!template) return []; const known = new Set(template.fields.map(field => field.key)); return this.system.fields.filter(field => !known.has(field.key)); }
+  extraFields() { const template = SHEET_TEMPLATES.find(item => item.id === this.system.templateId && item.version === this.system.templateVersion) || SHEET_TEMPLATES.find(item => item.id === this.system.templateId); if (!template) return []; const known = new Set(template.fields.map(field => field.key)); return this.system.fields.filter(field => !known.has(field.key)); }
   field(key: string) { return this.system.fields.find(item => item.key === key); }
   prefix(prefix: string) { return this.system.fields.filter(item => item.key.startsWith(prefix)); }
   tabs() {

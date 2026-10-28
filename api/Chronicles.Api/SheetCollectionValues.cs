@@ -39,6 +39,8 @@ public static class SheetCollectionValues
                     "text" => cell.Value.ValueKind == JsonValueKind.String && cell.Value.GetString()?.Length <= 300,
                     "number" => cell.Value.ValueKind == JsonValueKind.Number && cell.Value.TryGetInt32(out _),
                     "boolean" => cell.Value.ValueKind is JsonValueKind.True or JsonValueKind.False,
+                    "dice" => cell.Value.ValueKind == JsonValueKind.String && cell.Value.GetString() is { Length: <= 40 } expression
+                        && (expression.Length == 0 || DiceExpression.TryParse(expression, out _)),
                     _ => false
                 };
                 if (!valid) return false;

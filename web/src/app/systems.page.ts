@@ -74,7 +74,7 @@ export class SystemsPage implements OnInit {
               <label *ngIf="field.type === 'number'" class="wide">Rolagem do campo<input [name]="'roll' + i" [(ngModel)]="field.rollExpression" maxlength="80" placeholder="1d20+&#123;bonus&#125;" [disabled]="readonly()"><small>Ex.: 1d20+3 ou 1d20+&#123;bonus&#125;. O resultado aparece na campanha.</small></label>
               <label *ngIf="field.type === 'select'" class="wide">Opções separadas por vírgula<input [name]="'options' + i" [ngModel]="field.options?.join(', ') || ''" (ngModelChange)="field.options = parseOptions($event)" [disabled]="readonly()"></label></div>
               <label *ngIf="field.type === 'table'">Colunas da tabela<input [name]="'columns' + i" [ngModel]="columnLabels(field)" (ngModelChange)="setColumns(field,$event)" placeholder="Nome, Tipo, Custo" [disabled]="readonly()"><small>Separe os títulos por vírgula. Até 8 colunas; cada ficha pode adicionar até 30 linhas.</small></label>
-              <div *ngIf="field.type === 'table'" class="system-field-grid"><label *ngFor="let column of field.columns; let c=index">{{ column.label }}<select [name]="'columnType' + i + '_' + c" [(ngModel)]="column.type" [disabled]="readonly()"><option value="text">Texto</option><option value="number">Número</option><option value="boolean">Sim/não</option></select></label></div>
+              <div *ngIf="field.type === 'table'" class="system-field-grid"><label *ngFor="let column of field.columns; let c=index">{{ column.label }}<select [name]="'columnType' + i + '_' + c" [(ngModel)]="column.type" [disabled]="readonly()"><option value="text">Texto</option><option value="number">Número</option><option value="boolean">Sim/não</option><option value="dice">Rolagem de dados</option></select></label></div>
           </div></div>
           <label *ngIf="editorMode === 'json'">Campos em JSON<textarea name="json" [(ngModel)]="jsonDraft" rows="18" spellcheck="false" [disabled]="readonly()"></textarea><small>Use um array de campos com key, label, type, section, span, min, max, options, defaultValue, formula e rollExpression. Nenhum script é executado.</small></label>
           <app-sheet-layout-designer [layout]="layout" [fields]="fields" [readOnly]="readonly()" (layoutChange)="layout = $event" (pageSelected)="selectedPreviewPage = $event" />
@@ -204,7 +204,7 @@ export class SystemEditorPage implements OnInit {
         && (field.options == null || Array.isArray(field.options))
         && (field.formula == null || typeof field.formula === 'string')
         && (field.rollExpression == null || typeof field.rollExpression === 'string')
-        && (field.defaultValue == null || ['string', 'number', 'boolean'].includes(typeof field.defaultValue)))) throw new Error();
+        && (field.defaultValue == null || ['string', 'number', 'boolean'].includes(typeof field.defaultValue) || Array.isArray(field.defaultValue)))) throw new Error();
       this.fields = parsed as SystemField[]; this.error.set(''); return true;
     } catch { this.error.set('Definição JSON inválida. Informe um array de até 100 campos tipados.'); return false; }
   }

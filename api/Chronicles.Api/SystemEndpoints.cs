@@ -168,7 +168,7 @@ public static class SystemEndpoints
                 || field.Type == "select" && (field.Options is null || field.Options.Length is < 1 or > 30 || field.Options.Any(x => string.IsNullOrWhiteSpace(x) || x.Length > 80))
                 || field.Type == "table" && (field.Columns is null || field.Columns.Length is < 1 or > 8
                     || field.Columns.Any(column => column is null || column.Key is null || !KeyPattern.IsMatch(column.Key)
-                        || column.Label?.Trim().Length is not (>= 2 and <= 80) || column.Type is not ("text" or "number" or "boolean"))
+                        || column.Label?.Trim().Length is not (>= 2 and <= 80) || column.Type is not ("text" or "number" or "boolean" or "dice"))
                     || field.Columns.Select(column => column.Key).Distinct(StringComparer.Ordinal).Count() != field.Columns.Length)
                 || field.Type != "table" && field.Columns is { Length: > 0 }
                 || field.EditRole is not (null or "both" or "gm")
