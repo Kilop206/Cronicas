@@ -137,12 +137,16 @@ const sheetLayout = { accentColor: '#8d6c9e', skin: 'investigation', pages: [{ i
   { id: 'identidade', kind: 'identity', span: 8, title: 'Identidade', key: null, text: null, style: 'plain' },
   { id: 'coragem', kind: 'resource', span: 4, title: 'Coragem', key: 'coragem', maxKey: 'maxHealth', text: null, style: 'accent' }
 ] }] };
-const systemInput = { name: 'Arquivo das Marés', description: 'Sistema autoral de teste', layout: sheetLayout, fields: [
+const systemInput = { name: 'Arquivo das Marés', description: 'Sistema autoral de teste', layout: sheetLayout, npcTemplates: [
+  { id: 'informante', name: 'Informante', appearance: '', personality: '', motivation: 'Conhece uma pista', relationships: '', location: '', status: 'active', visibility: 'gm', health: 5, maxHealth: 5 }
+], fields: [
   { key: 'coragem', label: 'Coragem', type: 'number', section: 'Atributos', min: 0, max: 10, options: null, span: 4 },
   { key: 'origem', label: 'Origem', type: 'text', section: 'Identidade', min: null, max: null, options: null, span: 12 }
 ] };
 const customSystem = await request('/api/systems', { method: 'POST', cookie: ownerCookie, body: systemInput });
-expect(customSystem.status === 201 && customSystem.body.fields.length === 2 && customSystem.body.fields[0].span === 4 && customSystem.body.layout.pages[0].blocks[1].key === 'coragem' && customSystem.body.layout.skin === 'investigation', 'Custom typed system and layout persisted');
+expect(customSystem.status === 201 && customSystem.body.fields.length === 2 && customSystem.body.fields[0].span === 4 && customSystem.body.layout.pages[0].blocks[1].key === 'coragem' && customSystem.body.layout.skin === 'investigation' && customSystem.body.npcTemplates[0].id === 'informante', 'Custom typed system, NPC template and layout persisted');
+const invalidNpcTemplate = await request('/api/systems', { method: 'POST', cookie: ownerCookie, body: { ...systemInput, npcTemplates: [{ ...systemInput.npcTemplates[0], health: 7, maxHealth: 5 }] } });
+expect(invalidNpcTemplate.status === 400, 'NPC template health is validated');
 const invalidLayout = await request('/api/systems', { method: 'POST', cookie: ownerCookie, body: { ...systemInput, fields: [{ ...systemInput.fields[0], span: 13 }] } });
 expect(invalidLayout.status === 400, 'System layout width is validated');
 const invalidBlock = await request('/api/systems', { method: 'POST', cookie: ownerCookie, body: { ...systemInput, layout: { ...sheetLayout, pages: [{ ...sheetLayout.pages[0], blocks: [{ id: 'ruim', kind: 'resource', span: 6, key: 'coragem', maxKey: 'ausente' }] }] } } });

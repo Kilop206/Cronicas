@@ -32,7 +32,8 @@ export interface SheetBlock { id: string; kind: 'identity' | 'portrait' | 'resou
 export interface SheetPage { id: string; title: string; blocks: SheetBlock[]; layoutMode?: 'grid' | 'canvas' | null; backgroundUrl?: string | null; aspectRatio?: number | null; }
 export interface SheetLayout { accentColor: string; pages: SheetPage[]; skin?: 'archive' | 'investigation' | 'fantasy' | 'mythic' | null; headerLabel?: string | null; fontStyle?: 'editorial' | 'modern' | 'typewriter' | null; density?: 'comfortable' | 'compact' | null; borderStyle?: 'soft' | 'sharp' | 'ornate' | null; }
 export interface SystemRevision { revision: number; savedAt: string; name: string; }
-export interface RpgSystem { id: string; ownerId: string | null; name: string; description: string; fields: SystemField[]; layout: SheetLayout | null; templateId: string | null; templateVersion: number; rulesetVersion: string | null; rendererMode: 'specialized' | 'layout' | null; revision: number; revisions: SystemRevision[]; createdAt: string; updatedAt: string; }
+export interface NpcTemplate { id: string; name: string; appearance: string; personality: string; motivation: string; relationships: string; location: string; status: Npc['status']; visibility: Npc['visibility']; health: number; maxHealth: number; }
+export interface RpgSystem { id: string; ownerId: string | null; name: string; description: string; fields: SystemField[]; layout: SheetLayout | null; templateId: string | null; templateVersion: number; rulesetVersion: string | null; rendererMode: 'specialized' | 'layout' | null; revision: number; revisions: SystemRevision[]; npcTemplates: NpcTemplate[]; createdAt: string; updatedAt: string; }
 export interface CampaignMember { userId: string; displayName: string; role: string; joinedAt: string; }
 export interface World { id: string; ownerId: string; name: string; description: string; createdAt: string; updatedAt: string; }
 export interface WorldDetail extends World { campaigns: { campaignId: string; name: string; role: string }[]; }
@@ -120,8 +121,8 @@ export class ApiService {
   deleteEncounter(id: string) { return this.http.delete<void>(`/api/encounters/${id}`, { withCredentials: true }); }
   systems() { return this.http.get<RpgSystem[]>('/api/systems', { withCredentials: true }); }
   system(id: string) { return this.http.get<RpgSystem>(`/api/systems/${id}`, { withCredentials: true }); }
-  createSystem(data: Pick<RpgSystem, 'name' | 'description' | 'fields' | 'layout' | 'templateId' | 'templateVersion' | 'rulesetVersion' | 'rendererMode'>) { return this.http.post<RpgSystem>('/api/systems', data, { withCredentials: true }); }
-  updateSystem(id: string, data: Pick<RpgSystem, 'name' | 'description' | 'fields' | 'layout' | 'templateId' | 'templateVersion' | 'rulesetVersion' | 'rendererMode' | 'revision'> & { fieldRenames?: Record<string, string> }) { return this.http.put<RpgSystem>(`/api/systems/${id}`, data, { withCredentials: true }); }
+  createSystem(data: Pick<RpgSystem, 'name' | 'description' | 'fields' | 'layout' | 'templateId' | 'templateVersion' | 'rulesetVersion' | 'rendererMode' | 'npcTemplates'>) { return this.http.post<RpgSystem>('/api/systems', data, { withCredentials: true }); }
+  updateSystem(id: string, data: Pick<RpgSystem, 'name' | 'description' | 'fields' | 'layout' | 'templateId' | 'templateVersion' | 'rulesetVersion' | 'rendererMode' | 'revision' | 'npcTemplates'> & { fieldRenames?: Record<string, string> }) { return this.http.put<RpgSystem>(`/api/systems/${id}`, data, { withCredentials: true }); }
   restoreSystemRevision(id: string, revision: number, expectedRevision: number) { return this.http.post<RpgSystem>(`/api/systems/${id}/revisions/${revision}/restore`, { expectedRevision }, { withCredentials: true }); }
   deleteSystem(id: string) { return this.http.delete<void>(`/api/systems/${id}`, { withCredentials: true }); }
   characters(campaignId: string) { return this.http.get<Character[]>(`/api/campaigns/${campaignId}/characters`, { withCredentials: true }); }

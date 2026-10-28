@@ -28,6 +28,8 @@ Fórmulas são analisadas por `SheetFormula`; não executam JavaScript. Express�
 
 ## Versionamento, migração e dados
 
+O editor do sistema também guarda até 12 modelos de NPC simplificado no mesmo esquema versionado. O mestre escolhe um deles ao criar um NPC, preenchendo aparência, personalidade, motivação, relações, localização, vida e visibilidade. Os segredos não fazem parte do modelo compartilhado e são escritos no NPC com a permissão de mestre.
+
 Atualizações do sistema exigem a revisão atual; a API guarda um snapshot anterior e permite restaurar uma revisão. É possível informar renomeações explícitas de chaves. `SheetSchemaMigration` valida cada valor, remapeia as chaves indicadas, recalcula fórmulas e registra as mudanças nos históricos dos personagens. Valores de campos removidos continuam guardados, permitindo recuperação manual futura. O editor exporta/importa a definição JSON; a ficha exporta/importa os seus dados em JSON vinculados ao ID do sistema. Importar dados aciona o salvamento automático e a validação do servidor.
 
 O personagem é salvo com debounce de 900 ms e versão otimista. Um conflito de versão não sobrescreve silenciosamente a edição de outra pessoa: a API responde 409 e o editor informa o erro. Recursos, condições e coleções ficam nos campos persistidos da ficha. O histórico de personagem permite recuperar revisões autorizadas. Teste migrações em um sistema de campanha antes de mudar chaves de campos que já têm dados.

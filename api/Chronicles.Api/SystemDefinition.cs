@@ -13,10 +13,13 @@ public sealed record SheetLayout(string AccentColor, SheetPage[] Pages, string? 
     string? FontStyle = null, string? Density = null, string? BorderStyle = null);
 public sealed record SystemRevision(int Revision, DateTime SavedAt, string Name, string Description,
     SystemField[] Fields, SheetLayout? Layout, string? TemplateId, int TemplateVersion,
-    string? RulesetVersion, string? RendererMode);
+    string? RulesetVersion, string? RendererMode, NpcTemplate[]? NpcTemplates = null);
+public sealed record NpcTemplate(string Id, string Name, string? Appearance = null, string? Personality = null,
+    string? Motivation = null, string? Relationships = null, string? Location = null,
+    string? Status = null, string? Visibility = null, int? Health = null, int? MaxHealth = null);
 public sealed record SystemDefinition(SystemField[] Fields, SheetLayout? Layout, string? TemplateId = null,
     int TemplateVersion = 1, string? RulesetVersion = null, string? RendererMode = null,
-    int Revision = 1, SystemRevision[]? History = null)
+    int Revision = 1, SystemRevision[]? History = null, NpcTemplate[]? NpcTemplates = null)
 {
     private static readonly Regex IdPattern = new("^[a-z][a-z0-9_]{1,39}$", RegexOptions.Compiled | RegexOptions.CultureInvariant);
     private static readonly Regex ColorPattern = new("^#[0-9a-fA-F]{6}$", RegexOptions.Compiled | RegexOptions.CultureInvariant);

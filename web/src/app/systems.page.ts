@@ -3,7 +3,7 @@ import { Component, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
-import { ApiService, RpgSystem, SheetLayout, SystemField, SystemRevision, apiError } from './api';
+import { ApiService, NpcTemplate, RpgSystem, SheetLayout, SystemField, SystemRevision, apiError } from './api';
 import { SheetLayoutDesignerComponent, SheetLayoutPreviewComponent } from './sheet-layout-designer.component';
 import { SHEET_TEMPLATES } from './system-templates';
 import { canAssociateTemplate } from './sheet-renderer-registry';
@@ -79,6 +79,9 @@ export class SystemsPage implements OnInit {
           <label *ngIf="editorMode === 'json'">Campos em JSON<textarea name="json" [(ngModel)]="jsonDraft" rows="18" spellcheck="false" [disabled]="readonly()"></textarea><small>Use um array de campos com key, label, type, section, span, min, max, options, defaultValue, formula e rollExpression. Nenhum script é executado.</small></label>
           <app-sheet-layout-designer [layout]="layout" [fields]="fields" [readOnly]="readonly()" (layoutChange)="layout = $event" (pageSelected)="selectedPreviewPage = $event" />
         </div>
+        <details *ngIf="!readonly()" class="layout-json"><summary>Modelos de NPC simplificado · {{ npcTemplates.length }}</summary><p>O mestre pode preencher um NPC a partir destes modelos. O conteúdo do modelo é visível aos participantes do sistema; segredos são escritos apenas no NPC.</p><button type="button" class="button button-small secondary" [disabled]="npcTemplates.length >= 12" (click)="addNpcTemplate()">Adicionar modelo de NPC</button>
+          <div *ngFor="let npc of npcTemplates; let n=index" class="editor-panel"><label>Nome do modelo<input [name]="'npcName' + n" [(ngModel)]="npc.name" required minlength="2" maxlength="80"></label><label>Aparência<textarea [name]="'npcAppearance' + n" [(ngModel)]="npc.appearance" maxlength="2000" rows="2"></textarea></label><label>Personalidade<textarea [name]="'npcPersonality' + n" [(ngModel)]="npc.personality" maxlength="2000" rows="2"></textarea></label><label>Motivação<textarea [name]="'npcMotivation' + n" [(ngModel)]="npc.motivation" maxlength="2000" rows="2"></textarea></label><label>Relações<textarea [name]="'npcRelations' + n" [(ngModel)]="npc.relationships" maxlength="2000" rows="2"></textarea></label><label>Localização<input [name]="'npcLocation' + n" [(ngModel)]="npc.location" maxlength="160"></label><div class="resource-fields"><label>Vida inicial<input type="number" [name]="'npcHealth' + n" [(ngModel)]="npc.health" min="0" [max]="npc.maxHealth"></label><label>Vida máxima<input type="number" [name]="'npcMaxHealth' + n" [(ngModel)]="npc.maxHealth" min="1" max="9999"></label></div><label>Visibilidade<select [name]="'npcVisibility' + n" [(ngModel)]="npc.visibility"><option value="gm">Somente mestres</option><option value="campaign">Campanha</option></select></label><button type="button" class="text-link danger" (click)="removeNpcTemplate(n)">Remover modelo</button></div>
+        </details>
         <p *ngIf="readonly()" class="room-note">Você pode consultar este sistema porque participa de uma campanha que o usa.</p>
         <div *ngIf="!readonly()" class="form-actions"><button type="button" class="button button-small secondary" (click)="exportTemplate()">Exportar modelo JSON</button><label class="button button-small secondary" style="cursor:pointer">Importar modelo JSON<input type="file" accept="application/json,.json" (change)="importTemplate($event)" hidden></label></div>
         <details *ngIf="!isNew && revisions.length" class="layout-json"><summary>Histórico do modelo · revisão {{ revision }}</summary><div *ngFor="let item of revisions" class="sheet-read-row"><span>Revisão {{ item.revision }} · {{ item.name }} · {{ item.savedAt | date:'short' }}</span><button type="button" class="button button-small secondary" [disabled]="busy() || readonly()" (click)="restoreRevision(item.revision)">Restaurar</button></div></details>
@@ -119,13 +122,16 @@ export class SystemEditorPage implements OnInit {
   templates = SHEET_TEMPLATES;
   name = ''; description = ''; preset = 'blank'; mode: 'free' | 'structured' = 'structured'; editorMode: 'visual' | 'json' = 'visual'; jsonDraft = '[]';
   templateId: string | null = null; templateVersion = 1; rulesetVersion: string | null = null;
+  npcTemplates: NpcTemplate[] = [];
   rendererMode: 'specialized' | 'layout' = 'specialized'; revision = 1; revisions: SystemRevision[] = [];
   private originalFieldKeys = new Set<string>(); private fieldRenames: Record<string, string> = {};
   layout = newSheetLayout();
   selectedPreviewPage = 'principal';
   fields: SystemField[] = []; loading = signal(!this.isNew); busy = signal(false); saved = signal(false); error = signal('');
   ngOnInit() { if (this.isNew) { const preset = this.route.snapshot.queryParamMap.get('preset'); if (preset) this.applyPreset(preset); return; } this.api.system(this.id).pipe(finalize(() => this.loading.set(false))).subscribe({ next: system => this.useSystem(system), error: e => this.error.set(apiError(e)) }); }
-  private useSystem(system: RpgSystem) { this.name = system.name; this.description = system.description; this.fields = system.fields.map(f => ({ ...f, span: f.span || 6, options: f.options?.slice() || null })); this.layout = system.layout || layoutFromFields(this.fields); this.selectedPreviewPage = this.layout.pages[0].id; this.mode = (system.layout || this.fields.length) ? 'structured' : 'free'; this.ownerId = system.ownerId; this.templateId = system.templateId; this.templateVersion = system.templateVersion || 1; this.rulesetVersion = system.rulesetVersion; this.rendererMode = system.rendererMode || 'specialized'; this.revision = system.revision || 1; this.revisions = system.revisions || []; this.originalFieldKeys = new Set(system.fields.map(field => field.key)); this.fieldRenames = {}; }
+  private useSystem(system: RpgSystem) { this.name = system.name; this.description = system.description; this.fields = system.fields.map(f => ({ ...f, span: f.span || 6, options: f.options?.slice() || null })); this.layout = system.layout || layoutFromFields(this.fields); this.selectedPreviewPage = this.layout.pages[0].id; this.mode = (system.layout || this.fields.length) ? 'structured' : 'free'; this.ownerId = system.ownerId; this.templateId = system.templateId; this.templateVersion = system.templateVersion || 1; this.rulesetVersion = system.rulesetVersion; this.rendererMode = system.rendererMode || 'specialized'; this.revision = system.revision || 1; this.revisions = system.revisions || []; this.npcTemplates = structuredClone(system.npcTemplates || []); this.originalFieldKeys = new Set(system.fields.map(field => field.key)); this.fieldRenames = {}; }
+  addNpcTemplate() { if (this.npcTemplates.length >= 12) return; let number = 1; while (this.npcTemplates.some(item => item.id === `npc_${number}`)) number++; this.npcTemplates.push({ id: `npc_${number}`, name: 'Novo modelo', appearance: '', personality: '', motivation: '', relationships: '', location: '', status: 'active', visibility: 'gm', health: 10, maxHealth: 10 }); }
+  removeNpcTemplate(index: number) { this.npcTemplates.splice(index, 1); }
   readonly() { return !this.isNew && this.ownerId !== this.api.user()?.id; }
   matchingTemplate() { return this.templates.find(template => template.id === this.templateId && template.version === this.templateVersion) || null; }
   compatibleTemplates() { return this.templates.filter(template => canAssociateTemplate(template.id, this.fields)); }
@@ -213,14 +219,14 @@ export class SystemEditorPage implements OnInit {
     if (this.mode === 'structured' && this.editorMode === 'json' && !this.parseJson()) return;
     this.busy.set(true);
     const fields = this.mode === 'free' ? [] : this.fields.map(f => ({ ...f, options: f.type === 'select' ? f.options : null, min: f.type === 'number' ? f.min : null, max: f.type === 'number' ? f.max : null, columns: f.type === 'table' ? f.columns : null, defaultValue: f.formula ? null : f.defaultValue ?? null }));
-    const payload = { name: this.name, description: this.description, fields, layout: this.mode === 'structured' ? this.layout : null, templateId: this.mode === 'free' ? null : this.templateId, templateVersion: this.templateVersion, rulesetVersion: this.rulesetVersion, rendererMode: this.rendererMode, revision: this.revision, fieldRenames: this.fieldRenames };
+    const payload = { name: this.name, description: this.description, fields, layout: this.mode === 'structured' ? this.layout : null, templateId: this.mode === 'free' ? null : this.templateId, templateVersion: this.templateVersion, rulesetVersion: this.rulesetVersion, rendererMode: this.rendererMode, revision: this.revision, fieldRenames: this.fieldRenames, npcTemplates: this.npcTemplates };
     const request = this.isNew ? this.api.createSystem(payload) : this.api.updateSystem(this.id, payload);
     request.pipe(finalize(() => this.busy.set(false))).subscribe({ next: system => { this.useSystem(system); this.saved.set(true); this.id = system.id; this.isNew = false; void this.router.navigate(['/systems', system.id], { replaceUrl: true }); }, error: e => this.error.set(apiError(e)) });
   }
   exportTemplate() {
     const payload = { format: 'cronicas.sheet-template', formatVersion: 1, name: this.name, description: this.description,
       templateId: this.templateId, templateVersion: this.templateVersion, rulesetVersion: this.rulesetVersion,
-      rendererMode: this.rendererMode, fields: this.mode === 'free' ? [] : this.fields,
+      rendererMode: this.rendererMode, fields: this.mode === 'free' ? [] : this.fields, npcTemplates: this.npcTemplates,
       layout: this.mode === 'free' ? null : this.layout };
     const blob = new Blob([JSON.stringify(payload, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob);
@@ -257,6 +263,7 @@ export class SystemEditorPage implements OnInit {
       this.templateVersion = typeof model['templateVersion'] === 'number' ? model['templateVersion'] : 1;
       this.rulesetVersion = typeof model['rulesetVersion'] === 'string' ? model['rulesetVersion'] : null;
       this.rendererMode = model['rendererMode'] === 'specialized' && this.templateId ? 'specialized' : 'layout';
+      this.npcTemplates = Array.isArray(model['npcTemplates']) && model['npcTemplates'].length <= 12 ? model['npcTemplates'] as NpcTemplate[] : [];
       this.editorMode = 'visual'; this.saved.set(false); this.error.set('');
     } catch { this.error.set('Arquivo de modelo inválido. Importe um JSON exportado pelo Crônicas.'); }
   }

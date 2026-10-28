@@ -50,7 +50,8 @@ public static class SystemEndpoints
             var errors = Validate(input);
             if (errors.Count > 0) return Results.ValidationProblem(errors);
             var history = (previous.History ?? []).Append(Snapshot(system, previous)).TakeLast(10).ToArray();
-            var next = Definition(input) with { Revision = previous.Revision + 1, History = history };
+            var next = Definition(input) with { Revision = previous.Revision + 1, History = history,
+                NpcTemplates = input.NpcTemplates ?? previous.NpcTemplates };
             var renames = input.FieldRenames ?? new Dictionary<string, string>();
             if (renames.Count > 100 || renames.Values.Distinct(StringComparer.Ordinal).Count() != renames.Count
                 || renames.Any(pair => pair.Key == pair.Value
@@ -104,7 +105,7 @@ public static class SystemEndpoints
             var history = (current.History ?? []).Append(Snapshot(system, current)).TakeLast(10).ToArray();
             system.Name = target.Name; system.Description = target.Description;
             system.SchemaJson = JsonSerializer.Serialize(new SystemDefinition(target.Fields, target.Layout, target.TemplateId,
-                target.TemplateVersion, target.RulesetVersion, target.RendererMode, current.Revision + 1, history));
+                target.TemplateVersion, target.RulesetVersion, target.RendererMode, current.Revision + 1, history, target.NpcTemplates));
             system.UpdatedAt = DateTime.UtcNow;
             try { await db.SaveChangesAsync(); }
             catch (DbUpdateConcurrencyException) { return Results.Conflict(new { message = "O modelo mudou. Recarregue antes de restaurar." }); }
@@ -136,16 +137,16 @@ public static class SystemEndpoints
 
     private static Guid? UserId(HttpContext http) => Guid.TryParse(http.User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : null;
     private static SystemDefinition Definition(SystemInput input) => new(input.Fields, input.Layout, input.TemplateId,
-        input.TemplateVersion, input.RulesetVersion, input.RendererMode);
+        input.TemplateVersion, input.RulesetVersion, input.RendererMode, NpcTemplates: input.NpcTemplates);
     private static SystemRevision Snapshot(RpgSystem system, SystemDefinition definition) => new(definition.Revision,
         system.UpdatedAt, system.Name, system.Description, definition.Fields, definition.Layout,
-        definition.TemplateId, definition.TemplateVersion, definition.RulesetVersion, definition.RendererMode);
+        definition.TemplateId, definition.TemplateVersion, definition.RulesetVersion, definition.RendererMode, definition.NpcTemplates);
     private static object View(RpgSystem system)
     {
         var definition = SystemDefinition.Read(system.SchemaJson);
         return new { system.Id, system.OwnerId, system.Name, system.Description, fields = definition.Fields, layout = definition.Layout,
             definition.TemplateId, definition.TemplateVersion, definition.RulesetVersion, definition.RendererMode,
-            definition.Revision, revisions = (definition.History ?? []).Select(item => new { item.Revision, item.SavedAt, item.Name }),
+            definition.Revision, npcTemplates = definition.NpcTemplates ?? [], revisions = (definition.History ?? []).Select(item => new { item.Revision, item.SavedAt, item.Name }),
             system.CreatedAt, system.UpdatedAt };
     }
     private static Dictionary<string, string[]> Validate(SystemInput input)
@@ -156,6 +157,15 @@ public static class SystemEndpoints
             || input.RulesetVersion is not null && input.RulesetVersion.Length > 40)
             errors["template"] = ["Identificador ou versao do modelo invalidos."];
         if (input.RendererMode is not (null or "specialized" or "layout")) errors["rendererMode"] = ["Modo de ficha invalido."];
+        if (input.NpcTemplates is { } templates && (templates.Length > 12 || templates.Any(template => template is null || template.Id is null || !KeyPattern.IsMatch(template.Id)
+            || template.Name?.Trim().Length is not (>= 2 and <= 80) || template.Appearance?.Length > 2000 || template.Personality?.Length > 2000
+            || template.Motivation?.Length > 2000 || template.Relationships?.Length > 2000 || template.Location?.Length > 160
+            || template.Status is not (null or "active" or "missing" or "deceased" or "unknown")
+            || template.Visibility is not (null or "gm" or "campaign") || template.MaxHealth is < 1 or > 9999
+            || template.Health is < 0 or > 9999 || template.Health > template.MaxHealth
+            || (template.Health is null) != (template.MaxHealth is null))
+            || templates.Select(template => template.Id).Distinct(StringComparer.Ordinal).Count() != templates.Length))
+            errors["npcTemplates"] = ["Modelo de NPC inválido ou repetido."];
         if (input.Name?.Trim().Length is not (>= 3 and <= 120) || input.Description is null || input.Description.Length > 2000) errors["system"] = ["Nome ou descrição inválidos."];
         if (input.Fields is null || input.Fields.Length > 100) { errors["fields"] = ["Defina até 100 campos."]; return errors; }
         var keys = new HashSet<string>(StringComparer.Ordinal);
@@ -201,7 +211,8 @@ public static class SystemEndpoints
     }
     public sealed record SystemInput(string Name, string Description, SystemField[] Fields, SheetLayout? Layout = null,
         string? TemplateId = null, int TemplateVersion = 1, string? RulesetVersion = null,
-        string? RendererMode = null, int? Revision = null, Dictionary<string, string>? FieldRenames = null);
+        string? RendererMode = null, int? Revision = null, Dictionary<string, string>? FieldRenames = null,
+        NpcTemplate[]? NpcTemplates = null);
     public sealed record RestoreSystemInput(int ExpectedRevision);
     public sealed record SetSystemInput(Guid? SystemId);
 }

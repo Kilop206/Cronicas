@@ -92,6 +92,9 @@ var versioned = new SystemDefinition([field], layout, "dnd_5e", 1, "2024", "spec
 var versionedCopy = SystemDefinition.Read(System.Text.Json.JsonSerializer.Serialize(versioned));
 Check(versionedCopy.TemplateId == "dnd_5e" && versionedCopy.TemplateVersion == 1 && versionedCopy.Revision == 2
     && versionedCopy.History?.Length == 1, "Identidade estavel e historico do modelo persistem");
+var npcModel = new NpcTemplate("informante", "Informante", Motivation: "Conhece uma pista", Visibility: "gm", Health: 5, MaxHealth: 5);
+var withNpcs = versioned with { NpcTemplates = [npcModel] };
+Check(SystemDefinition.Read(System.Text.Json.JsonSerializer.Serialize(withNpcs)).NpcTemplates?.Single().Id == "informante", "Modelos de NPC persistem no sistema versionado");
 var listField = new SystemField("condicoes", "Condicoes", "list", "Combate", null, null, null);
 var tableField = new SystemField("ataques", "Ataques", "table", "Combate", null, null, null,
     Columns: [new SystemColumn("nome", "Nome", "text"), new SystemColumn("bonus", "Bonus", "number")]);

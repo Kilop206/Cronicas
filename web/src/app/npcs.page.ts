@@ -3,7 +3,7 @@ import { Component, OnDestroy, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
-import { ApiService, Npc, NpcInput, Page, apiError } from './api';
+import { ApiService, Npc, NpcInput, NpcTemplate, Page, apiError } from './api';
 
 const blankNpc = (): NpcInput => ({
   name: '', portraitUrl: null, appearance: '', personality: '', motivation: '', relationships: '',
@@ -27,6 +27,7 @@ const blankNpc = (): NpcInput => ({
       <button *ngIf="master()" type="button" class="button button-small secondary" (click)="edit(npc)">Editar NPC</button>
     </section>
     <form *ngIf="editing()" class="editor-panel narrative-detail" (ngSubmit)="save()" #form="ngForm"><div class="panel-heading"><span>SOMENTE MESTRES</span><h2>{{ editingId ? 'Editar NPC' : 'Novo NPC' }}</h2></div>
+      <label *ngIf="!editingId && npcTemplates().length">Modelo do sistema<select name="npcTemplate" [ngModel]="selectedTemplate" (ngModelChange)="applyNpcTemplate($event)"><option value="">Ficha em branco</option><option *ngFor="let template of npcTemplates()" [value]="template.id">{{ template.name }}</option></select></label>
       <label>Nome<input name="name" [(ngModel)]="draft.name" required minlength="2" maxlength="120"></label>
       <label>URL HTTPS do retrato<input name="portraitUrl" [(ngModel)]="draft.portraitUrl" type="url" maxlength="2048" placeholder="https://..."></label>
       <label>Aparência<textarea name="appearance" [(ngModel)]="draft.appearance" rows="3" maxlength="2000"></textarea></label>
@@ -53,11 +54,12 @@ export class NpcsPage implements OnInit, OnDestroy {
   private api = inject(ApiService); private route = inject(ActivatedRoute);
   campaignId = this.route.snapshot.paramMap.get('id')!;
   page = signal<Page<Npc> | null>(null); selected = signal<Npc | null>(null); master = signal(false);
+  npcTemplates = signal<NpcTemplate[]>([]); selectedTemplate = '';
   loading = signal(true); busy = signal(false); editing = signal(false); error = signal('');
   pageNumber = 1; search = ''; draft = blankNpc(); editingId: string | null = null;
   private searchTimer?: ReturnType<typeof setTimeout>;
   ngOnInit() {
-    this.api.campaign(this.campaignId).subscribe({ next: campaign => this.master.set(['owner', 'gm', 'co-gm'].includes(campaign.role)), error: error => this.error.set(apiError(error)) });
+    this.api.campaign(this.campaignId).subscribe({ next: campaign => { const master = ['owner', 'gm', 'co-gm'].includes(campaign.role); this.master.set(master); if (master && campaign.systemId) this.api.system(campaign.systemId).subscribe({ next: system => this.npcTemplates.set(system.npcTemplates || []), error: error => this.error.set(apiError(error)) }); }, error: error => this.error.set(apiError(error)) });
     this.load();
     const npcId = this.route.snapshot.queryParamMap.get('npc');
     if (npcId) this.select(npcId);
@@ -67,7 +69,8 @@ export class NpcsPage implements OnInit, OnDestroy {
   searchChanged() { clearTimeout(this.searchTimer); this.searchTimer = setTimeout(() => { this.pageNumber = 1; this.load(); }, 250); }
   changePage(step: number) { this.pageNumber += step; this.load(); }
   select(id: string) { this.error.set(''); this.editing.set(false); this.api.npc(id).subscribe({ next: npc => this.selected.set(npc), error: error => this.error.set(apiError(error)) }); }
-  newNpc() { this.editingId = null; this.selected.set(null); this.draft = blankNpc(); this.editing.set(true); this.error.set(''); }
+  newNpc() { this.editingId = null; this.selected.set(null); this.draft = blankNpc(); this.selectedTemplate = ''; this.editing.set(true); this.error.set(''); }
+  applyNpcTemplate(id: string) { this.selectedTemplate = id; const template = this.npcTemplates().find(item => item.id === id); const name = this.draft.name, portraitUrl = this.draft.portraitUrl; this.draft = template ? { ...blankNpc(), appearance: template.appearance || '', personality: template.personality || '', motivation: template.motivation || '', relationships: template.relationships || '', location: template.location || '', status: template.status || 'active', visibility: template.visibility || 'gm', health: template.health ?? 10, maxHealth: template.maxHealth ?? 10, name, portraitUrl } : { ...blankNpc(), name, portraitUrl }; }
   edit(npc: Npc) { this.editingId = npc.id; this.draft = { name: npc.name, portraitUrl: npc.portraitUrl, appearance: npc.appearance, personality: npc.personality, motivation: npc.motivation, relationships: npc.relationships, location: npc.location, secrets: npc.secrets ?? '', status: npc.status, visibility: npc.visibility, health: npc.health, maxHealth: npc.maxHealth, version: npc.version }; this.editing.set(true); this.error.set(''); }
   save() {
     if (!this.master()) return;
