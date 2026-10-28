@@ -6,11 +6,15 @@ Capturas reais do Angular local em Chrome headless, feitas com `web/visual-valid
 | --- | --- | --- | --- | --- |
 | Ordem Paranormal | [desktop](ordem-desktop.png) | [amplo](ordem-wide.png) | [tablet](ordem-tablet.png) | [mobile](ordem-mobile.png) |
 | D&D 5e | [desktop](dnd-desktop.png) | [amplo](dnd-wide.png) | [tablet](dnd-tablet.png) | [mobile](dnd-mobile.png) |
+| Call of Cthulhu 7e | [desktop](coc-desktop.png) | [amplo](coc-wide.png) | [tablet](coc-tablet.png) | [mobile](coc-mobile.png) |
+| Tormenta20 | [desktop](t20-desktop.png) | [amplo](t20-wide.png) | [tablet](t20-tablet.png) | [mobile](t20-mobile.png) |
 
 ## Comparação estrutural
 
 - **Ordem Paranormal:** a imagem pública indexada do C.R.I.S. orientou a roda de cinco atributos interligados, barras de Vida/Sanidade/Esforço e perícias compactas em coluna à direita. A implementação mantém esse eixo visual e acrescenta controles próprios do Crônicas. No celular, a coluna de perícias passa abaixo dos recursos e pode rolar horizontalmente dentro da tabela.
 - **D&D 5e:** a imagem pública indexada do D&D Beyond e a ficha oficial de 2024 orientaram o cabeçalho curto, seis caixas de atributo, resistências à esquerda, perícias no centro e combate à direita. No celular, o painel de combate sobe antes das listas para manter HP e AC acessíveis.
+- **Call of Cthulhu 7e:** a [ficha oficial da Chaosium](https://www.chaosium.com/content/FreePDFs/CoC/Character%20Sheets/V2/CoC7%20PC%20Sheet%20-%20Auto-Fill%20-%201920s%20-%20Standard%20-%20Color.pdf) orientou o dossiê de investigador, características com metade e quinto, recursos de sanidade/sorte e perícias percentuais. A implementação usa um layout documental próprio, com teste percentual e dados de bônus ou penalidade.
+- **Tormenta20:** a [ficha oficial da Jambô](https://jamboeditora.com.br/wp-content/uploads/2023/07/Tormenta20-Jogo-do-Ano-Ficha.pdf) orientou identidade, modificadores de atributo, PV/PM, Defesa, ataques e perícias. O template persistido atual contém o total de cada perícia; sua decomposição em treino, atributo e nível ainda não é armazenada.
 - Em ambas, a ficha começa abaixo da navegação global do Crônicas. A página não tem rolagem horizontal em nenhuma das quatro resoluções.
 
 Os URLs diretos dos screenshots solicitados de C.R.I.S. e D&D Beyond retornaram erro de conexão em 28/10/2026. Não há comparação de pixels lado a lado com os arquivos originais nem alegação de equivalência visual exata. Foram consultadas as imagens indexadas e as fichas oficiais: [Ordem Paranormal](https://jamboeditora.com.br/wp-content/uploads/woocommerce_uploads/2023/02/jamboeditora-ordem-paranormal-ficha-de-personagem-oeuvst.pdf) e [D&D 2024](https://media.dndbeyond.com/compendium-images/free-rules/downloads/2024-character-sheet.pdf).
