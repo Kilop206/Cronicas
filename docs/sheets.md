@@ -34,6 +34,8 @@ O editor do sistema também guarda até 12 modelos de NPC simplificado no mesmo 
 
 Atualizações do sistema exigem a revisão atual; a API guarda um snapshot anterior e permite restaurar uma revisão. É possível informar renomeações explícitas de chaves. `SheetSchemaMigration` valida cada valor, remapeia as chaves indicadas, recalcula fórmulas e registra as mudanças nos históricos dos personagens. Valores de campos removidos continuam guardados, permitindo recuperação manual futura. O editor exporta/importa a definição JSON; a ficha exporta/importa os seus dados em JSON vinculados ao ID do sistema. Importar dados aciona o salvamento automático e a validação do servidor.
 
+Para aplicar regras novas a uma campanha existente, o dono abre o editor do sistema, usa **Preparar atualização de regras**, revisa os campos e salva. Ordem Paranormal, Tormenta20 e Call of Cthulhu oferecem atualização para seus templates atuais. A mudança de D&D 2024 para 2014 não é oferecida como atualização automática. Em Tormenta20, perícias e Defesa previamente manuais passam a ser recalculadas; consulte o histórico dos personagens para os valores anteriores.
+
 O personagem é salvo com debounce de 900 ms e versão otimista. Um conflito de versão não sobrescreve silenciosamente a edição de outra pessoa: a API responde 409 e o editor informa o erro. Recursos, condições e coleções ficam nos campos persistidos da ficha. O histórico de personagem permite recuperar revisões autorizadas. Teste migrações em um sistema de campanha antes de mudar chaves de campos que já têm dados.
 
 ## Limites atuais

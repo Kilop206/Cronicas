@@ -49,6 +49,8 @@ export class SystemsPage implements OnInit {
         <label>Descrição<textarea name="description" [(ngModel)]="description" maxlength="2000" rows="3" [disabled]="readonly()"></textarea></label>
         <label *ngIf="!isNew && !templateId && !readonly() && compatibleTemplates().length">Vincular ficha existente a um modelo<select name="associateTemplate" [ngModel]="''" (ngModelChange)="associateTemplate($event)"><option value="">Escolha um modelo</option><option *ngFor="let template of compatibleTemplates()" [value]="template.id">{{ template.name }}</option></select><small>Preserva campos e personagens; a ficha passa a usar a experiência do modelo após salvar.</small></label>
         <label *ngIf="templateId && mode === 'structured'">Apresentação da ficha<select name="rendererMode" [(ngModel)]="rendererMode" [disabled]="readonly()"><option value="specialized">Ficha especializada do sistema</option><option value="layout">Composição visual personalizada</option></select><small>Use a composição visual se quiser posicionar livremente todos os blocos.</small></label>
+        <div *ngIf="latestRulesTemplate() as update" class="rules-upgrade"><strong>Regras disponíveis: {{ update.name }} · modelo {{ update.version }}</strong><p>O sistema usa o modelo {{ templateVersion }}. Atualize os campos e revise as alterações antes de salvar. Personagens existentes serão recalculados; o histórico permite consultar os valores anteriores.</p><p *ngIf="update.id === 'tormenta20'">Em Tormenta20, os valores manuais de perícias e Defesa passarão a ser calculados a partir dos atributos, nível e treino.</p><button type="button" class="button button-small secondary" (click)="prepareRulesUpgrade()">Preparar atualização de regras</button></div>
+        <p *ngIf="rulesUpgradeNotice" class="form-success" role="status">{{ rulesUpgradeNotice }}</p>
         <label *ngIf="isNew">Ponto de partida<select name="preset" [ngModel]="preset" (ngModelChange)="applyPreset($event)"><option value="blank">Em branco</option><option value="fantasy">Aventura fantástica genérica</option><option value="mystery">Investigação genérica</option><option *ngFor="let template of templates" [value]="template.id">{{ template.name }} (não oficial)</option></select></label>
         <fieldset class="mode-choice" [disabled]="readonly()"><legend>Como criar a ficha</legend>
           <label [class.selected]="mode === 'free'"><input type="radio" name="mode" [checked]="mode === 'free'" (change)="mode = 'free'"><span><strong>Livre</strong><small>Jogadores adicionam campos manualmente à própria ficha.</small></span></label>
@@ -113,6 +115,8 @@ export class SystemsPage implements OnInit {
     .field-actions { display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px; }
     .system-field-head { gap: 12px; }
     .system-field-head strong { min-width: 0; overflow-wrap: anywhere; }
+    .rules-upgrade { margin: 15px 0; padding: 12px; border: 1px solid var(--gold); border-radius: 5px; background: color-mix(in srgb, var(--gold) 8%, var(--surface)); }
+    .rules-upgrade p { margin: 7px 0; color: var(--muted); font-size: 13px; line-height: 1.4; }
     @media (max-width: 1320px) { .designer-layout { grid-template-columns: 1fr; } .designer-preview { position: static; } }
     @media (max-width: 620px) { .mode-choice { grid-template-columns: 1fr; } }
   `] })
@@ -122,6 +126,7 @@ export class SystemEditorPage implements OnInit {
   templates = SHEET_TEMPLATES;
   name = ''; description = ''; preset = 'blank'; mode: 'free' | 'structured' = 'structured'; editorMode: 'visual' | 'json' = 'visual'; jsonDraft = '[]';
   templateId: string | null = null; templateVersion = 1; rulesetVersion: string | null = null;
+  rulesUpgradeNotice = '';
   npcTemplates: NpcTemplate[] = [];
   rendererMode: 'specialized' | 'layout' = 'specialized'; revision = 1; revisions: SystemRevision[] = [];
   private originalFieldKeys = new Set<string>(); private fieldRenames: Record<string, string> = {};
@@ -129,11 +134,30 @@ export class SystemEditorPage implements OnInit {
   selectedPreviewPage = 'principal';
   fields: SystemField[] = []; loading = signal(!this.isNew); busy = signal(false); saved = signal(false); error = signal('');
   ngOnInit() { if (this.isNew) { const preset = this.route.snapshot.queryParamMap.get('preset'); if (preset) this.applyPreset(preset); return; } this.api.system(this.id).pipe(finalize(() => this.loading.set(false))).subscribe({ next: system => this.useSystem(system), error: e => this.error.set(apiError(e)) }); }
-  private useSystem(system: RpgSystem) { this.name = system.name; this.description = system.description; this.fields = system.fields.map(f => ({ ...f, span: f.span || 6, options: f.options?.slice() || null })); this.layout = system.layout || layoutFromFields(this.fields); this.selectedPreviewPage = this.layout.pages[0].id; this.mode = (system.layout || this.fields.length) ? 'structured' : 'free'; this.ownerId = system.ownerId; this.templateId = system.templateId; this.templateVersion = system.templateVersion || 1; this.rulesetVersion = system.rulesetVersion; this.rendererMode = system.rendererMode || 'specialized'; this.revision = system.revision || 1; this.revisions = system.revisions || []; this.npcTemplates = structuredClone(system.npcTemplates || []); this.originalFieldKeys = new Set(system.fields.map(field => field.key)); this.fieldRenames = {}; }
+  private useSystem(system: RpgSystem) { this.name = system.name; this.description = system.description; this.fields = system.fields.map(f => ({ ...f, span: f.span || 6, options: f.options?.slice() || null })); this.layout = system.layout || layoutFromFields(this.fields); this.selectedPreviewPage = this.layout.pages[0].id; this.mode = (system.layout || this.fields.length) ? 'structured' : 'free'; this.ownerId = system.ownerId; this.templateId = system.templateId; this.templateVersion = system.templateVersion || 1; this.rulesetVersion = system.rulesetVersion; this.rendererMode = system.rendererMode || 'specialized'; this.revision = system.revision || 1; this.revisions = system.revisions || []; this.npcTemplates = structuredClone(system.npcTemplates || []); this.originalFieldKeys = new Set(system.fields.map(field => field.key)); this.fieldRenames = {}; this.rulesUpgradeNotice = ''; }
   addNpcTemplate() { if (this.npcTemplates.length >= 12) return; let number = 1; while (this.npcTemplates.some(item => item.id === `npc_${number}`)) number++; this.npcTemplates.push({ id: `npc_${number}`, name: 'Novo modelo', appearance: '', personality: '', motivation: '', relationships: '', location: '', status: 'active', visibility: 'gm', health: 10, maxHealth: 10 }); }
   removeNpcTemplate(index: number) { this.npcTemplates.splice(index, 1); }
   readonly() { return !this.isNew && this.ownerId !== this.api.user()?.id; }
   matchingTemplate() { return this.templates.find(template => template.id === this.templateId && template.version === this.templateVersion) || null; }
+  latestRulesTemplate() { if (this.isNew || this.readonly() || this.mode !== 'structured' || this.templateId === 'dnd_5e') return null; return this.templates.find(template => template.id === this.templateId && template.version > this.templateVersion) || null; }
+  prepareRulesUpgrade() {
+    const template = this.latestRulesTemplate();
+    if (!template) return;
+    const conflict = template.fields.find(next => this.fields.some(current => current.key === next.key && current.type !== next.type));
+    if (conflict) { this.error.set(`O campo ${conflict.label} tem outro tipo. Ajuste o campo antes de atualizar.`); return; }
+    const missing = template.fields.filter(next => !this.fields.some(current => current.key === next.key));
+    if (this.fields.length + missing.length > 100) { this.error.set('Remova campos antes de atualizar: o limite é de 100.'); return; }
+    const byKey = new Map(template.fields.map(field => [field.key, field]));
+    this.fields = [...this.fields.map(current => {
+      if (template.id !== 'tormenta20' || current.key !== 'defesa' && !current.key.startsWith('per_')) return current;
+      const next = byKey.get(current.key);
+      return next ? { ...current, formula: next.formula, rollExpression: next.rollExpression } : current;
+    }), ...structuredClone(missing)];
+    this.templateVersion = template.version;
+    this.rulesetVersion = template.rulesetVersion;
+    this.rulesUpgradeNotice = `Atualização para o modelo ${template.version} preparada. Revise os campos e clique em Salvar sistema para aplicar às fichas da campanha.`;
+    this.error.set(''); this.saved.set(false);
+  }
   compatibleTemplates() { return this.templates.filter(template => canAssociateTemplate(template.id, this.fields)); }
   private mergeTemplateFields(template: (typeof SHEET_TEMPLATES)[number]) {
     const missing = template.fields.filter(field => !this.fields.some(current => current.key === field.key));

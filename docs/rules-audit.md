@@ -15,6 +15,8 @@ O PDF `chamado-de-cthulhu-livro do guardião-7-edicao.pdf` foi localizado, mas n
 
 Um sistema salvo na campanha conserva `templateId`, `templateVersion` e `rulesetVersion`. As versões antigas continuam no registro de renderizadores. O Crônicas não altera automaticamente a edição nem converte bônus de perícia gravados em fichas antigas para fórmulas novas. Ativar o visual especializado de um modelo já associado preserva a versão existente; associar outro modelo é uma ação explícita do dono do sistema.
 
+Na edição de um sistema existente, o dono pode preparar a atualização de Ordem Paranormal, Tormenta20 ou Call of Cthulhu para o template mais recente e revisar os campos antes de salvar. A API migra e recalcula os personagens com histórico de alterações. Em Tormenta20, a atualização explícita substitui os bônus manuais de perícia e Defesa por fórmulas; os valores anteriores ficam no histórico. A edição 2024 marcada no antigo template de D&D não é convertida para a edição 2014, pois são regras distintas.
+
 As fórmulas novas passam pelo mesmo interpretador limitado no cliente e na API. A função `min(a,b)` foi acrescentada à lista permitida para representar os patamares de Tormenta20 sem código executável. O servidor recalcula valores derivados ao salvar; o cliente mostra o resultado enquanto se edita.
 
 ## Regras ainda não automatizadas

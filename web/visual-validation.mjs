@@ -112,5 +112,28 @@ const sizes = [{ name: 'desktop', width: 1440, height: 900 }, { name: 'wide', wi
     }
     await page.close();
   }
+  if (process.argv[2] === 'upgrade') {
+    const template = templateExports.SHEET_TEMPLATES.find(item => item.id === 'tormenta20');
+    let system = { id: 'system-visual', ownerId: user.id, name: 'Tormenta20', description: '', fields: template.fields.filter(field => field.key !== 'bonus_treinamento' && !field.key.startsWith('treino_per_') && !field.key.startsWith('bonus_') && !field.key.startsWith('outro_')).map(field => field.key === 'defesa' || field.key.startsWith('per_') ? { ...field, formula: null } : field), layout: template.layout, templateId: template.id, templateVersion: 1, rulesetVersion: null, rendererMode: 'specialized', revision: 1, revisions: [], npcTemplates: [], createdAt: '', updatedAt: '' };
+    let saved = null;
+    const page = await browser.newPage();
+    await page.route('**/api/**', async route => {
+      const { pathname } = new URL(route.request().url());
+      if (pathname === '/api/systems/system-visual' && route.request().method() === 'PUT') {
+        saved = JSON.parse(route.request().postData() || '{}');
+        system = { ...system, ...saved, revision: 2 };
+      }
+      const body = pathname === '/api/auth/me' ? user : pathname === '/api/systems/system-visual' ? system : [];
+      await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
+    });
+    await page.goto('http://127.0.0.1:4200/systems/system-visual', { waitUntil: 'networkidle' });
+    await page.getByRole('button', { name: 'Preparar atualização de regras' }).click();
+    if (!await page.getByText('Atualização para o modelo 2 preparada.', { exact: false }).count()) throw new Error('Rules upgrade was not prepared');
+    await page.getByRole('button', { name: 'Salvar sistema' }).click();
+    await page.getByText('Sistema salvo.').waitFor();
+    if (saved?.templateVersion !== 2 || saved?.rulesetVersion !== template.rulesetVersion || !saved.fields.find(field => field.key === 'per_atletismo')?.formula || !saved.fields.find(field => field.key === 'defesa')?.formula) throw new Error('T20 upgrade did not save the versioned formulas');
+    console.log('T20 version upgrade passed');
+    await page.close();
+  }
   await browser.close();
 })().catch(error => { console.error(error); process.exitCode = 1; });
