@@ -82,3 +82,26 @@ const dnd2014LevelXp = [0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 640
 export function dnd2014NextLevelXp(level: number): number | null {
   return Number.isInteger(level) && level >= 1 && level < 20 ? dnd2014LevelXp[level] : null;
 }
+
+export function coc7eDamageProfile(strength: number, size: number): { bonus: string; build: number; rollExpression: string | null } | null {
+  if (![strength, size].every(Number.isInteger) || strength < 0 || size < 0 || strength > 1000 || size > 1000) return null;
+  const total = strength + size;
+  if (total < 2) return null;
+  if (total <= 64) return { bonus: '−2', build: -2, rollExpression: null };
+  if (total <= 84) return { bonus: '−1', build: -1, rollExpression: null };
+  if (total <= 124) return { bonus: '0', build: 0, rollExpression: null };
+  if (total <= 164) return { bonus: '+1d4', build: 1, rollExpression: '1d4' };
+  if (total <= 204) return { bonus: '+1d6', build: 2, rollExpression: '1d6' };
+  const dice = 2 + Math.floor((total - 205) / 80);
+  return { bonus: `+${dice}d6`, build: dice + 1, rollExpression: dice <= 40 ? `${dice}d6` : null };
+}
+
+// The target is the number required for success, including the selected difficulty.
+export function coc7eSuccessDegree(total: number, target: number): string | null {
+  if (!Number.isInteger(total) || total < 1 || total > 100 || !Number.isInteger(target) || target < 0 || target > 100) return null;
+  if (total === 1) return 'crítico';
+  if (total === 100 || target < 50 && total >= 96) return 'falha crítica';
+  if (total <= Math.floor(target / 5)) return 'extremo';
+  if (total <= Math.floor(target / 2)) return 'difícil';
+  return total <= target ? 'regular' : 'falha';
+}

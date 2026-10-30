@@ -17,7 +17,7 @@ function load(file) {
 }
 
 const { SHEET_TEMPLATES: templates } = load('system-templates.ts');
-const { calculateSheet, fieldRoll, paranormalFieldRoll, paranormalV13BaseResources, dnd2014NextLevelXp } = load('sheet-rules.ts');
+const { calculateSheet, fieldRoll, paranormalFieldRoll, paranormalV13BaseResources, dnd2014NextLevelXp, coc7eDamageProfile, coc7eSuccessDegree } = load('sheet-rules.ts');
 const { resolveSheetRenderer, sheetResources, sheetIndicators } = load('sheet-renderer-registry.ts');
 assert.equal(templates.length, 4);
 assert.equal(new Set(templates.map(template => template.layout.skin)).size, templates.length, 'Each template should have its own visual style');
@@ -72,7 +72,14 @@ const cocValues = { inteligencia: 65 };
 assert.equal(calculateSheet(coc.fields, cocValues), null);
 assert.equal(cocValues.inteligencia_metade, 32);
 assert.equal(cocValues.inteligencia_quinto, 13);
-assert.equal(coc.version, 2);
+assert.equal(coc.version, 3);
+for (const [total, bonus, build] of [[64, '−2', -2], [65, '−1', -1], [84, '−1', -1], [85, '0', 0], [124, '0', 0], [125, '+1d4', 1], [164, '+1d4', 1], [165, '+1d6', 2], [204, '+1d6', 2], [205, '+2d6', 3], [284, '+2d6', 3], [285, '+3d6', 4], [445, '+5d6', 6]]) {
+  const profile = coc7eDamageProfile(total, 0);
+  assert.equal(profile?.bonus, bonus);
+  assert.equal(profile?.build, build);
+}
+assert.equal(coc7eDamageProfile(-1, 80), null);
+assert.equal(coc7eDamageProfile(75, 60)?.rollExpression, '1d4');
 const cocVitals = { constituicao: 60, tamanho: 50, poder: 65 };
 assert.equal(calculateSheet(coc.fields, cocVitals), null);
 assert.equal(cocVitals.pv_inicial, 11);
@@ -112,3 +119,7 @@ assert.equal(orderValues.defesa, 11);
 assert.equal(fieldRoll('{agilidade}d20kh1+{per_luta}', orderValues), '1d20');
 assert.equal(paranormalFieldRoll('{agilidade}d20kh1+{per_luta}', { agilidade: 0, per_luta: 5 }), '2d20kl1+5', 'Order attribute zero keeps the lower die');
 console.log(`Validated ${templates.length} sheet templates and representative formulas/rolls.`);
+
+for (const [roll, target, expected] of [[1, 0, 'cr\u00edtico'], [10, 50, 'extremo'], [25, 50, 'dif\u00edcil'], [50, 50, 'regular'], [51, 50, 'falha'], [95, 49, 'falha'], [96, 49, 'falha cr\u00edtica'], [96, 50, 'falha'], [99, 50, 'falha'], [100, 100, 'falha cr\u00edtica']]) assert.equal(coc7eSuccessDegree(roll, target), expected);
+assert.equal(coc7eSuccessDegree(0, 50), null);
+assert.equal(coc7eSuccessDegree(50, NaN), null);

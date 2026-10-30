@@ -19,6 +19,7 @@ function fixture(id) {
   const t20 = id === 'tormenta20';
   Object.assign(fields, order ? { origem: 'Acadêmico', classe: 'Especialista', trilha: 'Investigador', nex: 35, deslocamento: 9, agilidade: 3, forca: 2, intelecto: 4, presenca: 2, vigor: 2, per_investigacao: 5, per_ocultismo: 5, per_percepcao: 5, protecao: 'Colete', resistencias: 'Mental +5' } : coc ? { ocupacao: 'Jornalista', local: 'Arkham', epoca: '1925', idade: 34, credito: 45, sorte: 62, forca: 55, constituicao: 60, tamanho: 50, destreza: 65, aparencia: 45, educacao: 70, inteligencia: 75, poder: 60, forca_metade: 27, forca_quinto: 11, per_biblioteca: 70, per_escutar: 55, per_ocultismo: 35 } : t20 ? { raca: 'Humano', origem: 'Marinheiro', classe: 'Guerreiro', divindade: 'Valkaria', nivel: 4, experiencia: 3200, forca: 4, destreza: 2, constituicao: 3, inteligencia: 1, sabedoria: 0, carisma: 1, defesa: 19, deslocamento: 9, per_atletismo: 8, per_luta: 9, per_percepcao: 4 } : { classe: 'Paladino', especie: 'Humano', antecedente: 'Viajante', nivel: 5, experiencia: 6500, proficiencia: 3, forca: 16, destreza: 12, constituicao: 14, inteligencia: 10, sabedoria: 12, carisma: 16, mod_forca: 3, mod_destreza: 1, mod_constituicao: 2, mod_inteligencia: 0, mod_sabedoria: 1, mod_carisma: 3, classe_armadura: 18, iniciativa: 1, deslocamento: 9, per_atletismo: 6, per_percepcao: 4 });
   if (order) fields.classe_regra = 'especialista';
+  if (coc) { fields.forca = 75; fields.tamanho = 60; }
   const character = { id: 'char-visual', campaignId: 'camp-visual', ownerId: 'user-visual', canEdit: true, name: order ? 'Helena Valença' : coc ? 'Clara Mendes' : t20 ? 'Ravi dos Ventos' : 'Elias de Valoria', portraitUrl: null, backgroundUrl: null, health: order ? 28 : coc ? 11 : t20 ? 36 : 37, maxHealth: order ? 35 : coc ? 12 : t20 ? 42 : 44, sanity: coc ? 58 : 32, maxSanity: coc ? 65 : 40, mana: t20 ? 10 : 7, maxMana: t20 ? 16 : 12, fields, version: 1, updatedAt: new Date().toISOString() };
   const system = { id: 'system-visual', ownerId: null, name: template.name, description: '', fields: template.fields, layout: template.layout, templateId: template.id, templateVersion: template.version, rulesetVersion: template.rulesetVersion, rendererMode: 'specialized', revision: 1, revisions: [], npcTemplates: [], createdAt: '', updatedAt: '' };
   const campaign = { id: 'camp-visual', name: order ? 'Caso do Farol' : 'Estrada dos Reinos', description: '', status: 'active', accentColor: '#a54d52', role: 'owner', updatedAt: '', systemId: system.id, worldId: null };
@@ -32,6 +33,7 @@ const sizes = [{ name: 'desktop', width: 1440, height: 900 }, { name: 'wide', wi
   const browser = await chromium.launch({ channel: 'chrome', headless: true });
   for (const sheetId of ['ordem_paranormal', 'dnd_5e', 'call_of_cthulhu_7e', 'tormenta20'].filter(id => !process.argv[2] || process.argv[2] === id)) for (const size of sizes.filter(item => !process.argv[3] || process.argv[3] === item.name)) {
     let { character, system, campaign, name, selector } = fixture(sheetId);
+    let rollTotal = 13;
     const page = await browser.newPage({ viewport: { width: size.width, height: size.height }, deviceScaleFactor: 1 });
     page.on('console', msg => { if (msg.type() === 'error') console.error(size.name, msg.text()); });
     await page.route('**/api/**', async route => {
@@ -41,7 +43,7 @@ const sizes = [{ name: 'desktop', width: 1440, height: 900 }, { name: 'wide', wi
       if (pathname === '/api/characters/char-visual' && method === 'PUT') character = { ...character, ...JSON.parse(route.request().postData() || '{}'), version: character.version + 1 };
       if ((pathname === '/api/campaigns/camp-visual/rolls' || pathname === '/api/campaigns/camp-visual/percentile-rolls') && method === 'POST') {
         const request = JSON.parse(route.request().postData() || '{}');
-        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: 'roll-visual', campaignId: campaign.id, userId: user.id, userName: user.displayName, expression: request.expression || '1d100', rolls: [13], keptIndexes: [0], modifier: 0, total: 13, visibility: request.visibility, createdAt: new Date().toISOString() }) });
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: 'roll-visual', campaignId: campaign.id, userId: user.id, userName: user.displayName, expression: request.expression || '1d100', rolls: [rollTotal], keptIndexes: [0], modifier: 0, total: rollTotal, visibility: request.visibility, createdAt: new Date().toISOString() }) });
       }
       const body = pathname === '/api/characters/char-visual' ? character : responses[pathname] ?? (method === 'GET' ? [] : {});
       await route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify(body) });
@@ -65,6 +67,15 @@ const sizes = [{ name: 'desktop', width: 1440, height: 900 }, { name: 'wide', wi
       const rollButton = page.locator('.custom-sheet-main').getByRole('button', { name: name === 'ordem' ? 'Rolar Agilidade' : name === 'coc' ? 'Rolar Força (STR)' : 'Rolar Força' });
       await rollButton.first().click();
       await page.locator('.custom-sheet-main [role="status"]').filter({ hasText: ': 13' }).first().waitFor();
+      if (name === 'coc') {
+        rollTotal = 1;
+        await rollButton.first().click();
+        await page.locator('.coc-roll-result').filter({ hasText: 'crítico' }).waitFor();
+        rollTotal = 100;
+        await rollButton.first().click();
+        await page.locator('.coc-roll-result').filter({ hasText: 'falha crítica' }).waitFor();
+        rollTotal = 13;
+      }
       await page.getByRole('button', { name: 'Editar ficha' }).click();
       const fieldKey = name === 'ordem' ? 'agilidade' : 'forca';
       const fieldInput = page.locator('.custom-sheet-main').getByRole('spinbutton', { name: name === 'ordem' ? 'Agilidade' : name === 'coc' ? 'Força (STR)' : name === 't20' ? 'Força' : 'Valor de Força' });
@@ -108,6 +119,10 @@ const sizes = [{ name: 'desktop', width: 1440, height: 900 }, { name: 'wide', wi
         if (character.fields.experiencia !== 7000) throw new Error('D&D experience did not persist');
       }
       if (name === 'coc') {
+        if (!await page.locator('.coc-damage').getByText('+1d4').count()) throw new Error('CoC 7e damage bonus was not derived');
+        const damageRoll = page.waitForRequest(request => request.url().endsWith('/api/campaigns/camp-visual/rolls') && request.method() === 'POST');
+        await page.getByRole('button', { name: 'Rolar Bônus de dano' }).click();
+        if (JSON.parse((await damageRoll).postData() || '{}').expression !== '1d4') throw new Error('CoC 7e damage bonus used the wrong die');
         await page.getByRole('button', { name: 'Editar ficha' }).click();
         const savedVitals = page.waitForResponse(response => response.url().endsWith('/api/characters/char-visual') && response.request().method() === 'PUT');
         await page.getByRole('button', { name: 'Aplicar à criação' }).click();
