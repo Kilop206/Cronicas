@@ -41,6 +41,8 @@ try {
     }
     const fields = Object.fromEntries(template.fields.filter(field => field.defaultValue !== undefined && field.defaultValue !== null).map(field => [field.key, field.defaultValue]));
     Object.assign(fields, template.id === 'ordem_paranormal' ? { nex: 35, classe_regra: 'especialista' } : template.id === 'call_of_cthulhu_7e' ? { constituicao: 60, tamanho: 50, forca: 65, destreza: 60, idade: 40, inteligencia: 70 } : { nivel: 4 });
+    fields.ataques_regras = [{ nome: 'Ataque de validação', base: template.id === 'dnd_5e' ? 'mod_forca' : template.id === 'call_of_cthulhu_7e' ? 'per_lutar' : 'per_luta', dano: '1d6+1', dano_extra: '1d4', municao: 3,
+      ...(template.id === 'dnd_5e' ? { treinado: true, bonus: 0 } : template.id === 'call_of_cthulhu_7e' ? { empala: true, tipo: 'corpo', falha: 100 } : { margem: 20, multiplicador: 2 }) }];
     const created = await request(`/api/campaigns/${campaign.body.id}/characters`, owner, 'POST', { name: 'Personagem de validação', health: 12, maxHealth: 20, sanity: 50, maxSanity: 99, mana: 10, maxMana: 20, portraitUrl: null, backgroundUrl: null, fields });
     assert.equal(created.status, 201, JSON.stringify(created.body));
     let character = created.body;
@@ -64,6 +66,22 @@ try {
     await controls.getByRole('button', { name: 'Aplicar ação', exact: true }).click(); assert.equal((await saved).status(), 200);
     await page.reload({ waitUntil: 'networkidle' });
     assert.equal((await request(`/api/characters/${character.id}`, owner)).body.health, 12);
+    await controls.getByRole('combobox', { name: 'Ação', exact: true }).selectOption('attack');
+    await controls.getByRole('combobox', { name: 'Rolagens', exact: true }).selectOption('private');
+    const attacked = page.waitForResponse(response => response.url().endsWith(route) && response.request().method() === 'POST');
+    await controls.getByRole('button', { name: 'Aplicar ação', exact: true }).click(); assert.equal((await attacked).status(), 200);
+    const afterAttack = (await request(`/api/characters/${character.id}`, owner)).body;
+    assert.equal(afterAttack.fields.ataques_regras[0].municao, 2, 'ammunition consumed and persisted');
+    assert.ok((await request(`/api/campaigns/${campaign.body.id}/rolls`, owner)).body.length >= 1);
+    assert.equal((await request(`/api/campaigns/${campaign.body.id}/rolls`, player)).body.length, 0, 'private attack rolls stay private');
+    if (template.id === 'dnd_5e') {
+      const configured = await request(route, owner, 'POST', { expectedVersion: afterAttack.version, command: { action: 'configure', amount: 5, option: 'nivel_clerigo', visibility: 'private' } });
+      assert.equal(configured.status, 200, JSON.stringify(configured.body));
+      assert.equal(configured.body.character.fields.espacos_magia_3, 2);
+      const cast = await request(route, owner, 'POST', { expectedVersion: configured.body.character.version, command: { action: 'cast', amount: 3, visibility: 'private' } });
+      assert.equal(cast.status, 200, JSON.stringify(cast.body)); assert.equal(cast.body.character.fields.espacos_magia_3, 1);
+    }
+    await page.reload({ waitUntil: 'networkidle' });
     for (const [name, width, height] of [['desktop', 1440, 900], ['wide', 1920, 1080], ['tablet', 768, 1024], ['mobile', 390, 844]]) {
       await page.setViewportSize({ width, height });
       await page.screenshot({ path: path.join(out, `${template.id}-${name}.png`), fullPage: true });

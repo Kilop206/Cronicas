@@ -150,10 +150,10 @@ const sizes = [{ name: 'desktop', width: 1440, height: 900 }, { name: 'wide', wi
     });
     await page.goto('http://127.0.0.1:4200/systems/system-visual', { waitUntil: 'networkidle' });
     await page.getByRole('button', { name: 'Preparar atualização de regras' }).click();
-    await page.getByText('Atualização para o modelo 3 preparada.', { exact: false }).waitFor();
+    await page.getByText('Atualização para o modelo 4 preparada.', { exact: false }).waitFor();
     await page.getByRole('button', { name: 'Salvar sistema' }).click();
     await page.getByText('Sistema salvo.').waitFor();
-    if (saved?.templateVersion !== 3 || saved?.rulesetVersion !== template.rulesetVersion || !saved.fields.find(field => field.key === 'per_atletismo')?.formula || !saved.fields.find(field => field.key === 'defesa')?.formula) throw new Error('T20 upgrade did not save the versioned formulas');
+    if (saved?.templateVersion !== 4 || saved?.rulesetVersion !== template.rulesetVersion || !saved.fields.find(field => field.key === 'per_atletismo')?.formula || !saved.fields.find(field => field.key === 'defesa')?.formula) throw new Error('T20 upgrade did not save the versioned formulas');
     console.log('T20 version upgrade passed');
     await page.close();
   }

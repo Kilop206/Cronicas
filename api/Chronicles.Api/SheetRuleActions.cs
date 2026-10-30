@@ -19,8 +19,8 @@ public static class SheetRuleActions
     public static bool Supports(SystemDefinition system) => system.Fields.Any(f => f.Key == StateKey && f.Type == "table") &&
         (system.TemplateId, system.TemplateVersion, system.RulesetVersion) switch
         {
-            ("ordem_paranormal", 6, "1.3") or ("dnd_5e", 3, "2014") or
-            ("tormenta20", 3, "jogo-do-ano-2024-v1.3") or ("call_of_cthulhu_7e", 4, "7e") => true,
+            ("ordem_paranormal", 6 or 7, "1.3") or ("dnd_5e", 3 or 4, "2014") or
+            ("tormenta20", 3 or 4, "jogo-do-ano-2024-v1.3") or ("call_of_cthulhu_7e", 4 or 5, "7e") => true,
             _ => false
         };
 
@@ -35,7 +35,14 @@ public static class SheetRuleActions
             "tormenta20" => TormentaRules.Describe(s),
             _ => CthulhuRules.Describe(s)
         };
-        return view with { Actions = [.. view.Actions, new RuleAction("configure", "Salvar configuração", "Valor", view.Settings.Select(x => new RuleChoice(x.Key, x.Label)).ToArray())] };
+        var weapon = WeaponActions.Describe(system, s);
+        if (system.Fields.Any(f => f.Key == WeaponActions.FieldKey))
+        {
+            if (system.TemplateId == "dnd_5e") view = view with { Settings = [.. view.Settings, new("modo_ataque", "Ataques: −1 desvantagem, 0 normal, 1 vantagem", -1, 1)] };
+            if (system.TemplateId == "call_of_cthulhu_7e") view = view with { Settings = [.. view.Settings, new("dados_ataque", "Ataques: dados de bônus (+) ou penalidade (−)", -2, 2)] };
+        }
+        RuleAction[] weaponActions = weapon is null ? [] : [weapon];
+        return view with { Actions = [.. view.Actions, .. weaponActions, new RuleAction("configure", "Salvar configuração", "Valor", view.Settings.Select(x => new RuleChoice(x.Key, x.Label)).ToArray())] };
     }
 
     public static RuleResult Apply(SystemDefinition system, CharacterInput input, RuleCommand command, Func<int, int> draw)
@@ -53,7 +60,13 @@ public static class SheetRuleActions
             var totalLevels = s.State.Where(x => x.Key.StartsWith("nivel_", StringComparison.Ordinal)).Sum(x => x.Value);
             RuleState.Require(totalLevels <= 20, "A soma dos níveis não pode ultrapassar 20.");
             if (setting.Key.StartsWith("nivel_", StringComparison.Ordinal) && totalLevels > 0) s.Field("nivel", totalLevels);
+            if (system.TemplateId == "dnd_5e" && (setting.Key.StartsWith("nivel_", StringComparison.Ordinal) || setting.Key.StartsWith("terco_", StringComparison.Ordinal))) Dnd2014Rules.SyncSlots(s);
             return new(s.Export(), "Configuração salva.", []);
+        }
+        if (command.Action == "attack")
+        {
+            var attackMessage = WeaponActions.Apply(system, s, command);
+            return new(s.Export(), attackMessage, s.Rolls.ToArray());
         }
         var message = system.TemplateId switch
         {
@@ -73,6 +86,8 @@ public static class SheetRuleActions
             var empty = new CharacterInput("Estado", null, null, 1, 1, 1, 1, 1, 1);
             var next = new RuleState(empty with { Fields = after });
             var old = new RuleState(empty with { Fields = before });
+            foreach (var key in new[] { "morto", "insano", "estavel", "morrendo", "enlouquecendo", "ferimento_grave", "inconsciente", "insanidade_temporaria", "insanidade_indefinida", "sangrando", "dormiu", "relaxou" })
+                if (next.Get(key) is < 0 or > 1) return $"Indicador inválido: {key}.";
             if (!master && next.Get("sorte_opcional") != old.Get("sorte_opcional")) return "Somente o mestre pode alterar a regra opcional de sorte.";
             var settings = Describe(system, empty with { Fields = after }).Settings;
             foreach (var setting in settings)
@@ -114,6 +129,18 @@ public sealed class RuleState
     public int N(string key, int fallback = 0) => Fields.TryGetValue(key, out var v) && v.ValueKind == JsonValueKind.Number && v.TryGetInt32(out var n) ? n : fallback;
     public string Text(string key) => Fields.TryGetValue(key, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() ?? "" : "";
     public int Get(string key, int fallback = 0) => State.GetValueOrDefault(key, fallback);
+    public int ParanormalSkill(string key)
+    {
+        var bonus = N(key);
+        if (!Fields.TryGetValue("pericias_detalhes", out var rows) || rows.ValueKind != JsonValueKind.Array) return bonus;
+        foreach (var row in rows.EnumerateArray())
+        {
+            if (row.ValueKind != JsonValueKind.Object || !row.TryGetProperty("chave", out var name) || name.ValueKind != JsonValueKind.String || name.GetString() != key) continue;
+            foreach (var column in new[] { "treino", "outros" }) if (row.TryGetProperty(column, out var value) && value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var number)) bonus += number;
+            break;
+        }
+        return bonus;
+    }
     public void Set(string key, int value) { if (value == 0) State.Remove(key); else State[key] = value; }
     public void Field(string key, int value) => Fields[key] = JsonSerializer.SerializeToElement(value);
     public int Die(int sides)
@@ -122,6 +149,22 @@ public sealed class RuleState
         if (value < 1 || value > sides) throw new ArgumentException("Dado fora dos limites.");
         Rolls.Add(new($"1d{sides}", [value], [0], 0, value));
         return value;
+    }
+    public int Pool(int count, int sides)
+    {
+        Require(count is >= 1 and <= 80 && sides is 3 or 4 or 6 or 8 or 10 or 12 or 20 or 100, "Quantidade ou faces inválidas.");
+        var values = Enumerable.Range(0, count).Select(_ => draw(sides)).ToArray();
+        Require(values.All(value => value >= 1 && value <= sides), "Resultado de dado fora dos limites.");
+        var total = values.Sum();
+        Rolls.Add(new($"{count}d{sides}", values, Enumerable.Range(0, count).ToArray(), 0, total));
+        return total;
+    }
+    public int Percentile(int bonus)
+    {
+        Require(bonus is >= -2 and <= 2, "Dados percentuais fora dos limites.");
+        var result = PercentileDice.Roll(bonus, () => draw(10) - 1);
+        Rolls.Add(new("d100" + (bonus == 0 ? "" : $" {bonus:+#;-#}"), result.Rolls, result.KeptIndexes, 0, result.Total));
+        return result.Total;
     }
     public int Roll(string expression)
     {

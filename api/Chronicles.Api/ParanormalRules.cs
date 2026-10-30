@@ -40,10 +40,11 @@ public static class ParanormalRules
                 if (s.Health == 0) s.Set("morrendo", 1);
                 if (c.Amount * 2 >= s.MaxHealth && s.Health > 0)
                 {
-                    var vigor = s.N("vigor"); var bonus = s.N("per_fortitude");
+                    var vigor = s.N("vigor"); var bonus = s.ParanormalSkill("per_fortitude");
                     var result = s.Roll($"{(vigor > 0 ? vigor : 2)}d20{(vigor == 0 ? "kl1" : vigor > 1 ? "kh1" : "")}{(bonus < 0 ? bonus.ToString() : "+" + bonus)}");
-                    if (result < 15) { s.Health = 0; s.Set("morrendo", 1); }
-                    return $"Dano massivo: Fortitude {result} / DT 15. " + (result < 15 ? "PV reduzidos a zero." : "Teste bem-sucedido.");
+                    var passed = Passed(s, result, 15);
+                    if (!passed) { s.Health = 0; s.Set("morrendo", 1); }
+                    return $"Dano massivo: Fortitude {result} / DT 15. " + (!passed ? "PV reduzidos a zero." : "Teste bem-sucedido.");
                 }
                 return "Dano aplicado.";
             case "heal": s.Health += c.Amount; return "Cura aplicada. A condição morrendo exige estabilização mesmo com PV positivos.";
@@ -62,9 +63,9 @@ public static class ParanormalRules
                     if (s.Sanity == 0) s.Set("enlouquecendo", 1);
                     return "Ritual de Medo: custo em PE, perda de SAN e redução permanente aplicados. Requisitos e efeito dependem do ritual conhecido.";
                 }
-                var intellect = s.N("intelecto"); var occult = s.N("per_ocultismo");
+                var intellect = s.N("intelecto"); var occult = s.ParanormalSkill("per_ocultismo");
                 var check = s.Roll($"{(intellect > 0 ? intellect : 2)}d20{(intellect == 0 ? "kl1" : intellect > 1 ? "kh1" : "")}{(occult < 0 ? occult.ToString() : "+" + occult)}");
-                if (check < 20 + c.Amount) { s.Sanity -= c.Amount; if (check <= 15 + c.Amount) s.LoseSanityMaximum(1); }
+                if (!Passed(s, check, 20 + c.Amount)) { s.Sanity -= c.Amount; if (check <= 15 + c.Amount) s.LoseSanityMaximum(1); }
                 if (s.Sanity == 0) s.Set("enlouquecendo", 1);
                 return $"Custo paranormal: Ocultismo {check} / DT {20 + c.Amount}. Custos aplicados; o resultado deste teste não anula o ritual.";
             case "turn":
@@ -86,4 +87,5 @@ public static class ParanormalRules
             default: throw new ArgumentException("Ação desconhecida.");
         }
     }
+    private static bool Passed(RuleState s, int total, int target) { var roll = s.Rolls[^1]; return roll.Rolls[roll.KeptIndexes[0]] == 20 || total >= target; }
 }

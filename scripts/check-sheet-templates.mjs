@@ -46,7 +46,7 @@ for (const template of templates) {
 }
 
 const dnd = templates.find(template => template.id === 'dnd_5e');
-assert.equal(dnd.version, 3);
+assert.equal(dnd.version, 4);
 assert.equal(dnd.rulesetVersion, '2014', 'The supplied Player Handbook covers the 2014 rules');
 assert.equal(dnd2014NextLevelXp(4), 6500);
 assert.equal(dnd2014NextLevelXp(19), 355000);
@@ -72,7 +72,7 @@ const cocValues = { inteligencia: 65 };
 assert.equal(calculateSheet(coc.fields, cocValues), null);
 assert.equal(cocValues.inteligencia_metade, 32);
 assert.equal(cocValues.inteligencia_quinto, 13);
-assert.equal(coc.version, 4);
+assert.equal(coc.version, 5);
 for (const [total, bonus, build] of [[64, '−2', -2], [65, '−1', -1], [84, '−1', -1], [85, '0', 0], [124, '0', 0], [125, '+1d4', 1], [164, '+1d4', 1], [165, '+1d6', 2], [204, '+1d6', 2], [205, '+2d6', 3], [284, '+2d6', 3], [285, '+3d6', 4], [445, '+5d6', 6]]) {
   const profile = coc7eDamageProfile(total, 0);
   assert.equal(profile?.bonus, bonus);
@@ -88,7 +88,7 @@ assert.equal(cocVitals.san_inicial, 65);
 assert.equal(resolveSheetRenderer({ ...dndSystem, templateId: coc.id, templateVersion: 1, fields: coc.fields })?.id, coc.id, 'Existing CoC 7e sheets remain available');
 
 const t20 = templates.find(template => template.id === 'tormenta20');
-assert.equal(t20.version, 3);
+assert.equal(t20.version, 4);
 assert.equal(t20.rulesetVersion, 'jogo-do-ano-2024-v1.3');
 for (const [level, training] of [[1, 2], [6, 2], [7, 4], [14, 4], [15, 6], [20, 6]]) {
   const values = { nivel: level, forca: 4, destreza: 2, treino_per_atletismo: 1 };
@@ -100,7 +100,7 @@ for (const [level, training] of [[1, 2], [6, 2], [7, 4], [14, 4], [15, 6], [20, 
 assert.equal(resolveSheetRenderer({ ...dndSystem, templateId: t20.id, templateVersion: 1, fields: t20.fields })?.id, t20.id, 'Existing Tormenta20 sheets remain available');
 
 const order = templates.find(template => template.id === 'ordem_paranormal');
-assert.equal(order.version, 6, 'New Order templates are versioned without replacing existing sheets');
+assert.equal(order.version, 7, 'New Order templates are versioned without replacing existing sheets');
 assert.equal(order.rulesetVersion, '1.3');
 assert.equal(order.fields.find(field => field.key === 'classe_regra')?.type, 'select');
 assert.equal(JSON.stringify(paranormalV13BaseResources('especialista', 35, 2, 2)), JSON.stringify({ pv: 48, pe: 35, san: 40 }));

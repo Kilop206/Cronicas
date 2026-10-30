@@ -64,6 +64,7 @@ public static class SheetRuleActionTests
         var investigator = Make(("forca", 75), ("destreza", 60), ("tamanho", 50), ("idade", 50), ("constituicao", 60), ("inteligencia", 70), ("per_biblioteca", 70), ("sorte", 50));
         Check(CthulhuRules.Movement(75, 60, 50, 50) == 7, "CoC age-based movement");
         Check(CthulhuRules.Movement(50, 50, 50, 30) == 8, "equal characteristics do not grant MOV 9");
+        Check(CthulhuRules.DamageBonus(75, 60) == "1d4" && CthulhuRules.DamageBonus(30, 30) == "-2", "CoC melee damage bonus includes negative bands");
         var major = Apply(coc, investigator, "damage", 15, die: 90).Character;
         Check(new RuleState(major).Get("ferimento_grave") == 1 && major.Health == 5, "major wound at half max HP");
         Check(new RuleState(Apply(coc, investigator, "damage", 31).Character).Get("morto") == 1, "single hit greater than max HP kills in core rules");
@@ -98,6 +99,36 @@ public static class SheetRuleActionTests
         var optionalLuck = Configure(Make(), ("sorte_opcional", 1)).Fields!;
         Check(SheetRuleActions.ValidateStateAccess(coc, before, optionalLuck, false) is not null, "player cannot activate optional rules via normal save/import/restore");
         Check(SheetRuleActions.ValidateStateAccess(coc, before, optionalLuck, true) is null, "GM may activate optional rules");
+        var damageState = new RuleState(Make(("mod_forca", 3)), _ => 4);
+        Check(DamageFormula.Evaluate("1d8+{mod_forca}+1d6", damageState, 2) == 19, "compound damage doubles dice but not flat modifier");
+        Reject(() => DamageFormula.Parse("1d6+System.IO.File.ReadAllText(x)", damageState), "damage never executes code");
+        Reject(() => DamageFormula.Parse("1d61d6", damageState), "missing operators are rejected");
+        Reject(() => DamageFormula.Parse("40d6+1d4", damageState), "damage dice count bounded");
+        SystemField Numeric(string key, string? roll = null) => new(key, key, "number", "Testes", null, null, null, RollExpression: roll);
+        var weaponField = new SystemField("ataques_regras", "Ataques", "table", "Regras", null, null, null);
+        CharacterInput Weapon(CharacterInput character, object row) { var fields = new Dictionary<string, JsonElement>(character.Fields!); fields["ataques_regras"] = JsonSerializer.SerializeToElement(new[] { row }); return character with { Fields = fields }; }
+        var armedDnd = dnd with { Fields = [stateField, weaponField, Numeric("mod_forca"), Numeric("proficiencia")] };
+        var sword = Weapon(Make(("mod_forca", 3), ("proficiencia", 2)), new { nome = "Arma de teste", @base = "mod_forca", treinado = true, dano = "1d8+{mod_forca}", dano_extra = "1d6", municao = 5 });
+        var swordHit = Apply(armedDnd, sword, "attack", 100, "0", 20);
+        Check(swordHit.Message.Contains("dano 31") && swordHit.Character.Fields!["ataques_regras"][0].GetProperty("municao").GetInt32() == 4, "D&D critical doubles all damage dice, hits high AC and consumes ammo");
+        Check(sword.Fields!["ataques_regras"][0].GetProperty("municao").GetInt32() == 5, "action does not mutate input snapshot");
+        var armedOp = op with { Fields = [stateField, weaponField, Numeric("forca"), Numeric("per_luta", "{forca}d20kh1+{per_luta}")] };
+        var opWeapon = Weapon(Make(("forca", 1), ("per_luta", 30)), new { nome = "Teste OP", @base = "per_luta", dano = "2d6+3", dano_extra = "1d4", margem = 20, multiplicador = 2, municao = -1 });
+        Check(Apply(armedOp, opWeapon, "attack", 20, "0", 1).Message.Contains("dano"), "OP natural 1 is not an automatic failure");
+        Check(Apply(armedOp, opWeapon, "attack", 100, "0", 20).Message.Contains("dano 31"), "OP critical excludes extra damage dice");
+        var trainedOp = Make(("forca", 1), ("per_luta", 1), ("pericias_detalhes", new[] { new { chave = "per_luta", treino = 5, outros = 2 } }));
+        Check(WeaponActions.Resolve("{forca}d20kh1+{per_luta}", new RuleState(trainedOp), true) == "1d20+8", "OP server attacks include training and other modifiers");
+        var automatic = Apply(op, Make(("nex", 35), ("intelecto", 1), ("per_ocultismo", 0)), "ritual", 3, "other", 20).Character;
+        Check(automatic.Sanity == 50 && automatic.MaxSanity == 99, "OP natural 20 succeeds even below ritual DC");
+        var armedT20 = t20 with { Fields = [stateField, weaponField, Numeric("per_luta")] };
+        var t20Weapon = Weapon(Make(("per_luta", 30)), new { nome = "Teste T20", @base = "per_luta", dano = "1d8+4", dano_extra = "2d6", margem = 19, multiplicador = 3, municao = -1 });
+        Check(Apply(armedT20, t20Weapon, "attack", 20, "0", 1).Message.Contains("errou"), "T20 natural 1 automatically fails");
+        Check(Apply(armedT20, t20Weapon, "attack", 20, "0", 19).Message.Contains("dano 40"), "T20 threat range and multiplier preserve extra dice");
+        var armedCoc = coc with { Fields = [stateField, weaponField, Numeric("per_lutar")] };
+        var cocWeapon = Weapon(Make(("per_lutar", 60)), new { nome = "Teste CoC", @base = "per_lutar", dano = "1d6+2", dano_extra = "1d4", empala = true, tipo = "corpo", falha = 100, municao = -1 });
+        var sequence = new Queue<int>([2, 1, 4]);
+        var impale = SheetRuleActions.Apply(armedCoc, cocWeapon, new("attack", 1, "0"), _ => sequence.Dequeue());
+        Check(impale.Message.Contains("empalamento") && impale.Message.Contains("dano 18"), "CoC impale is max weapon plus rolled weapon plus max bonus");
         Console.WriteLine("Edition rule actions: damage, death, rest, slots, costs, wounds, sanity, development and multiclass passed.");
     }
 }

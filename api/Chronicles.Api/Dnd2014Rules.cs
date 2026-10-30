@@ -14,6 +14,11 @@ public static class Dnd2014Rules
     private static RuleChoice[] Dice => new[] { 6, 8, 10, 12 }.Select(d => new RuleChoice(d.ToString(), $"d{d}")).ToArray();
     private static int Level(RuleState s) => Classes.Sum(c => s.Get("nivel_" + c.Key));
     private static int HitDice(RuleState s, int die) => Classes.Where(c => c.Die == die).Sum(c => s.Get("nivel_" + c.Key));
+    public static void SyncSlots(RuleState s)
+    {
+        var slots = SpellSlots(s);
+        for (var i = 1; i <= 9; i++) s.Field("espacos_magia_" + i, Math.Max(0, (i <= slots.Length ? slots[i - 1] : 0) - s.Get("slot_usado_" + i)));
+    }
     public static int[] SpellSlots(RuleState s)
     {
         var active = Classes.Where(c => s.Get("nivel_" + c.Key) > 0 && (c.Casting == 1 || c.Casting == 2 && s.Get("nivel_" + c.Key) >= 2 || c.Casting == 3 && s.Get("terco_" + c.Key) == 1 && s.Get("nivel_" + c.Key) >= 3)).ToArray();
@@ -33,7 +38,7 @@ public static class Dnd2014Rules
         var stats = new List<RuleStat> { new("Níveis configurados", Level(s).ToString()), new("Carga normal (libras)", (s.N("forca") * 15).ToString()),
             new("Estado", s.Get("morto") > 0 ? "Morto" : s.Health == 0 ? s.Get("estavel") > 0 ? "Estável / inconsciente" : "Inconsciente / testes contra a morte" : "Ativo") };
         stats.AddRange(Dice.Select(d => { var die = int.Parse(d.Value); return new RuleStat($"Dados de vida d{die}", $"{Math.Max(0, HitDice(s, die) - s.Get("dv_usado_" + die))}/{HitDice(s, die)}"); }));
-        stats.AddRange(slots.Select((total, i) => new RuleStat($"Espaços de nível {i + 1}", $"{Math.Max(0, total - s.Get("slot_usado_" + (i + 1)))}/{total}")));
+        stats.AddRange(slots.Select((total, i) => new RuleStat($"Espaços de nível {i + 1}", $"{s.N("espacos_magia_" + (i + 1), Math.Max(0, total - s.Get("slot_usado_" + (i + 1))))}/{total}")));
         var warlock = s.Get("nivel_bruxo");
         if (warlock > 0) stats.Add(new("Magia de pacto", $"{Math.Max(0, PactCount(warlock) - s.Get("pacto_usado"))}/{PactCount(warlock)} de nível {Math.Min(5, (warlock + 1) / 2)}"));
         return new("D&D 5e 2014", [new("damage", "Sofrer dano", "Dano após resistências", [new("normal", "Normal"), new("critical", "Acerto crítico")]),
@@ -43,6 +48,7 @@ public static class Dnd2014Rules
             new("long-rest", "Concluir descanso longo", null, [new("confirmed", "8h concluídas; nenhum descanso longo nas últimas 24h")]),
             new("recover-hit-die", "Recuperar dado de vida", null, Dice), new("cast", "Gastar espaço de magia", "Nível do espaço (1–9)"),
             new("pact-cast", "Gastar espaço de pacto"), new("short-rest", "Concluir descanso curto (1h)"),
+            new("spellcasting", "Usar conjuração de uma classe", null, Classes.Where(c => c.Casting > 0 || c.Key == "bruxo").Select(c => new RuleChoice(c.Key, c.Label)).ToArray()),
             new("baseline", "Aplicar PV médios de criação", null, Classes.Select(c => new RuleChoice(c.Key, $"Classe inicial: {c.Label}")).ToArray())], stats.ToArray(),
             [.. Classes.Select(c => new RuleSetting("nivel_" + c.Key, $"Níveis de {c.Label}", 0, 20)), new("terco_guerreiro", "Guerreiro com conjuração de 1/3 (0 ou 1)", 0, 1), new("terco_ladino", "Ladino com conjuração de 1/3 (0 ou 1)", 0, 1)], s.State);
     }
@@ -83,6 +89,7 @@ public static class Dnd2014Rules
                 RuleState.Require(s.Health > 0 && Level(s) is >= 1 and <= 20, "O descanso longo exige ao menos 1 PV no início e níveis configurados.");
                 s.Health = s.MaxHealth; s.Field("pontos_temporarios", 0);
                 for (var i = 1; i <= 9; i++) s.Set("slot_usado_" + i, 0);
+                SyncSlots(s);
                 s.Set("pacto_usado", 0); s.Set("dv_recuperar", Math.Max(1, Level(s) / 2));
                 return "PV e espaços restaurados; escolha os dados de vida a recuperar (até metade dos níveis, mínimo 1).";
             case "recover-hit-die":
@@ -92,8 +99,18 @@ public static class Dnd2014Rules
             case "cast":
                 RuleState.Require(c.Amount is >= 1 and <= 9, "Nível do espaço inválido.");
                 var slots = SpellSlots(s); var total = c.Amount <= slots.Length ? slots[c.Amount - 1] : 0;
-                RuleState.Require(total > s.Get("slot_usado_" + c.Amount), "Não há espaço deste nível disponível.");
-                s.Set("slot_usado_" + c.Amount, s.Get("slot_usado_" + c.Amount) + 1); return "Espaço gasto. Componentes e efeitos dependem da magia escolhida.";
+                var current = s.N("espacos_magia_" + c.Amount, total - s.Get("slot_usado_" + c.Amount));
+                RuleState.Require(current > 0 && current <= total, "Não há espaço deste nível disponível. Confira os níveis e os espaços registrados.");
+                s.Set("slot_usado_" + c.Amount, total - current + 1); s.Field("espacos_magia_" + c.Amount, current - 1); return "Espaço gasto. Componentes e efeitos dependem da magia escolhida.";
+            case "spellcasting":
+                RuleState.Require(s.Get("nivel_" + c.Option) > 0, "Configure níveis da classe conjuradora.");
+                RuleState.Require(c.Option is not ("paladino" or "patrulheiro") || s.Get("nivel_" + c.Option) >= 2, "Esta classe recebe conjuração a partir do nível 2.");
+                RuleState.Require(c.Option is not ("guerreiro" or "ladino") || s.Get("nivel_" + c.Option) >= 3, "A subclasse recebe conjuração a partir do nível 3.");
+                var attribute = c.Option is "clerigo" or "druida" or "patrulheiro" ? "sabedoria" : c.Option is "mago" or "guerreiro" or "ladino" ? "inteligencia" : "carisma";
+                RuleState.Require(c.Option is not ("guerreiro" or "ladino") || s.Get("terco_" + c.Option) == 1, "A subclasse precisa conceder conjuração.");
+                var attack = s.N("mod_" + attribute) + s.N("proficiencia");
+                s.Field("ataque_magico", attack); s.Field("cd_magias", 8 + attack); s.Fields["atributo_conjuracao"] = System.Text.Json.JsonSerializer.SerializeToElement(attribute);
+                return "Atributo, ataque e CD atualizados para a classe selecionada. Multiclasse conserva atributos de conjuração distintos.";
             case "pact-cast": RuleState.Require(s.Get("nivel_bruxo") > 0 && s.Get("pacto_usado") < PactCount(s.Get("nivel_bruxo")), "Sem espaço de pacto."); s.Set("pacto_usado", s.Get("pacto_usado") + 1); return "Espaço de pacto gasto.";
             case "short-rest": s.Set("pacto_usado", 0); return "Espaços de pacto restaurados. Gaste dados de vida individualmente para recuperar PV.";
             case "baseline":

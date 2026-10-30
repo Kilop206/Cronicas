@@ -2,6 +2,11 @@ namespace Chronicles.Api;
 
 public static class CthulhuRules
 {
+    public static string DamageBonus(int strength, int size)
+    {
+        var total = strength + size;
+        return total < 2 ? "0" : total <= 64 ? "-2" : total <= 84 ? "-1" : total <= 124 ? "0" : total <= 164 ? "1d4" : total <= 204 ? "1d6" : $"{2 + (total - 205) / 80}d6";
+    }
     public static int Movement(int strength, int dexterity, int size, int age) => Math.Max(0,
         (strength < size && dexterity < size ? 7 : strength > size && dexterity > size ? 9 : 8) - Math.Clamp(age / 10 - 3, 0, 5));
     private static int SanityCap(RuleState s) => Math.Max(0, 99 - s.Get("mitos"));

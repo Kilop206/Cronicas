@@ -23,6 +23,14 @@ Os comandos que confirmam passagem de tempo ou efeitos externos exigem a confirm
 
 ## Conferência e diferenças entre fontes
 
+As versões Ordem v7, D&D v4, Tormenta20 v4 e CoC v5 acrescentam ataques estruturados com cálculo de dano no servidor. O campo `ataques_regras` é adicionado na atualização explícita, preservando as tabelas antigas de armas e ataques. A base usa uma chave numérica do próprio schema. Em Ordem, o servidor inclui treino e outros modificadores da tabela de perícias e trata atributo zero com dois dados conservando o menor.
+
+D&D dobra os dados base e extras no crítico; Ordem e Tormenta20 multiplicam os dados base conforme a arma, mantendo dados extras e bônus fixos. CoC usa testes percentuais, mau funcionamento, dano máximo e empalamento, distinguindo armas a distância. Munição é descontada na mesma transação da rolagem, inclusive em falhas; −1 representa ataques sem consumo controlado. O alvo recebe o dano por uma ação separada, depois de aplicar proteção, resistências e imunidades. O motor ainda não infere oposição, alcance ou elegibilidade apenas do nome da arma.
+
+O interpretador `DamageFormula` aceita até 12 termos de dados/números e referências a campos numéricos, com limites de quantidade; não aceita funções, objetos, acesso a arquivos ou execução de código. Dano base e extra ficam separados para que os multiplicadores de cada edição sejam aplicados corretamente. Os testes verificam críticos, consumo de munição, privacidade, persistência e recarga usando a API real de teste.
+
+Em D&D, configurar níveis também atualiza o nível total e os espaços disponíveis da ficha. Gastar um espaço ou concluir descanso longo atualiza tanto o estado do motor quanto os campos da aba de magias. A escolha de classe conjuradora preenche atributo, CD e bônus de ataque, sem misturar o atributo de classes diferentes.
+
 Os capítulos completos dos quatro livros básicos locais foram extraídos para arquivos temporários para conferência. Esses arquivos e os PDFs não são publicados. Ações são código e matemática; não incluem descrições de poderes, magias, aventuras ou imagens dos livros.
 
 O Livro Básico de CoC 7e consultado trata dano **maior** que PV máximos como morte imediata; o quick-start usa **maior ou igual**. O motor segue o livro básico e tem teste específico para o caso de igualdade. A recuperação semanal em extremo usa 2d3, também conferida na [referência oficial da Chaosium](https://callofcthulhuwiki.chaosium.com/rules/hit-points-wounds-and-healing.html). Movimento 9 exige FOR e DES estritamente maiores que TAM; valores iguais resultam em 8.
@@ -36,7 +44,7 @@ O Livro Básico de CoC 7e consultado trata dano **maior** que PV máximos como m
 
 ## Regras pendentes — não declarar cobertura integral
 
-- Ataques com alvos, críticos, múltiplos componentes de dano, resistências por tipo, munição e armas específicas.
+- Aplicação de dano diretamente ao alvo, resistências/imunidades por tipo, alcance, munições e propriedades especiais de cada arma. Ataques, críticos e múltiplos componentes de dano já estão integrados ao motor.
 - Condições com modificadores aplicados automaticamente a cada teste, ações disponíveis, deslocamento e duração; efeitos acumulados e exceções de classe.
 - Catálogos de escolhas de origem, espécie/raça, classe, trilha/subclasse, poderes, talentos, equipamentos e magias/rituais; pré-requisitos e escolhas em cada nível.
 - Conjuração completa: preparação/conhecimento, componentes, concentração, sustentação, alcance, áreas e efeitos específicos; recuperação de recursos de características individuais.

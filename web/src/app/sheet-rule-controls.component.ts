@@ -2,12 +2,13 @@ import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, OnChanges, OnDestroy, Output, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { Subscription, finalize } from 'rxjs';
-import { ApiService, Character, apiError } from './api';
+import { ApiService, Character, CharacterInput, RpgSystem, apiError } from './api';
+import { SheetCollectionFieldComponent } from './sheet-collection-field.component';
 
 interface RuleAction { id: string; label: string; amountLabel: string | null; options: { value: string; label: string }[] | null; }
 interface RuleView { edition: string; actions: RuleAction[]; stats: { label: string; value: string }[]; settings: { key: string; label: string; min: number; max: number }[]; state: Record<string, number>; }
 
-@Component({ selector: 'app-sheet-rule-controls', standalone: true, imports: [CommonModule, FormsModule], template: `
+@Component({ selector: 'app-sheet-rule-controls', standalone: true, imports: [CommonModule, FormsModule, SheetCollectionFieldComponent], template: `
   <section *ngIf="view() as rules" class="rule-controls" aria-label="Ações das regras do sistema">
     <details open><summary>{{ rules.edition }} · Ações e recursos</summary>
       <dl><div *ngFor="let stat of rules.stats"><dt>{{ stat.label }}</dt><dd>{{ stat.value }}</dd></div></dl>
@@ -21,6 +22,11 @@ interface RuleView { edition: string; actions: RuleAction[]; stats: { label: str
       <p *ngIf="character.canEdit && !ready" class="muted">Aguarde o salvamento das alterações antes de aplicar uma ação.</p>
       <p *ngIf="actionId === 'configure' && view()?.state" class="muted">Valor salvo deste indicador: {{ view()?.state?.[option] || 0 }}.</p>
       <p *ngIf="message()" role="status">{{ message() }}</p><p *ngIf="error()" role="alert" class="form-error">{{ error() }}</p>
+      <details *ngIf="rolls().length"><summary>Composição das rolagens</summary><p *ngFor="let roll of rolls()"><code>{{ roll.expression }} [{{ roll.rolls.join(', ') }}]{{ roll.modifier ? ' · modificador ' + roll.modifier : '' }} = {{ roll.total }}</code></p></details>
+      <details *ngIf="attackField() as field" class="weapon-editor" [attr.inert]="busy() ? '' : null"><summary>Ataques, dano e munição</summary>
+        <p>Use chaves numéricas da ficha para a base do teste. O dano aceita dados, números e referências como {{ system.templateId === 'dnd_5e' ? '{mod_forca}' : '{forca}' }}. Separe o dano extra para preservar os multiplicadores de crítico do sistema.</p>
+        <app-sheet-collection-field [field]="field" [draft]="draft" [campaignId]="character.campaignId" [mode]="character.canEdit ? 'edit' : 'read'" (changed)="changed.emit()" />
+      </details>
     </details>
   </section><p *ngIf="!view() && error()" role="alert" class="form-error">{{ error() }}</p>
 `, styles: [`
@@ -28,15 +34,20 @@ interface RuleView { edition: string; actions: RuleAction[]; stats: { label: str
 `] })
 export class SheetRuleControlsComponent implements OnChanges, OnDestroy {
   @Input({ required: true }) character!: Character;
+  @Input({ required: true }) draft!: CharacterInput;
+  @Input({ required: true }) system!: RpgSystem;
   @Input() ready = false;
   @Input() isMaster = false;
   @Output() applied = new EventEmitter<Character>();
   @Output() working = new EventEmitter<boolean>();
+  @Output() changed = new EventEmitter<void>();
   private api = inject(ApiService);
   private request?: Subscription;
   view = signal<RuleView | null>(null); busy = signal(false); error = signal(''); message = signal('');
+  rolls = signal<{ expression: string; rolls: number[]; keptIndexes: number[]; modifier: number; total: number }[]>([]);
   actionId = ''; option = ''; amount = 1; visibility: 'campaign' | 'private' | 'gm' = 'campaign';
   private version = '';
+  attackField() { return this.system.fields.find(field => field.key === 'ataques_regras'); }
   ngOnChanges() {
     const version = `${this.character.id}:${this.character.version}`;
     if (version === this.version) return;
@@ -52,10 +63,10 @@ export class SheetRuleControlsComponent implements OnChanges, OnDestroy {
   maximum() { return this.actionId === 'configure' ? this.view()?.settings.find(item => item.key === this.option)?.max ?? 9999 : 9999; }
   apply() {
     if (!this.ready || this.busy() || !this.character.canEdit || !this.action()) return;
-    this.busy.set(true); this.working.emit(true); this.error.set(''); this.message.set('');
+    this.busy.set(true); this.working.emit(true); this.error.set(''); this.message.set(''); this.rolls.set([]);
     this.api.applyCharacterRule(this.character.id, this.character.version, { action: this.actionId, amount: this.amount, option: this.option || null, visibility: this.visibility })
       .pipe(finalize(() => { this.busy.set(false); this.working.emit(false); })).subscribe({
-        next: result => { this.message.set(result.message); this.applied.emit(result.character); }, error: error => this.error.set(apiError(error))
+        next: result => { this.message.set(result.message); this.rolls.set(result.rolls); this.applied.emit(result.character); }, error: error => this.error.set(apiError(error))
       });
   }
   ngOnDestroy() { this.request?.unsubscribe(); }

@@ -34,7 +34,8 @@ public static class TormentaRules
             case "turn":
                 if (s.Get("sangrando") == 0) return "Turno iniciado; sem sangramento.";
                 var bleedingCon = s.N("constituicao"); var test = s.Roll($"1d20{(bleedingCon < 0 ? bleedingCon.ToString() : "+" + bleedingCon)}");
-                if (test >= 15) { s.Set("sangrando", 0); return $"Constituição {test}: sangramento encerrado."; }
+                var natural = s.Rolls[^1].Rolls[0];
+                if (natural == 20 || natural != 1 && test >= 15) { s.Set("sangrando", 0); return $"Constituição {test}: sangramento encerrado."; }
                 Health(s, Current(s) - s.Die(6)); Death(s); return $"Constituição {test}: sangramento causou perda de 1d6 PV.";
             case "spend":
                 RuleState.Require(c.Amount <= s.Get("nivel_" + c.Option), "O custo ultrapassa o nível na classe que fornece a habilidade. Aprimoramentos de limite exigem configuração própria.");

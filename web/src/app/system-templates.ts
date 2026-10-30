@@ -23,6 +23,11 @@ const tableField = (key: string, label: string, section: string, columns: [strin
   ({ key, label, section, type: 'table', min: null, max: null, options: null, span: 12,
     columns: columns.map(([columnKey, columnLabel, type]) => ({ key: columnKey, label: columnLabel, type })) });
 const ruleStateField = (): SystemField => ({ ...tableField('estado_regras', 'Estado das regras', 'Regras', [['chave', 'Indicador', 'text'], ['valor', 'Valor', 'number']]), defaultValue: [] });
+const weaponField = (system: 'dnd' | 'coc' | 'other'): SystemField => ({ ...tableField('ataques_regras', 'Ataques, dano e munição', 'Regras', [
+  ['nome', 'Ataque', 'text'], ['base', system === 'dnd' ? 'Modificador (ex.: mod_forca)' : system === 'coc' ? 'Perícia (ex.: per_lutar)' : 'Perícia (ex.: per_luta)', 'text'], ['dano', 'Dano base', 'text'], ['dano_extra', system === 'coc' ? 'Extra (vazio: bônus de dano corpo a corpo)' : 'Dano extra', 'text'],
+  ...(system === 'coc' ? [['empala', 'Empala', 'boolean'], ['tipo', 'corpo / distancia', 'text'], ['falha', 'Mau funcionamento', 'number']] as [string, string, 'text' | 'number' | 'boolean'][] : system === 'dnd' ? [['treinado', 'Proficiente', 'boolean'], ['bonus', 'Bônus de ataque', 'number']] as [string, string, 'number' | 'boolean'][] : [['margem', 'Margem (2–20)', 'number'], ['multiplicador', 'Crítico (2–5)', 'number']] as [string, string, 'number'][]),
+  ['municao', 'Munição (−1: livre)', 'number']
+]), defaultValue: [] });
 
 const block = (id: string, kind: SheetBlock['kind'], title: string, span: number, key: string | null = null, style: SheetBlock['style'] = 'panel'): SheetBlock =>
   ({ id, kind, title, span, key, text: null, style });
@@ -47,6 +52,7 @@ function makeLayout(fields: SystemField[], specs: PageSpec[], skin: SheetLayout[
     return block(`campo_${item}`, 'field', field.label, display?.span || field.span || 6, item, display?.style || 'panel');
   }) }));
   if (fields.some(field => field.key === 'estado_regras')) pages[pages.length - 1].blocks.push(block('estado_regras', 'field', 'Estado das regras', 12, 'estado_regras', 'compact'));
+  if (fields.some(field => field.key === 'ataques_regras')) pages[pages.length - 1].blocks.push(block('ataques_regras', 'field', 'Ataques, dano e munição', 12, 'ataques_regras', 'compact'));
   return { accentColor, skin, headerLabel, pages };
 }
 
@@ -66,6 +72,7 @@ const orderSkills: [string, string, string][] = [
   ['vontade', 'Vontade', 'presenca']
 ];
 const orderFields: SystemField[] = [
+  weaponField('other'),
   ruleStateField(),
   textField('aparencia', 'Aparência', 'Identidade'), textField('afinidade', 'Afinidade', 'Identidade'),
   { key: 'classe_regra', label: 'Classe para recursos', section: 'Identidade', type: 'select', options: ['combatente', 'especialista', 'ocultista'], span: 3, min: null, max: null, defaultValue: null },
@@ -99,6 +106,7 @@ const dndSkills: [string, string, string][] = [
   ['prestidigitacao', 'Prestidigitação', 'destreza'], ['religiao', 'Religião', 'inteligencia'], ['sobrevivencia', 'Sobrevivência', 'sabedoria']
 ];
 const dndFields: SystemField[] = [
+  weaponField('dnd'),
   ruleStateField(),
   textField('alinhamento', 'Alinhamento', 'Identidade'),
   listField('condicoes', 'Conditions', 'Combate'),
@@ -137,6 +145,7 @@ const t20Skills: [string, string, string][] = [
   ['reflexos', 'Reflexos', 'destreza'], ['religiao', 'Religião', 'sabedoria'], ['sobrevivencia', 'Sobrevivência', 'sabedoria'], ['vontade', 'Vontade', 'sabedoria']
 ];
 const t20Fields: SystemField[] = [
+  weaponField('other'),
   ruleStateField(),
   listField('condicoes', 'Condições', 'Combate'),
   tableField('ataques', 'Ataques', 'Combate', [['nome', 'Ataque', 'text'], ['bonus', 'Bônus', 'number'], ['dano', 'Dano', 'text']]),
@@ -165,6 +174,7 @@ const cocSkills: [string, string][] = [
   ['ocultismo', 'Ocultismo'], ['persuadir', 'Persuadir'], ['psicologia', 'Psicologia'], ['rastrear', 'Rastrear']
 ];
 const cocFields: SystemField[] = [
+  weaponField('coc'),
   ruleStateField(),
   numberField('sorte', 'Sorte', 'Progressão', 0, '1d100'),
   longField('contatos', 'Contatos e notas', 'Identidade'),
@@ -184,7 +194,7 @@ const cocFields: SystemField[] = [
 ];
 
 export const SHEET_TEMPLATES: SheetTemplate[] = [
-  { id: 'ordem_paranormal', version: 6, rulesetVersion: '1.3', name: 'Ordem Paranormal RPG', summary: 'Painel de agente com atributos, perícias detalhadas, recursos, defesa, ataques e rituais.', sourceUrl: 'https://jamboeditora.com.br/wp-content/uploads/woocommerce_uploads/2023/02/jamboeditora-ordem-paranormal-ficha-de-personagem-oeuvst.pdf', fields: orderFields,
+  { id: 'ordem_paranormal', version: 7, rulesetVersion: '1.3', name: 'Ordem Paranormal RPG', summary: 'Painel de agente com atributos, perícias detalhadas, recursos, defesa, ataques e rituais.', sourceUrl: 'https://jamboeditora.com.br/wp-content/uploads/woocommerce_uploads/2023/02/jamboeditora-ordem-paranormal-ficha-de-personagem-oeuvst.pdf', fields: orderFields,
     layout: makeLayout(orderFields, [
       { id: 'dossie', title: 'Dossiê do agente', items: [identity(), portrait(), ...sectionKeys(orderFields, 'Identidade'), 'nex', resource('health', 'PV', 4), resource('mana', 'PE', 4), resource('sanity', 'SAN', 4), highlight('defesa', 4), 'bloqueio', 'esquiva', 'iniciativa', 'deslocamento', 'equip_defesa', 'outros_defesa'] },
       { id: 'aptidoes', title: 'Aptidões e ação', items: [note('nota_aptidoes', 'Rolagens', 'Ajuste os atributos e bônus de perícia conforme sua mesa.'), ...sectionKeys(orderFields, 'Atributos'), ...orderSkills.filter(([, , attribute]) => ['agilidade', 'forca', 'vigor'].includes(attribute)).map(([key]) => `per_${key}`)] },
@@ -192,7 +202,7 @@ export const SHEET_TEMPLATES: SheetTemplate[] = [
       { id: 'arsenal', title: 'Arsenal e rituais', items: ['protecao', 'resistencias', 'proficiencias', 'ataques', 'condicoes', 'rituais', 'carga_atual', 'carga_limite', inventory(), abilities()] },
       { id: 'registros', title: 'Registros', items: [history()] }
     ], 'investigation', '#9b8bc0', 'CRÔNICAS / DOSSIÊ DO AGENTE', { Atributos: { style: 'score', span: 3 }, Perícias: { style: 'compact', span: 6 } }) },
-  { id: 'dnd_5e', version: 3, rulesetVersion: '2014', name: 'D&D 5e (2014)', summary: 'Atributos, modificadores, resistências, perícias, progressão e combate da edição 2014.', sourceUrl: '', fields: dndFields,
+  { id: 'dnd_5e', version: 4, rulesetVersion: '2014', name: 'D&D 5e (2014)', summary: 'Atributos, modificadores, resistências, perícias, progressão e combate da edição 2014.', sourceUrl: '', fields: dndFields,
     layout: makeLayout(dndFields, [
       { id: 'aventura', title: 'Personagem e combate', items: [identity(), portrait(), ...sectionKeys(dndFields, 'Identidade'), 'nivel', 'experiencia', highlight('proficiencia', 4), resource('health', 'Pontos de vida', 8), highlight('classe_armadura', 4), 'iniciativa', 'deslocamento', 'pontos_temporarios', 'dados_vida', 'salvaguardas_sucesso', 'salvaguardas_falha', 'condicoes'] },
       { id: 'aptidoes', title: 'Atributos e resistências', items: [...dndAbilities.flatMap(([key]) => [key, `mod_${key}`]), ...dndAbilities.flatMap(([key]) => [`treino_res_${key}`, `res_${key}`])] },
@@ -201,7 +211,7 @@ export const SHEET_TEMPLATES: SheetTemplate[] = [
       { id: 'recursos', title: 'Características e magias', items: [...sectionKeys(dndFields, 'Magias'), abilities()] },
       { id: 'jornada', title: 'Jornada', items: [history()] }
     ], 'fantasy', '#b56d63', 'CRÔNICAS / AVENTURA', { Atributos: { style: 'score', span: 3 }, Modificadores: { style: 'score', span: 3 }, Resistências: { style: 'compact', span: 6 }, Perícias: { style: 'compact', span: 6 } }) },
-  { id: 'tormenta20', version: 3, rulesetVersion: 'jogo-do-ano-2024-v1.3', name: 'Tormenta20 — Jogo do Ano', summary: 'Raça, origem, classe, atributos, PV, PM, Defesa e perícias calculadas.', sourceUrl: 'https://jamboeditora.com.br/wp-content/uploads/2023/06/Tormenta20-Resumo-de-Regras.pdf', fields: t20Fields,
+  { id: 'tormenta20', version: 4, rulesetVersion: 'jogo-do-ano-2024-v1.3', name: 'Tormenta20 — Jogo do Ano', summary: 'Raça, origem, classe, atributos, PV, PM, Defesa e perícias calculadas.', sourceUrl: 'https://jamboeditora.com.br/wp-content/uploads/2023/06/Tormenta20-Resumo-de-Regras.pdf', fields: t20Fields,
     layout: makeLayout(t20Fields, [
       { id: 'heroi', title: 'Herói de Arton', items: [identity(), portrait(), ...sectionKeys(t20Fields, 'Identidade'), 'nivel', 'experiencia', 'bonus_treinamento', resource('health', 'PV', 6), resource('mana', 'PM', 6), highlight('defesa', 6), 'deslocamento', 'bonus_armadura', 'bonus_escudo', 'outros_defesa'] },
       { id: 'combate', title: 'Atributos e combate', items: [...sectionKeys(t20Fields, 'Atributos'), 'ataques', 'condicoes', ...t20Skills.slice(0, 10).flatMap(([key]) => [`treino_per_${key}`, `per_${key}`])] },
@@ -210,7 +220,7 @@ export const SHEET_TEMPLATES: SheetTemplate[] = [
       { id: 'mochila', title: 'Mochila', items: [inventory()] },
       { id: 'cronica', title: 'Crônica', items: [history()] }
     ], 'mythic', '#be825d', 'CRÔNICAS / LENDA', { Atributos: { style: 'score', span: 4 }, Perícias: { style: 'compact', span: 6 } }) },
-  { id: 'call_of_cthulhu_7e', version: 4, rulesetVersion: '7e', name: 'Call of Cthulhu 7e', summary: 'Características percentuais, limiares, recursos derivados e investigação.', sourceUrl: 'https://www.chaosium.com/content/FreePDFs/CoC/CHA23131%20Call%20of%20Cthulhu%207th%20Edition%20Quick-Start%20Rules.pdf', fields: cocFields,
+  { id: 'call_of_cthulhu_7e', version: 5, rulesetVersion: '7e', name: 'Call of Cthulhu 7e', summary: 'Características percentuais, limiares, recursos derivados e investigação.', sourceUrl: 'https://www.chaosium.com/content/FreePDFs/CoC/CHA23131%20Call%20of%20Cthulhu%207th%20Edition%20Quick-Start%20Rules.pdf', fields: cocFields,
     layout: makeLayout(cocFields, [
       { id: 'investigador', title: 'Arquivo do investigador', items: [identity(), portrait(), ...sectionKeys(cocFields, 'Identidade'), 'credito', 'sorte', 'desenvolvimento', resource('health', 'PV', 4), resource('sanity', 'SAN', 4), resource('mana', 'Magia', 4), ...sectionKeys(cocFields, 'Valores derivados')] },
       { id: 'caracteristicas', title: 'Características e limiares', items: [note('nota_limiares', 'Valores percentuais', 'Metade e quinto são calculados a partir de cada característica.'), ...cocCharacteristics.flatMap(([key]) => [key, `${key}_metade`, `${key}_quinto`])] },

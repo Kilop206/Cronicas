@@ -51,5 +51,5 @@ export class SheetCollectionFieldComponent {
   setCell(index: number, column: SystemColumn, value: SheetCellValue) { const rows = this.rows().map(row => ({ ...row })); rows[index][column.key] = column.type === 'number' ? Number(value) : value; this.set(rows); }
   removeRow(index: number) { this.set(this.rows().filter((_, position) => position !== index)); }
   add() { if (this.field.type === 'list' && this.items().length < 30) this.set([...this.items(), '']);
-    if (this.field.type === 'table' && this.rows().length < this.rowLimit()) this.set([...this.rows(), Object.fromEntries((this.field.columns || []).map(column => [column.key, this.cell({}, column)]))]); }
+    if (this.field.type === 'table' && this.rows().length < this.rowLimit()) this.set([...this.rows(), Object.fromEntries((this.field.columns || []).map(column => [column.key, this.field.key === 'ataques_regras' ? ({ margem: 20, multiplicador: 2, municao: -1, falha: 100, dano: '1', dano_extra: this.field.columns?.some(item => item.key === 'empala') ? '' : '0' } as Record<string, SheetCellValue>)[column.key] ?? this.cell({}, column) : this.cell({}, column)]))]); }
 }
