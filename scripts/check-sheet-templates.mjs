@@ -17,7 +17,7 @@ function load(file) {
 }
 
 const { SHEET_TEMPLATES: templates } = load('system-templates.ts');
-const { calculateSheet, fieldRoll, paranormalFieldRoll, dnd2014NextLevelXp } = load('sheet-rules.ts');
+const { calculateSheet, fieldRoll, paranormalFieldRoll, paranormalV13BaseResources, dnd2014NextLevelXp } = load('sheet-rules.ts');
 const { resolveSheetRenderer, sheetResources, sheetIndicators } = load('sheet-renderer-registry.ts');
 assert.equal(templates.length, 4);
 assert.equal(new Set(templates.map(template => template.layout.skin)).size, templates.length, 'Each template should have its own visual style');
@@ -93,12 +93,19 @@ for (const [level, training] of [[1, 2], [6, 2], [7, 4], [14, 4], [15, 6], [20, 
 assert.equal(resolveSheetRenderer({ ...dndSystem, templateId: t20.id, templateVersion: 1, fields: t20.fields })?.id, t20.id, 'Existing Tormenta20 sheets remain available');
 
 const order = templates.find(template => template.id === 'ordem_paranormal');
-assert.equal(order.version, 4, 'New Order templates are versioned without replacing existing sheets');
+assert.equal(order.version, 5, 'New Order templates are versioned without replacing existing sheets');
 assert.equal(order.rulesetVersion, '1.3');
+assert.equal(order.fields.find(field => field.key === 'classe_regra')?.type, 'select');
+assert.equal(JSON.stringify(paranormalV13BaseResources('especialista', 35, 2, 2)), JSON.stringify({ pv: 48, pe: 35, san: 40 }));
+assert.equal(JSON.stringify(paranormalV13BaseResources('combatente', 5, 2, 3)), JSON.stringify({ pv: 22, pe: 5, san: 12 }));
+assert.equal(JSON.stringify(paranormalV13BaseResources('ocultista', 99, 2, 3)), JSON.stringify({ pv: 90, pe: 140, san: 115 }));
+assert.equal(paranormalV13BaseResources('especialista', 37, 2, 2), null);
+assert.equal(paranormalV13BaseResources('classe digitada', 35, 2, 2), null);
 assert.equal(resolveSheetRenderer({ ...dndSystem, templateId: order.id, templateVersion: 1, fields: order.fields, layout: order.layout })?.id, order.id, 'Existing Order v1 still resolves');
 assert.equal(resolveSheetRenderer({ ...dndSystem, templateId: order.id, templateVersion: 2, fields: order.fields, layout: order.layout })?.id, order.id, 'Existing Order v2 still resolves');
 assert.equal(resolveSheetRenderer({ ...dndSystem, templateId: order.id, templateVersion: 3, fields: order.fields, layout: order.layout })?.id, order.id, 'New Order v3 resolves');
 assert.equal(resolveSheetRenderer({ ...dndSystem, templateId: order.id, templateVersion: 4, fields: order.fields, layout: order.layout })?.id, order.id, 'Order v4 resolves');
+assert.equal(resolveSheetRenderer({ ...dndSystem, templateId: order.id, templateVersion: 5, fields: order.fields, layout: order.layout })?.id, order.id, 'Order v5 resolves');
 const orderValues = {};
 assert.equal(calculateSheet(order.fields, orderValues), null);
 assert.equal(orderValues.defesa, 11);

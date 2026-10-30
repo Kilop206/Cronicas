@@ -62,6 +62,21 @@ export function paranormalFieldRoll(expression: string, values: SheetValues): st
   return fieldRoll(expression, values);
 }
 
+export type ParanormalClass = 'combatente' | 'especialista' | 'ocultista';
+
+// Baseline only: origins, powers and other choices can change these totals.
+export function paranormalV13BaseResources(characterClass: string, nex: number, vigor: number, presenca: number): { pv: number; pe: number; san: number } | null {
+  const progression: Record<ParanormalClass, { pv: number; pe: number; san: number; pvStep: number; peStep: number; sanStep: number }> = {
+    combatente: { pv: 20, pe: 2, san: 12, pvStep: 4, peStep: 2, sanStep: 3 },
+    especialista: { pv: 16, pe: 3, san: 16, pvStep: 3, peStep: 3, sanStep: 4 },
+    ocultista: { pv: 12, pe: 4, san: 20, pvStep: 2, peStep: 4, sanStep: 5 }
+  };
+  const base = progression[characterClass as ParanormalClass];
+  if (!base || ![nex, vigor, presenca].every(Number.isInteger) || nex < 5 || nex > 99 || nex !== 99 && nex % 5 !== 0 || vigor < 0 || presenca < 0) return null;
+  const steps = nex === 99 ? 19 : (nex - 5) / 5;
+  return { pv: base.pv + vigor + steps * (base.pvStep + vigor), pe: base.pe + presenca + steps * (base.peStep + presenca), san: base.san + steps * base.sanStep };
+}
+
 const dnd2014LevelXp = [0, 300, 900, 2700, 6500, 14000, 23000, 34000, 48000, 64000, 85000, 100000, 120000, 140000, 165000, 195000, 225000, 265000, 305000, 355000];
 
 export function dnd2014NextLevelXp(level: number): number | null {

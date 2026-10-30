@@ -65,6 +65,7 @@ const orderSkills: [string, string, string][] = [
 ];
 const orderFields: SystemField[] = [
   textField('aparencia', 'Aparência', 'Identidade'), textField('afinidade', 'Afinidade', 'Identidade'),
+  { key: 'classe_regra', label: 'Classe para recursos', section: 'Identidade', type: 'select', options: ['combatente', 'especialista', 'ocultista'], span: 3, min: null, max: null, defaultValue: null },
   longField('vinculos', 'Vínculos e histórico', 'Identidade'),
   listField('condicoes', 'Condições e estados', 'Combate'),
   listField('proficiencias', 'Proficiências', 'Combate'),
@@ -177,7 +178,7 @@ const cocFields: SystemField[] = [
 ];
 
 export const SHEET_TEMPLATES: SheetTemplate[] = [
-  { id: 'ordem_paranormal', version: 4, rulesetVersion: '1.3', name: 'Ordem Paranormal RPG', summary: 'Painel de agente com atributos, perícias detalhadas, recursos, defesa, ataques e rituais.', sourceUrl: 'https://jamboeditora.com.br/wp-content/uploads/woocommerce_uploads/2023/02/jamboeditora-ordem-paranormal-ficha-de-personagem-oeuvst.pdf', fields: orderFields,
+  { id: 'ordem_paranormal', version: 5, rulesetVersion: '1.3', name: 'Ordem Paranormal RPG', summary: 'Painel de agente com atributos, perícias detalhadas, recursos, defesa, ataques e rituais.', sourceUrl: 'https://jamboeditora.com.br/wp-content/uploads/woocommerce_uploads/2023/02/jamboeditora-ordem-paranormal-ficha-de-personagem-oeuvst.pdf', fields: orderFields,
     layout: makeLayout(orderFields, [
       { id: 'dossie', title: 'Dossiê do agente', items: [identity(), portrait(), ...sectionKeys(orderFields, 'Identidade'), 'nex', resource('health', 'PV', 4), resource('mana', 'PE', 4), resource('sanity', 'SAN', 4), highlight('defesa', 4), 'bloqueio', 'esquiva', 'iniciativa', 'deslocamento', 'equip_defesa', 'outros_defesa'] },
       { id: 'aptidoes', title: 'Aptidões e ação', items: [note('nota_aptidoes', 'Rolagens', 'Ajuste os atributos e bônus de perícia conforme sua mesa.'), ...sectionKeys(orderFields, 'Atributos'), ...orderSkills.filter(([, , attribute]) => ['agilidade', 'forca', 'vigor'].includes(attribute)).map(([key]) => `per_${key}`)] },

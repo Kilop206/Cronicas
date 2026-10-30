@@ -18,6 +18,7 @@ function fixture(id) {
   const coc = id === 'call_of_cthulhu_7e';
   const t20 = id === 'tormenta20';
   Object.assign(fields, order ? { origem: 'Acadêmico', classe: 'Especialista', trilha: 'Investigador', nex: 35, deslocamento: 9, agilidade: 3, forca: 2, intelecto: 4, presenca: 2, vigor: 2, per_investigacao: 5, per_ocultismo: 5, per_percepcao: 5, protecao: 'Colete', resistencias: 'Mental +5' } : coc ? { ocupacao: 'Jornalista', local: 'Arkham', epoca: '1925', idade: 34, credito: 45, sorte: 62, forca: 55, constituicao: 60, tamanho: 50, destreza: 65, aparencia: 45, educacao: 70, inteligencia: 75, poder: 60, forca_metade: 27, forca_quinto: 11, per_biblioteca: 70, per_escutar: 55, per_ocultismo: 35 } : t20 ? { raca: 'Humano', origem: 'Marinheiro', classe: 'Guerreiro', divindade: 'Valkaria', nivel: 4, experiencia: 3200, forca: 4, destreza: 2, constituicao: 3, inteligencia: 1, sabedoria: 0, carisma: 1, defesa: 19, deslocamento: 9, per_atletismo: 8, per_luta: 9, per_percepcao: 4 } : { classe: 'Paladino', especie: 'Humano', antecedente: 'Viajante', nivel: 5, experiencia: 6500, proficiencia: 3, forca: 16, destreza: 12, constituicao: 14, inteligencia: 10, sabedoria: 12, carisma: 16, mod_forca: 3, mod_destreza: 1, mod_constituicao: 2, mod_inteligencia: 0, mod_sabedoria: 1, mod_carisma: 3, classe_armadura: 18, iniciativa: 1, deslocamento: 9, per_atletismo: 6, per_percepcao: 4 });
+  if (order) fields.classe_regra = 'especialista';
   const character = { id: 'char-visual', campaignId: 'camp-visual', ownerId: 'user-visual', canEdit: true, name: order ? 'Helena Valença' : coc ? 'Clara Mendes' : t20 ? 'Ravi dos Ventos' : 'Elias de Valoria', portraitUrl: null, backgroundUrl: null, health: order ? 28 : coc ? 11 : t20 ? 36 : 37, maxHealth: order ? 35 : coc ? 12 : t20 ? 42 : 44, sanity: coc ? 58 : 32, maxSanity: coc ? 65 : 40, mana: t20 ? 10 : 7, maxMana: t20 ? 16 : 12, fields, version: 1, updatedAt: new Date().toISOString() };
   const system = { id: 'system-visual', ownerId: null, name: template.name, description: '', fields: template.fields, layout: template.layout, templateId: template.id, templateVersion: template.version, rulesetVersion: template.rulesetVersion, rendererMode: 'specialized', revision: 1, revisions: [], npcTemplates: [], createdAt: '', updatedAt: '' };
   const campaign = { id: 'camp-visual', name: order ? 'Caso do Farol' : 'Estrada dos Reinos', description: '', status: 'active', accentColor: '#a54d52', role: 'owner', updatedAt: '', systemId: system.id, worldId: null };
@@ -90,6 +91,12 @@ const sizes = [{ name: 'desktop', width: 1440, height: 900 }, { name: 'wide', wi
         const rollRequest = page.waitForRequest(request => request.url().endsWith('/api/campaigns/camp-visual/rolls') && request.method() === 'POST');
         await page.locator('.custom-sheet-main').getByRole('button', { name: 'Rolar Agilidade' }).click();
         if (JSON.parse((await rollRequest).postData() || '{}').expression !== '2d20kl1') throw new Error('Order attribute zero did not keep the lower die');
+        await page.getByRole('button', { name: 'Editar ficha' }).click();
+        const savedBase = page.waitForResponse(response => response.url().endsWith('/api/characters/char-visual') && response.request().method() === 'PUT');
+        await page.getByRole('button', { name: 'Aplicar valores iniciais' }).click();
+        await savedBase;
+        await page.reload({ waitUntil: 'networkidle' });
+        if (character.maxHealth !== 48 || character.maxMana !== 35 || character.maxSanity !== 40 || character.health !== 48 || character.mana !== 35 || character.sanity !== 40) throw new Error('Order baseline resources did not persist');
       }
       if (name === 'dnd') {
         if (!await page.locator('.dnd-topline').getByText('14000 XP').count()) throw new Error('D&D 2014 next level XP was not shown');
