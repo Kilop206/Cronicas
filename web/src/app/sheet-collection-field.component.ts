@@ -5,6 +5,13 @@ import { CharacterInput, SheetCellValue, SystemColumn, SystemField } from './api
 import { SheetRollComponent } from './sheet-roll.component';
 
 type SheetRow = Record<string, SheetCellValue>;
+type ColumnOptions = Record<string, { value: string; label: string }[]>;
+const numericOptions = new WeakMap<SystemField[], ColumnOptions>();
+export function numericColumnOptions(fields: SystemField[]): ColumnOptions {
+  let options = numericOptions.get(fields);
+  if (!options) { options = { base: fields.filter(field => field.type === 'number').map(field => ({ value: field.key, label: `${field.section}: ${field.label}` })) }; numericOptions.set(fields, options); }
+  return options;
+}
 
 @Component({ selector: 'app-sheet-collection-field', standalone: true, imports: [CommonModule, FormsModule, SheetRollComponent], template: `
   <div class="sheet-collection-field" [attr.aria-label]="field.label">
@@ -15,7 +22,7 @@ type SheetRow = Record<string, SheetCellValue>;
     </li></ul>
     <div *ngIf="field.type === 'table'" class="sheet-custom-table"><table><thead><tr><th *ngFor="let column of field.columns">{{ column.label }}</th><th *ngIf="mode === 'edit'"><span class="sr-only">Ações</span></th></tr></thead>
       <tbody><tr *ngFor="let row of rows(); let index=index"><td *ngFor="let column of field.columns">
-        <ng-container *ngIf="mode === 'edit'; else readCell"><input [type]="column.type === 'boolean' ? 'checkbox' : column.type === 'number' ? 'number' : 'text'" [attr.aria-label]="column.label + ' linha ' + (index + 1)" [ngModel]="cell(row,column)" (ngModelChange)="setCell(index,column,$event)" [ngModelOptions]="{standalone:true}" [attr.maxlength]="column.type === 'text' ? 300 : null"></ng-container>
+        <ng-container *ngIf="mode === 'edit'; else readCell"><select *ngIf="columnOptions[column.key]?.length; else editCell" [attr.aria-label]="column.label + ' linha ' + (index + 1)" [ngModel]="cell(row,column)" (ngModelChange)="setCell(index,column,$event)" [ngModelOptions]="{standalone:true}"><option value="">Selecione…</option><option *ngFor="let option of columnOptions[column.key]" [value]="option.value">{{ option.label }}</option></select><ng-template #editCell><input [type]="column.type === 'boolean' ? 'checkbox' : column.type === 'number' ? 'number' : 'text'" [attr.aria-label]="column.label + ' linha ' + (index + 1)" [ngModel]="cell(row,column)" (ngModelChange)="setCell(index,column,$event)" [ngModelOptions]="{standalone:true}" [attr.maxlength]="column.type === 'text' ? 300 : null"></ng-template></ng-container>
         <ng-template #readCell>{{ column.type === 'boolean' ? cell(row,column) === true ? 'Sim' : 'Não' : cell(row,column) }}</ng-template>
         <app-sheet-roll *ngIf="mode !== 'print' && column.type === 'dice' && cell(row,column)" [campaignId]="campaignId" [expression]="String(cell(row,column))" [values]="draft.fields" [label]="field.label + ' ' + (index + 1)" [compact]="true" />
       </td><td *ngIf="mode === 'edit'"><button type="button" [attr.aria-label]="'Remover linha ' + (index + 1)" (click)="removeRow(index)">×</button></td></tr></tbody></table></div>
@@ -39,6 +46,7 @@ export class SheetCollectionFieldComponent {
   @Input({ required: true }) draft!: CharacterInput;
   @Input() campaignId = '';
   @Input() mode: 'read' | 'edit' | 'print' = 'read';
+  @Input() columnOptions: ColumnOptions = {};
   @Output() changed = new EventEmitter<void>();
   items(): string[] { const value = this.draft.fields[this.field.key]; return Array.isArray(value) && value.every(item => typeof item === 'string') ? value as string[] : []; }
   rowLimit() { return this.field.key === 'estado_regras' ? 100 : 30; }

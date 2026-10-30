@@ -3,9 +3,9 @@ using static Chronicles.Api.CharacterEndpoints;
 
 namespace Chronicles.Api;
 
-public sealed record RuleCommand(string Action, int Amount = 0, string? Option = null, string Visibility = "campaign");
+public sealed record RuleCommand(string Action, int Amount = 0, string? Option = null, string Visibility = "campaign", string? Expression = null);
 public sealed record RuleChoice(string Value, string Label);
-public sealed record RuleAction(string Id, string Label, string? AmountLabel = null, RuleChoice[]? Options = null);
+public sealed record RuleAction(string Id, string Label, string? AmountLabel = null, RuleChoice[]? Options = null, bool Hidden = false);
 public sealed record RuleStat(string Label, string Value);
 public sealed record RuleSetting(string Key, string Label, int Min = 0, int Max = 9999);
 public sealed record RuleView(string Edition, RuleAction[] Actions, RuleStat[] Stats, RuleSetting[] Settings, Dictionary<string, int> State);
@@ -42,6 +42,8 @@ public static class SheetRuleActions
             if (system.TemplateId == "call_of_cthulhu_7e") view = view with { Settings = [.. view.Settings, new("dados_ataque", "Ataques: dados de bônus (+) ou penalidade (−)", -2, 2)] };
         }
         RuleAction[] weaponActions = weapon is null ? [] : [weapon];
+        if (system.TemplateId == "dnd_5e") view = view with { Actions = [.. view.Actions, .. Dnd2014Conditions.Actions(system)], Stats = [.. view.Stats, .. Dnd2014Conditions.Stats(s)],
+            Settings = [.. view.Settings, new("modo_testes", "Testes: −1 desvantagem, 0 normal, 1 vantagem", -1, 1), new("fonte_medo_oculta", "Fonte do medo fora de vista (0 ou 1)", 0, 1), new("alvo_ve_invisivel", "Alvo consegue ver invisibilidade (0 ou 1)", 0, 1), new("alvo_encantador", "Alvo é a fonte do encanto (0 ou 1)", 0, 1), new("sentido_percepcao", "Percepção: 0 geral, 1 visão, 2 audição", 0, 2), new("vantagem_concentracao", "Concentração: −1 desvantagem, 0 normal, 1 vantagem", -1, 1)] };
         return view with { Actions = [.. view.Actions, .. weaponActions, new RuleAction("configure", "Salvar configuração", "Valor", view.Settings.Select(x => new RuleChoice(x.Key, x.Label)).ToArray())] };
     }
 
@@ -50,7 +52,7 @@ public static class SheetRuleActions
         var view = Describe(system, input);
         var action = view.Actions.SingleOrDefault(a => a.Id == command.Action) ?? throw new ArgumentException("Ação indisponível nesta edição.");
         if (command.Amount > 9999 || command.Amount < (command.Action == "configure" ? -9999 : 0) || command.Visibility is not ("campaign" or "private" or "gm")) throw new ArgumentException("Valor ou visibilidade inválidos.");
-        if (action.Options is { Length: > 0 } && !action.Options.Any(o => o.Value == command.Option)) throw new ArgumentException("Escolha uma opção válida.");
+        if (action.Options is not null && !action.Options.Any(o => o.Value == command.Option)) throw new ArgumentException("Escolha uma opção válida.");
         var s = new RuleState(input, draw);
         if (command.Action == "configure")
         {
@@ -67,6 +69,11 @@ public static class SheetRuleActions
         {
             var attackMessage = WeaponActions.Apply(system, s, command);
             return new(s.Export(), attackMessage, s.Rolls.ToArray());
+        }
+        if (system.TemplateId == "dnd_5e" && Dnd2014Conditions.Handles(command.Action))
+        {
+            var conditionMessage = Dnd2014Conditions.Apply(system, s, command);
+            return new(s.Export(), conditionMessage, s.Rolls.ToArray());
         }
         var message = system.TemplateId switch
         {
@@ -88,6 +95,7 @@ public static class SheetRuleActions
             var old = new RuleState(empty with { Fields = before });
             foreach (var key in new[] { "morto", "insano", "estavel", "morrendo", "enlouquecendo", "ferimento_grave", "inconsciente", "insanidade_temporaria", "insanidade_indefinida", "sangrando", "dormiu", "relaxou" })
                 if (next.Get(key) is < 0 or > 1) return $"Indicador inválido: {key}.";
+            if (system.TemplateId == "dnd_5e" && (next.Get("exaustao") is < 0 or > 6)) return "Exaustão fora dos limites.";
             if (!master && next.Get("sorte_opcional") != old.Get("sorte_opcional")) return "Somente o mestre pode alterar a regra opcional de sorte.";
             var settings = Describe(system, empty with { Fields = after }).Settings;
             foreach (var setting in settings)
@@ -175,18 +183,19 @@ public sealed class RuleState
     }
     public void SpendMana(int amount) { Require(amount > 0 && Mana >= amount, "Recurso insuficiente ou custo inválido."); Mana -= amount; }
     public void HealthMaximum(int value) { Require(value is >= 1 and <= 9999, "Total de PV inválido."); character = character with { Health = value, MaxHealth = value }; }
+    public void ChangeHealthMaximum(int value) { Require(value is >= 0 and <= 9999, "Total de PV inválido."); character = character with { MaxHealth = value, Health = Math.Min(Health, value) }; }
     public void LoseSanityMaximum(int amount)
     {
         var maximum = Math.Max(0, MaxSanity - amount);
-        character = character with { Sanity = Math.Min(Sanity, maximum), MaxSanity = Math.Max(1, maximum) };
+        character = character with { Sanity = Math.Min(Sanity, maximum), MaxSanity = maximum };
         if (maximum == 0) Set("insano", 1);
         Set("san_permanente_perdida", Get("san_permanente_perdida") + amount);
     }
     public void Vitals(int health, int mana, int? sanity = null)
     {
         Require(health is >= 1 and <= 9999 && mana is >= 0 and <= 9999 && sanity is not (< 0 or > 9999), "Totais de recursos inválidos.");
-        character = character with { MaxHealth = health, Health = health, MaxMana = Math.Max(1, mana), Mana = mana };
-        if (sanity is { } san) character = character with { MaxSanity = Math.Max(1, san), Sanity = san };
+        character = character with { MaxHealth = health, Health = health, MaxMana = mana, Mana = mana };
+        if (sanity is { } san) character = character with { MaxSanity = san, Sanity = san };
     }
     public CharacterInput Export()
     {

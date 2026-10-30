@@ -300,7 +300,7 @@ public static partial class CharacterEndpoints
         return errors.Count == 0 ? null : errors;
     }
     private static bool ValidUrl(string? value) => string.IsNullOrWhiteSpace(value) || value.Length <= 2048 && Uri.TryCreate(value, UriKind.Absolute, out var url) && url.Scheme == Uri.UriSchemeHttps;
-    private static bool ValidResource(int value, int max) => max is >= 1 and <= 9999 && value >= 0 && value <= max;
+    private static bool ValidResource(int value, int max) => max is >= 0 and <= 9999 && value >= 0 && value <= max;
     private static async Task<Dictionary<string, string[]>?> ValidateFields(AppDbContext db, Guid campaignId, Dictionary<string, JsonElement>? values, string? previousJson = null,
         bool allowGm = false, string? authorizationJson = null)
     {

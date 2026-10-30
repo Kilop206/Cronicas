@@ -21,6 +21,8 @@ O estado fica no campo tabelado `estado_regras`, com pares `chave`/`valor`, inte
 
 Os comandos que confirmam passagem de tempo ou efeitos externos exigem a confirmação contextual do usuário. O servidor não presume que uma hora de tempo real equivale a uma hora de jogo. Ataques recebidos usam dano já ajustado por resistência/proteção; a ficha não infere tipo de dano ou imunidades a partir de texto livre. As configurações de classe usam chaves estáveis e não tentam adivinhar classes a partir dos nomes digitados.
 
+`SheetWeaponListComponent` apresenta os ataques dentro de Actions em D&D, Combate em Ordem e CoC e nas áreas de ataque de Tormenta20. As listas antigas continuam disponíveis quando têm dados. O editor oferece uma lista dos atributos/perícias do schema para escolher a base do ataque; a seleção guarda a chave estável sem exigir que o jogador a digite. A composição dos dados, o consumo de munição e as falhas são apresentados no próprio componente.
+
 ## Conferência e diferenças entre fontes
 
 As versões Ordem v7, D&D v4, Tormenta20 v4 e CoC v5 acrescentam ataques estruturados com cálculo de dano no servidor. O campo `ataques_regras` é adicionado na atualização explícita, preservando as tabelas antigas de armas e ataques. A base usa uma chave numérica do próprio schema. Em Ordem, o servidor inclui treino e outros modificadores da tabela de perícias e trata atributo zero com dois dados conservando o menor.
@@ -37,6 +39,14 @@ O Livro Básico de CoC 7e consultado trata dano **maior** que PV máximos como m
 
 ## Validação reproduzível
 
+### Condições de D&D 2014
+
+O motor registra as 14 condições do apêndice e os seis níveis de exaustão. Ações próprias aplicam e removem condições. Ataques combinam fontes de vantagem/desvantagem sem empilhá-las; perícias, atributos e resistências usam os efeitos pertinentes. Paralisia, petrificação, atordoamento e inconsciência provocam falha automática em resistências de FOR/DES. Incapacidade bloqueia ataques e encerra concentração. O contexto permite informar se a fonte do medo está fora de vista, se o alvo vê invisibilidade, se o alvo é o encantador e qual sentido é necessário à Percepção.
+
+Os botões nativos de atributos, perícias, resistências, iniciativa e ações com d20 usam o motor da edição. Rolagens de teste sem alteração de estado ficam no registro de dados e não criam revisões redundantes da ficha. A concentração exige Constituição após dano, inclusive absorvido por PV temporários, e é encerrada ao falhar ou ficar incapacitado. Exaustão altera testes, deslocamento e PV máximos; reduzir a exaustão restaura o máximo sem fornecer cura gratuita. Descanso longo com comida/água reduz um nível. A percepção passiva e o deslocamento da interface refletem os modificadores pertinentes.
+
+Recursos agora aceitam máximo zero no cliente e servidor. O OBS e as barras tratam divisão por zero. Alterar um máximo usa o valor concluído ao sair do controle, evitando cortar recursos durante a digitação de um novo valor com vários dígitos. Um máximo em branco não é convertido silenciosamente em zero.
+
 - `dotnet run --project tests/Chronicles.Rules.Tests`: testes determinísticos de custos, recursos, morte, descanso, espaços, multiclasse, ferimentos, sanidade e desenvolvimento.
 - `node scripts/check-sheet-templates.mjs`: schemas, fórmulas, versões e resolução dos quatro renderizadores.
 - `npm run build` e `npm run lint` em `web`.
@@ -45,7 +55,7 @@ O Livro Básico de CoC 7e consultado trata dano **maior** que PV máximos como m
 ## Regras pendentes — não declarar cobertura integral
 
 - Aplicação de dano diretamente ao alvo, resistências/imunidades por tipo, alcance, munições e propriedades especiais de cada arma. Ataques, críticos e múltiplos componentes de dano já estão integrados ao motor.
-- Condições com modificadores aplicados automaticamente a cada teste, ações disponíveis, deslocamento e duração; efeitos acumulados e exceções de classe.
+- Condições de Ordem e Tormenta20 com modificadores automáticos; contexto de condições dos alvos, durações, efeitos acumulados e exceções de classe. As condições de D&D já afetam testes, ataques, concentração e os indicadores descritos acima.
 - Catálogos de escolhas de origem, espécie/raça, classe, trilha/subclasse, poderes, talentos, equipamentos e magias/rituais; pré-requisitos e escolhas em cada nível.
 - Conjuração completa: preparação/conhecimento, componentes, concentração, sustentação, alcance, áreas e efeitos específicos; recuperação de recursos de características individuais.
 - Criação de investigador por idade/ocupação, distribuição de pontos, perícias especializadas, tratamentos, crises de insanidade, perseguições e combate percentual completo.

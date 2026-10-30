@@ -3,9 +3,9 @@ import { Component, EventEmitter, Input, OnChanges, OnDestroy, Output, inject, s
 import { FormsModule } from '@angular/forms';
 import { Subscription, finalize } from 'rxjs';
 import { ApiService, Character, CharacterInput, RpgSystem, apiError } from './api';
-import { SheetCollectionFieldComponent } from './sheet-collection-field.component';
+import { SheetCollectionFieldComponent, numericColumnOptions } from './sheet-collection-field.component';
 
-interface RuleAction { id: string; label: string; amountLabel: string | null; options: { value: string; label: string }[] | null; }
+interface RuleAction { id: string; label: string; amountLabel: string | null; options: { value: string; label: string }[] | null; hidden?: boolean; }
 interface RuleView { edition: string; actions: RuleAction[]; stats: { label: string; value: string }[]; settings: { key: string; label: string; min: number; max: number }[]; state: Record<string, number>; }
 
 @Component({ selector: 'app-sheet-rule-controls', standalone: true, imports: [CommonModule, FormsModule, SheetCollectionFieldComponent], template: `
@@ -25,7 +25,7 @@ interface RuleView { edition: string; actions: RuleAction[]; stats: { label: str
       <details *ngIf="rolls().length"><summary>Composição das rolagens</summary><p *ngFor="let roll of rolls()"><code>{{ roll.expression }} [{{ roll.rolls.join(', ') }}]{{ roll.modifier ? ' · modificador ' + roll.modifier : '' }} = {{ roll.total }}</code></p></details>
       <details *ngIf="attackField() as field" class="weapon-editor" [attr.inert]="busy() ? '' : null"><summary>Ataques, dano e munição</summary>
         <p>Use chaves numéricas da ficha para a base do teste. O dano aceita dados, números e referências como {{ system.templateId === 'dnd_5e' ? '{mod_forca}' : '{forca}' }}. Separe o dano extra para preservar os multiplicadores de crítico do sistema.</p>
-        <app-sheet-collection-field [field]="field" [draft]="draft" [campaignId]="character.campaignId" [mode]="character.canEdit ? 'edit' : 'read'" (changed)="changed.emit()" />
+        <app-sheet-collection-field [field]="field" [columnOptions]="baseOptions()" [draft]="draft" [campaignId]="character.campaignId" [mode]="character.canEdit ? 'edit' : 'read'" (changed)="changed.emit()" />
       </details>
     </details>
   </section><p *ngIf="!view() && error()" role="alert" class="form-error">{{ error() }}</p>
@@ -48,12 +48,14 @@ export class SheetRuleControlsComponent implements OnChanges, OnDestroy {
   actionId = ''; option = ''; amount = 1; visibility: 'campaign' | 'private' | 'gm' = 'campaign';
   private version = '';
   attackField() { return this.system.fields.find(field => field.key === 'ataques_regras'); }
+  baseOptions() { return numericColumnOptions(this.system.fields); }
   ngOnChanges() {
     const version = `${this.character.id}:${this.character.version}`;
     if (version === this.version) return;
     this.version = version; this.request?.unsubscribe();
     this.request = this.api.characterRules(this.character.id).subscribe({ next: result => {
-      this.view.set(result.supported ? result.rules as RuleView : null);
+      const rules = result.supported ? result.rules as RuleView : null;
+      this.view.set(rules ? { ...rules, actions: rules.actions.filter(action => !action.hidden) } : null);
       if (this.view() && !this.view()!.actions.some(action => action.id === this.actionId)) this.choose(this.view()!.actions[0].id);
     }, error: error => this.error.set(apiError(error)) });
   }

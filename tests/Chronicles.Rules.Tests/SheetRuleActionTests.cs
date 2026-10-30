@@ -129,6 +129,25 @@ public static class SheetRuleActionTests
         var sequence = new Queue<int>([2, 1, 4]);
         var impale = SheetRuleActions.Apply(armedCoc, cocWeapon, new("attack", 1, "0"), _ => sequence.Dequeue());
         Check(impale.Message.Contains("empalamento") && impale.Message.Contains("dano 18"), "CoC impale is max weapon plus rolled weapon plus max bonus");
+        var conditioned = Apply(dnd, Make(("deslocamento", 9)), "condition", option: "envenenado").Character;
+        Check(Dnd2014Conditions.Mode(new RuleState(conditioned), "ability") == -1 && Dnd2014Conditions.Mode(new RuleState(conditioned), "save") == 0, "poison affects checks and attacks, not saves");
+        conditioned = Apply(dnd, conditioned, "condition", option: "invisivel").Character;
+        Check(Dnd2014Conditions.Mode(new RuleState(conditioned), "attack") == 0, "advantage and disadvantage cancel regardless of sources");
+        conditioned = Apply(dnd, conditioned, "condition", option: "incapacitado").Character;
+        Check(Dnd2014Conditions.Stats(new RuleState(conditioned)).Single(stat => stat.Label == "Deslocamento após condições").Value == "9", "incapacitated alone does not reduce movement");
+        Reject(() => Apply(armedDnd, Weapon(conditioned, new { nome = "Teste", @base = "mod_forca", dano = "1", municao = -1 }), "attack", 10, "0"), "incapacitated cannot attack");
+        var exhausted = Apply(dnd, Make(), "exhaustion", 4).Character;
+        Check(exhausted.MaxHealth == 15 && exhausted.Health == 15, "exhaustion halves maximum HP and clamps current");
+        exhausted = Apply(dnd, exhausted, "exhaustion", 3).Character;
+        Check(exhausted.MaxHealth == 30 && exhausted.Health == 15, "removing exhaustion restores maximum without healing");
+        var tiny = Apply(dnd, Make() with { MaxHealth = 1, Health = 1 }, "exhaustion", 4).Character;
+        Check(tiny.MaxHealth == 0 && tiny.Health == 0, "zero maximum is represented accurately");
+        var concentrating = Apply(dnd, Make(("res_constituicao", 2), ("pontos_temporarios", 10)), "concentrate").Character;
+        concentrating = Apply(dnd, concentrating, "damage", 8, "normal", 1).Character;
+        Check(concentrating.Health == 20 && new RuleState(concentrating).Get("concentrando") == 0, "absorbed damage still triggers concentration and failed save ends it");
+        var autoSaveSystem = dnd with { Fields = [stateField, Numeric("res_destreza", "1d20+{res_destreza}")] };
+        var paralyzed = Apply(autoSaveSystem, Make(("res_destreza", 20)), "condition", option: "paralisado").Character;
+        Check(Apply(autoSaveSystem, paralyzed, "test", 10, "res_destreza").Rolls.Length == 0, "paralysis automatically fails DEX save without fake roll");
         Console.WriteLine("Edition rule actions: damage, death, rest, slots, costs, wounds, sanity, development and multiclass passed.");
     }
 }

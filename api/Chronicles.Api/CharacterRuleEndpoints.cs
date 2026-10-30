@@ -17,7 +17,11 @@ public static partial class CharacterEndpoints
             var character = await db.Characters.AsNoTracking().SingleAsync(x => x.Id == id);
             var definition = await RulesDefinition(db, character.CampaignId);
             if (definition is null || !SheetRuleActions.Supports(definition)) return Results.Ok(new { supported = false });
-            try { return Results.Ok(new { supported = true, rules = SheetRuleActions.Describe(definition, RuleInput(character)) }); }
+            try
+            {
+                var rules = SheetRuleActions.Describe(definition, RuleInput(character));
+                return Results.Ok(new { supported = true, rules = rules with { Actions = rules.Actions.Where(action => !action.Hidden && (action.Options is null || action.Options.Length > 0)).ToArray() } });
+            }
             catch (ArgumentException error) { return RuleError(error.Message); }
         });
         api.MapPost("/characters/{id:guid}/rules", async Task<IResult> (Guid id, RuleExecutionInput input, HttpContext http, AppDbContext db) =>
@@ -43,8 +47,10 @@ public static partial class CharacterEndpoints
             if (errors is not null) return Results.ValidationProblem(errors);
             var fieldErrors = await ValidateFields(db, character.CampaignId, result.Character.Fields, character.FieldsJson, allowGm: master, authorizationJson: character.FieldsJson);
             if (fieldErrors is not null) return Results.ValidationProblem(fieldErrors);
-            CharacterHistory.Capture(db, character, userId);
-            Apply(character, result.Character);
+            var changed = character.Health != result.Character.Health || character.MaxHealth != result.Character.MaxHealth || character.Mana != result.Character.Mana || character.MaxMana != result.Character.MaxMana
+                || character.Sanity != result.Character.Sanity || character.MaxSanity != result.Character.MaxSanity
+                || !JsonElement.DeepEquals(JsonSerializer.SerializeToElement(result.Character.Fields), JsonSerializer.Deserialize<JsonElement>(character.FieldsJson));
+            if (changed) { CharacterHistory.Capture(db, character, userId); Apply(character, result.Character); }
             foreach (var roll in result.Rolls) db.DiceRolls.Add(new DiceRoll { CampaignId = character.CampaignId, UserId = userId, RequestId = Guid.NewGuid(),
                 Expression = roll.Expression, RollsJson = JsonSerializer.Serialize(roll.Rolls), KeptIndexesJson = JsonSerializer.Serialize(roll.KeptIndexes),
                 Modifier = roll.Modifier, Total = roll.Total, Visibility = input.Command.Visibility });

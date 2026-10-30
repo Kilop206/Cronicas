@@ -41,6 +41,12 @@ const sizes = [{ name: 'desktop', width: 1440, height: 900 }, { name: 'wide', wi
       const method = route.request().method();
       const responses = { '/api/auth/me': user, '/api/characters/char-visual': character, '/api/characters/char-visual/favorite': { favorite: false }, '/api/characters/char-visual/secret': { notes: '', revision: 1, updatedAt: null }, '/api/campaigns/camp-visual': campaign, '/api/systems/system-visual': system };
       if (pathname === '/api/characters/char-visual' && method === 'PUT') character = { ...character, ...JSON.parse(route.request().postData() || '{}'), version: character.version + 1 };
+      if (pathname === '/api/characters/char-visual/rules' && method === 'POST') {
+        const { command } = JSON.parse(route.request().postData() || '{}');
+        const label = system.fields.find(field => field.key === command.option)?.label || 'Teste';
+        character = { ...character, version: character.version + 1 };
+        return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ character, message: `${label}: ${rollTotal}`, rolls: [{ expression: '1d20', rolls: [rollTotal], keptIndexes: [0], modifier: 0, total: rollTotal }] }) });
+      }
       if ((pathname === '/api/campaigns/camp-visual/rolls' || pathname === '/api/campaigns/camp-visual/percentile-rolls') && method === 'POST') {
         const request = JSON.parse(route.request().postData() || '{}');
         return route.fulfill({ status: 200, contentType: 'application/json', body: JSON.stringify({ id: 'roll-visual', campaignId: campaign.id, userId: user.id, userName: user.displayName, expression: request.expression || '1d100', rolls: [rollTotal], keptIndexes: [0], modifier: 0, total: rollTotal, visibility: request.visibility, createdAt: new Date().toISOString() }) });

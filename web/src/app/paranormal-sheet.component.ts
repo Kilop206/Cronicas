@@ -1,3 +1,4 @@
+import { SheetWeaponListComponent } from './sheet-weapon-list.component';
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -8,7 +9,7 @@ import { CharacterHistoryPanelComponent } from './character-history.component';
 import { CharacterInventoryComponent } from './character-inventory.component';
 import { SheetCollectionFieldComponent } from './sheet-collection-field.component';
 import { SystemFieldComponent } from './specialized-sheet.component';
-import { paranormalFieldRoll, paranormalV13BaseResources } from './sheet-rules';
+import { resourceMaximum, paranormalFieldRoll, paranormalV13BaseResources } from './sheet-rules';
 import { SHEET_TEMPLATES } from './system-templates';
 
 type SheetMode = 'read' | 'edit' | 'print';
@@ -88,7 +89,7 @@ export class ParanormalAttributeWheelComponent {
   <div class="paranormal-resource" [class.health]="key === 'health'" [class.sanity]="key === 'sanity'" [class.effort]="key === 'mana'">
     <div class="resource-top"><span>{{ label }}</span><strong>{{ draft[key] }}<small> / {{ draft[maxKey()] }}</small></strong></div>
     <div class="resource-track" role="meter" [attr.aria-label]="label" [attr.aria-valuenow]="draft[key]" aria-valuemin="0" [attr.aria-valuemax]="draft[maxKey()]"><i [style.width.%]="percent()"></i></div>
-    <div *ngIf="mode !== 'print' && canEdit" class="resource-controls"><button type="button" [disabled]="draft[key] <= 0" [attr.aria-label]="'Diminuir ' + label" (click)="adjust(-1)">−</button><button type="button" [disabled]="draft[key] >= draft[maxKey()]" [attr.aria-label]="'Aumentar ' + label" (click)="adjust(1)">+</button><input *ngIf="mode === 'edit'" type="number" [attr.aria-label]="'Valor atual de ' + label" [ngModel]="draft[key]" (ngModelChange)="setCurrent($event)" [ngModelOptions]="{standalone:true}" min="0" [max]="draft[maxKey()]"><label *ngIf="mode === 'edit'">Máx. <input type="number" [attr.aria-label]="'Máximo de ' + label" [ngModel]="draft[maxKey()]" (ngModelChange)="setMax($event)" [ngModelOptions]="{standalone:true}" min="1" max="9999"></label></div>
+    <div *ngIf="mode !== 'print' && canEdit" class="resource-controls"><button type="button" [disabled]="draft[key] <= 0" [attr.aria-label]="'Diminuir ' + label" (click)="adjust(-1)">−</button><button type="button" [disabled]="draft[key] >= draft[maxKey()]" [attr.aria-label]="'Aumentar ' + label" (click)="adjust(1)">+</button><input *ngIf="mode === 'edit'" type="number" [attr.aria-label]="'Valor atual de ' + label" [ngModel]="draft[key]" (ngModelChange)="setCurrent($event)" [ngModelOptions]="{standalone:true}" min="0" [max]="draft[maxKey()]"><label *ngIf="mode === 'edit'">Máx. <input type="number" [attr.aria-label]="'Máximo de ' + label" [ngModel]="draft[maxKey()]" (blur)="setMax($any($event.target).value)" [ngModelOptions]="{standalone:true}" min="0" max="9999"></label></div>
   </div>
 `, styles: [`
   .paranormal-resource{--meter:#bc5b5d;padding:9px 11px;background:#201b20;border:1px solid #554048;min-width:0}.paranormal-resource.sanity{--meter:#777ab5}.paranormal-resource.effort{--meter:#af9655}
@@ -109,7 +110,7 @@ export class ParanormalResourceBarComponent {
   percent() { return Math.max(0, Math.min(100, this.draft[keyOf(this.key)] / this.draft[this.maxKey()] * 100)); }
   adjust(step: number) { if (!this.canEdit) return; this.draft[this.key] = Math.max(0, Math.min(this.draft[this.maxKey()], this.draft[this.key] + step)); this.changed.emit(); }
   setCurrent(value: number) { if (!this.canEdit) return; this.draft[this.key] = Math.max(0, Math.min(this.draft[this.maxKey()], Number(value) || 0)); this.changed.emit(); }
-  setMax(value: number) { if (!this.canEdit) return; this.draft[this.maxKey()] = Math.max(1, Math.min(9999, Number(value) || 1)); this.draft[this.key] = Math.min(this.draft[this.key], this.draft[this.maxKey()]); this.changed.emit(); }
+  setMax(value: number) { const max = resourceMaximum(value); if (max === null || !this.canEdit) return; this.draft[this.maxKey()] = max; this.draft[this.key] = Math.min(this.draft[this.key], this.draft[this.maxKey()]); this.changed.emit(); }
 }
 
 function keyOf(key: ResourceKey): ResourceKey { return key; }
@@ -161,7 +162,7 @@ export class ParanormalSkillTableComponent {
   rollValues(skill: SystemField) { return { ...this.draft.fields, [skill.key]: this.number(skill.key) + this.detail(skill.key,'treino') + this.detail(skill.key,'outros') }; }
 }
 
-@Component({ selector: 'app-paranormal-sheet', standalone: true, imports: [CommonModule, FormsModule, ParanormalAttributeWheelComponent, ParanormalResourceBarComponent, ParanormalSkillTableComponent, SystemFieldComponent, SheetCollectionFieldComponent, CharacterInventoryComponent, CharacterAbilitiesComponent, CharacterHistoryPanelComponent], template: `
+@Component({ selector: 'app-paranormal-sheet', standalone: true, imports: [SheetWeaponListComponent, CommonModule, FormsModule, ParanormalAttributeWheelComponent, ParanormalResourceBarComponent, ParanormalSkillTableComponent, SystemFieldComponent, SheetCollectionFieldComponent, CharacterInventoryComponent, CharacterAbilitiesComponent, CharacterHistoryPanelComponent], template: `
   <article class="paranormal-sheet">
     <header class="paranormal-header">
       <div class="paranormal-portrait"><img *ngIf="draft.portraitUrl" [src]="draft.portraitUrl" alt=""><span *ngIf="!draft.portraitUrl">{{ draft.name.slice(0,1) || 'C' }}</span></div>
@@ -180,7 +181,7 @@ export class ParanormalSkillTableComponent {
       </div>
       <div class="paranormal-right"><div class="paranormal-block-label">PERÍCIAS <small>{{ skillCount() }} TESTES</small></div><app-paranormal-skill-table [system]="system" [draft]="draft" [character]="character" [mode]="mode" [visibility]="visibility()" (changed)="changed.emit()" (rolled)="lastRoll.set($event)" /></div>
     </div>
-    <section *ngIf="show('combate')" class="paranormal-detail"><h2>Combate</h2><div class="paranormal-combat-grid"><div><div class="paranormal-block-label">RECURSOS E DEFESAS</div><div class="paranormal-resource-stack"><app-paranormal-resource [draft]="draft" key="health" label="Vida" [canEdit]="character.canEdit" [mode]="mode" (changed)="changed.emit()" /><app-paranormal-resource [draft]="draft" key="mana" label="Esforço" [canEdit]="character.canEdit" [mode]="mode" (changed)="changed.emit()" /></div><div class="paranormal-secondary"><app-system-field *ngFor="let key of ['defesa','bloqueio','esquiva','protecao','resistencias','equip_defesa','outros_defesa']" [field]="field(key)" [draft]="draft" [campaignId]="character.campaignId" [mode]="mode" [isMaster]="isMaster" (changed)="changed.emit()" /></div></div><div><div class="paranormal-block-label">ATAQUES</div><app-sheet-collection-field *ngIf="field('ataques') as attack" [field]="attack" [draft]="draft" [campaignId]="character.campaignId" [mode]="mode" (changed)="changed.emit()" /><app-system-field [field]="field('condicoes')" [draft]="draft" [campaignId]="character.campaignId" [mode]="mode" [isMaster]="isMaster" (changed)="changed.emit()" /></div></div></section>
+    <section *ngIf="show('combate')" class="paranormal-detail"><h2>Combate</h2><div class="paranormal-combat-grid"><div><div class="paranormal-block-label">RECURSOS E DEFESAS</div><div class="paranormal-resource-stack"><app-paranormal-resource [draft]="draft" key="health" label="Vida" [canEdit]="character.canEdit" [mode]="mode" (changed)="changed.emit()" /><app-paranormal-resource [draft]="draft" key="mana" label="Esforço" [canEdit]="character.canEdit" [mode]="mode" (changed)="changed.emit()" /></div><div class="paranormal-secondary"><app-system-field *ngFor="let key of ['defesa','bloqueio','esquiva','protecao','resistencias','equip_defesa','outros_defesa']" [field]="field(key)" [draft]="draft" [campaignId]="character.campaignId" [mode]="mode" [isMaster]="isMaster" (changed)="changed.emit()" /></div></div><div><div class="paranormal-block-label">ATAQUES</div><app-sheet-weapon-list [system]="system" [character]="character" [draft]="draft" [ready]="rulesReady" [mode]="mode" [isMaster]="isMaster" (working)="working.emit($event)" (applied)="restored.emit($event)" (changed)="changed.emit()" /><app-sheet-collection-field *ngIf="(mode === 'edit' || !field('ataques_regras') || $any(draft.fields['ataques'])?.length ? field('ataques') : null) as attack" [field]="attack" [draft]="draft" [campaignId]="character.campaignId" [mode]="mode" (changed)="changed.emit()" /><app-system-field [field]="field('condicoes')" [draft]="draft" [campaignId]="character.campaignId" [mode]="mode" [isMaster]="isMaster" (changed)="changed.emit()" /></div></div></section>
     <section *ngIf="show('inventario')" class="paranormal-detail"><h2>Inventário</h2><div class="paranormal-inline-fields"><app-system-field *ngFor="let key of ['carga_atual','carga_limite','proficiencias']" [field]="field(key)" [draft]="draft" [campaignId]="character.campaignId" [mode]="mode" [isMaster]="isMaster" (changed)="changed.emit()" /></div><app-character-inventory [character]="character" /></section>
     <section *ngIf="show('habilidades')" class="paranormal-detail"><h2>Habilidades</h2><app-character-abilities [character]="character" /></section>
     <section *ngIf="show('rituais')" class="paranormal-detail"><h2>Rituais</h2><app-sheet-collection-field *ngIf="field('rituais') as ritual" [field]="ritual" [draft]="draft" [campaignId]="character.campaignId" [mode]="mode" (changed)="changed.emit()" /></section>
@@ -210,6 +211,8 @@ export class ParanormalSkillTableComponent {
 `]
 })
 export class ParanormalSheetComponent {
+  @Input() rulesReady = false;
+  @Output() working = new EventEmitter<boolean>();
   @Input({ required: true }) system!: RpgSystem;
   @Input({ required: true }) draft!: CharacterInput;
   @Input({ required: true }) character!: Character;

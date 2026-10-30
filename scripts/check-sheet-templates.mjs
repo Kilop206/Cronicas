@@ -17,7 +17,7 @@ function load(file) {
 }
 
 const { SHEET_TEMPLATES: templates } = load('system-templates.ts');
-const { calculateSheet, fieldRoll, paranormalFieldRoll, paranormalV13BaseResources, dnd2014NextLevelXp, coc7eDamageProfile, coc7eSuccessDegree } = load('sheet-rules.ts');
+const { calculateSheet, fieldRoll, paranormalFieldRoll, paranormalV13BaseResources, dnd2014NextLevelXp, coc7eDamageProfile, coc7eSuccessDegree, resourceMaximum } = load('sheet-rules.ts');
 const { resolveSheetRenderer, sheetResources, sheetIndicators } = load('sheet-renderer-registry.ts');
 assert.equal(templates.length, 4);
 assert.equal(new Set(templates.map(template => template.layout.skin)).size, templates.length, 'Each template should have its own visual style');
@@ -123,3 +123,8 @@ console.log(`Validated ${templates.length} sheet templates and representative fo
 for (const [roll, target, expected] of [[1, 0, 'cr\u00edtico'], [10, 50, 'extremo'], [25, 50, 'dif\u00edcil'], [50, 50, 'regular'], [51, 50, 'falha'], [95, 49, 'falha'], [96, 49, 'falha cr\u00edtica'], [96, 50, 'falha'], [99, 50, 'falha'], [100, 100, 'falha cr\u00edtica']]) assert.equal(coc7eSuccessDegree(roll, target), expected);
 assert.equal(coc7eSuccessDegree(0, 50), null);
 assert.equal(coc7eSuccessDegree(50, NaN), null);
+
+assert.equal(resourceMaximum(null), null);
+assert.equal(resourceMaximum(''), null);
+assert.equal(resourceMaximum(0), 0);
+assert.equal(resourceMaximum(12000), 9999);

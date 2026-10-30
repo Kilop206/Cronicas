@@ -1,3 +1,4 @@
+import { resourceMaximum } from './sheet-rules';
 import { CommonModule } from '@angular/common';
 import { Component, EventEmitter, Input, Output, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
@@ -51,7 +52,7 @@ export class SystemFieldComponent {
 @Component({ selector: 'app-system-resource', standalone: true, imports: [CommonModule, FormsModule], template: `
   <div class="system-resource"><div class="system-resource-head"><span>{{ label }}</span><strong>{{ draft[key] }} <small>/ {{ draft[maxKey()] }}</small></strong></div>
     <div class="system-resource-bar" role="meter" [attr.aria-label]="label" [attr.aria-valuenow]="draft[key]" aria-valuemin="0" [attr.aria-valuemax]="draft[maxKey()]"><i [style.width.%]="percent()"></i></div>
-    <div *ngIf="mode !== 'print' && canEdit" class="system-resource-controls"><button type="button" [attr.aria-label]="'Diminuir ' + label" [disabled]="draft[key] <= 0" (click)="adjust(-1)">−</button><button type="button" [attr.aria-label]="'Aumentar ' + label" [disabled]="draft[key] >= draft[maxKey()]" (click)="adjust(1)">+</button><label *ngIf="mode === 'edit'">Máximo<input type="number" [attr.aria-label]="'Máximo de ' + label" [ngModel]="draft[maxKey()]" (ngModelChange)="setMax($event)" [ngModelOptions]="{standalone:true}" min="1" max="9999"></label></div>
+    <div *ngIf="mode !== 'print' && canEdit" class="system-resource-controls"><button type="button" [attr.aria-label]="'Diminuir ' + label" [disabled]="draft[key] <= 0" (click)="adjust(-1)">−</button><button type="button" [attr.aria-label]="'Aumentar ' + label" [disabled]="draft[key] >= draft[maxKey()]" (click)="adjust(1)">+</button><label *ngIf="mode === 'edit'">Máximo<input type="number" [attr.aria-label]="'Máximo de ' + label" [ngModel]="draft[maxKey()]" (blur)="setMax($any($event.target).value)" [ngModelOptions]="{standalone:true}" min="0" max="9999"></label></div>
   </div>`, styles: [`
     .system-resource { border:1px solid var(--border); padding:12px; background:color-mix(in srgb,var(--surface) 90%,transparent); }
     .system-resource-head { display:flex; justify-content:space-between; align-items:baseline; gap:10px; font:600 12px var(--font-ui); text-transform:uppercase; letter-spacing:.08em; }
@@ -73,7 +74,7 @@ export class SystemResourceComponent {
   maxKey(): 'maxHealth' | 'maxSanity' | 'maxMana' { return this.key === 'health' ? 'maxHealth' : this.key === 'sanity' ? 'maxSanity' : 'maxMana'; }
   percent() { return Math.max(0, Math.min(100, this.draft[this.key] / this.draft[this.maxKey()] * 100)); }
   adjust(step: number) { this.draft[this.key] = Math.max(0, Math.min(this.draft[this.maxKey()], this.draft[this.key] + step)); this.changed.emit(); }
-  setMax(value: number) { const max = Math.max(1, Math.min(9999, Number(value) || 1)); this.draft[this.maxKey()] = max; this.draft[this.key] = Math.min(this.draft[this.key], max); this.changed.emit(); }
+  setMax(value: number) { const max = resourceMaximum(value); if (max === null || !this.canEdit) return; this.draft[this.maxKey()] = max; this.draft[this.key] = Math.min(this.draft[this.key], max); this.changed.emit(); }
 }
 
 @Component({ selector: 'app-specialized-sheet', standalone: true, imports: [CommonModule, FormsModule, SystemFieldComponent, SystemResourceComponent, CharacterInventoryComponent, CharacterAbilitiesComponent, CharacterHistoryPanelComponent], template: `

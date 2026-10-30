@@ -33,6 +33,7 @@ public static partial class WeaponActions
         else
         {
             var dnd = system.TemplateId == "dnd_5e";
+            if (dnd) Dnd2014Conditions.CanAttack(s);
             var baseKey = Text(row, "base", dnd ? "mod_forca" : "per_luta");
             RuleState.Require(system.Fields.Any(f => f.Key == baseKey && f.Type == "number"), "Escolha a chave de um atributo, modificador ou perícia numérica do sistema.");
             string expression;
@@ -46,7 +47,7 @@ public static partial class WeaponActions
             {
                 var bonus = s.N(baseKey) + Number(row, "bonus");
                 if (dnd && Flag(row, "treinado")) bonus += s.N("proficiencia");
-                var mode = dnd ? s.Get("modo_ataque") : 0;
+                var mode = dnd ? Dnd2014Conditions.Mode(s, "attack", s.Get("modo_ataque")) : 0;
                 RuleState.Require(mode is >= -1 and <= 1, "Modo de ataque inválido.");
                 expression = (mode == 0 ? "1d20" : mode > 0 ? "2d20kh1" : "2d20kl1") + (bonus < 0 ? bonus.ToString() : "+" + bonus);
             }

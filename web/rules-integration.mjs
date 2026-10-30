@@ -29,7 +29,7 @@ const page = await context.newPage();
 const errors = []; page.on('pageerror', error => errors.push(error.message));
 const out = path.resolve(import.meta.dirname, '../docs/visual-validation/rules'); fs.mkdirSync(out, { recursive: true });
 try {
-  for (const template of exports.SHEET_TEMPLATES) {
+  for (const template of exports.SHEET_TEMPLATES.filter(template => !process.argv[2] || template.id === process.argv[2])) {
     const system = await request('/api/systems', owner, 'POST', { name: `Teste ${template.id}`, description: '', fields: template.fields, layout: template.layout, templateId: template.id, templateVersion: template.version, rulesetVersion: template.rulesetVersion, rendererMode: 'specialized', npcTemplates: [] });
     assert.equal(system.status, 201, JSON.stringify(system.body));
     const campaign = await request('/api/campaigns', owner, 'POST', { name: `Regras ${template.id}`, description: '', accentColor: '#a54d52' });
@@ -62,14 +62,18 @@ try {
     const controls = page.locator('app-sheet-rule-controls'); await controls.getByRole('combobox', { name: 'Ação', exact: true }).waitFor();
     await controls.getByRole('combobox', { name: 'Ação', exact: true }).selectOption('heal');
     await controls.getByRole('spinbutton').fill('3');
-    const saved = page.waitForResponse(response => response.url().endsWith(route) && response.request().method() === 'POST');
-    await controls.getByRole('button', { name: 'Aplicar ação', exact: true }).click(); assert.equal((await saved).status(), 200);
+    const [saved] = await Promise.all([page.waitForResponse(response => response.url().endsWith(route) && response.request().method() === 'POST'), controls.getByRole('button', { name: 'Aplicar ação', exact: true }).click()]);
+    assert.equal(saved.status(), 200);
     await page.reload({ waitUntil: 'networkidle' });
     assert.equal((await request(`/api/characters/${character.id}`, owner)).body.health, 12);
-    await controls.getByRole('combobox', { name: 'Ação', exact: true }).selectOption('attack');
-    await controls.getByRole('combobox', { name: 'Rolagens', exact: true }).selectOption('private');
-    const attacked = page.waitForResponse(response => response.url().endsWith(route) && response.request().method() === 'POST');
-    await controls.getByRole('button', { name: 'Aplicar ação', exact: true }).click(); assert.equal((await attacked).status(), 200);
+    await page.setViewportSize({ width: 1440, height: 900 });
+    if (['ordem_paranormal', 'call_of_cthulhu_7e'].includes(template.id)) await page.locator('.custom-sheet-main').getByRole('button', { name: 'Combate', exact: true }).click();
+    const nativeWeapons = page.locator('.custom-sheet-main app-sheet-weapon-list:visible');
+    await nativeWeapons.getByRole('combobox', { name: 'Visibilidade', exact: true }).selectOption('private');
+    const [attacked] = await Promise.all([page.waitForResponse(response => response.url().endsWith(route) && response.request().method() === 'POST'), nativeWeapons.getByRole('button', { name: 'Atacar com Ataque de validação', exact: true }).click()]);
+    assert.equal(attacked.status(), 200);
+    await nativeWeapons.locator('small').filter({ hasText: 'munição 2' }).first().waitFor();
+    await page.screenshot({ path: path.join(out, `${template.id}-combat-desktop.png`), fullPage: true });
     const afterAttack = (await request(`/api/characters/${character.id}`, owner)).body;
     assert.equal(afterAttack.fields.ataques_regras[0].municao, 2, 'ammunition consumed and persisted');
     assert.ok((await request(`/api/campaigns/${campaign.body.id}/rolls`, owner)).body.length >= 1);
@@ -80,6 +84,34 @@ try {
       assert.equal(configured.body.character.fields.espacos_magia_3, 2);
       const cast = await request(route, owner, 'POST', { expectedVersion: configured.body.character.version, command: { action: 'cast', amount: 3, visibility: 'private' } });
       assert.equal(cast.status, 200, JSON.stringify(cast.body)); assert.equal(cast.body.character.fields.espacos_magia_3, 1);
+      const poisoned = await request(route, owner, 'POST', { expectedVersion: cast.body.character.version, command: { action: 'condition', option: 'envenenado' } });
+      assert.equal(poisoned.status, 200, JSON.stringify(poisoned.body));
+      await page.reload({ waitUntil: 'networkidle' });
+      const skillRoll = page.waitForResponse(response => response.url().endsWith(route) && response.request().method() === 'POST');
+      await page.locator('.custom-sheet-main').getByRole('button', { name: 'Rolar Atletismo', exact: true }).click();
+      const skillResponse = await (await skillRoll).json();
+      assert.ok(skillResponse.rolls[0].expression.startsWith('2d20kl1'), 'native skill button applies poisoned disadvantage on server');
+      assert.equal(skillResponse.character.version, poisoned.body.character.version, 'read-only rolls do not flood character revisions');
+      const exhausted = await request(route, owner, 'POST', { expectedVersion: skillResponse.character.version, command: { action: 'exhaustion', amount: 4 } });
+      assert.equal(exhausted.status, 200, JSON.stringify(exhausted.body)); assert.equal(exhausted.body.character.maxHealth, 10);
+      const restored = await request(route, owner, 'POST', { expectedVersion: exhausted.body.character.version, command: { action: 'exhaustion', amount: 0 } });
+      assert.equal(restored.status, 200); assert.equal(restored.body.character.maxHealth, 20);
+      await page.reload({ waitUntil: 'networkidle' });
+      await page.getByRole('button', { name: 'Editar ficha', exact: true }).click();
+      await page.locator('.custom-sheet-main app-sheet-weapon-list').getByText('Editar ataques e munição', { exact: true }).click();
+      const baseSaved = page.waitForResponse(response => response.url().endsWith(`/api/characters/${character.id}`) && response.request().method() === 'PUT');
+      await page.locator('.custom-sheet-main app-sheet-weapon-list').getByRole('combobox', { name: /Modificador.*linha 1/ }).selectOption('mod_destreza');
+      assert.equal((await baseSaved).status(), 200);
+      const maxHp = page.locator('.custom-sheet-main app-dnd-hit-points').getByRole('spinbutton', { name: 'Máx.', exact: true });
+      const maxSaved = page.waitForResponse(response => response.url().endsWith(`/api/characters/${character.id}`) && response.request().method() === 'PUT');
+      await maxHp.fill('30'); await maxHp.press('Tab'); assert.equal((await maxSaved).status(), 200);
+      const afterMax = (await request(`/api/characters/${character.id}`, owner)).body;
+      assert.equal(afterMax.health, 10, 'typing a new maximum must not reduce current HP'); assert.equal(afterMax.maxHealth, 30);
+      assert.equal(afterMax.fields.ataques_regras[0].base, 'mod_destreza');
+    }
+    if (template.id === 'call_of_cthulhu_7e') {
+      const zeroMana = await request(`/api/characters/${character.id}`, owner, 'PUT', { ...afterAttack, mana: 0, maxMana: 0 });
+      assert.equal(zeroMana.status, 200, JSON.stringify(zeroMana.body)); assert.equal(zeroMana.body.maxMana, 0);
     }
     await page.reload({ waitUntil: 'networkidle' });
     for (const [name, width, height] of [['desktop', 1440, 900], ['wide', 1920, 1080], ['tablet', 768, 1024], ['mobile', 390, 844]]) {
@@ -90,4 +122,9 @@ try {
     console.log(`${template.id}: real API, permissions, conflict, history, browser action, reload and four screenshots passed`);
   }
   assert.deepEqual(errors, []);
+} catch (error) {
+  console.error('Browser errors:', errors);
+  console.error(await page.locator('app-sheet-rule-controls').innerText({ timeout: 1000 }).catch(() => 'No rule controls'));
+  await page.screenshot({ path: path.join(out, 'failure.png'), fullPage: true }).catch(() => undefined);
+  throw error;
 } finally { await browser.close(); }

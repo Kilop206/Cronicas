@@ -2,6 +2,12 @@ import { SheetFieldValue, SystemField } from './api';
 
 export type SheetValues = Record<string, SheetFieldValue>;
 
+export function resourceMaximum(value: unknown): number | null {
+  if (value === null || value === undefined || value === '') return null;
+  const number = Number(value);
+  return Number.isFinite(number) ? Math.max(0, Math.min(9999, Math.trunc(number))) : null;
+}
+
 export function calculateSheet(fields: SystemField[], values: SheetValues): string | null {
   for (const field of fields) if (!field.formula?.trim() && values[field.key] === undefined && field.defaultValue !== undefined && field.defaultValue !== null) values[field.key] = field.defaultValue;
   const calculated = new Map(fields.filter(field => field.formula?.trim()).map(field => [field.key, field]));

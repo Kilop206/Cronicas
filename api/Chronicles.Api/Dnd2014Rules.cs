@@ -45,7 +45,7 @@ public static class Dnd2014Rules
             new("heal", "Receber cura", "PV"), new("temporary", "Receber PV temporários", "PV temporários"),
             new("death-save", "Rolar teste contra a morte"), new("stabilize", "Estabilizar (efeito confirmado)"),
             new("hit-die", "Gastar dado de vida no descanso curto", null, Dice),
-            new("long-rest", "Concluir descanso longo", null, [new("confirmed", "8h concluídas; nenhum descanso longo nas últimas 24h")]),
+            new("long-rest", "Concluir descanso longo", null, [new("confirmed", "8h concluídas; nenhum descanso longo nas últimas 24h"), new("fed", "8h, alimentação e água; nenhum descanso longo nas últimas 24h")]),
             new("recover-hit-die", "Recuperar dado de vida", null, Dice), new("cast", "Gastar espaço de magia", "Nível do espaço (1–9)"),
             new("pact-cast", "Gastar espaço de pacto"), new("short-rest", "Concluir descanso curto (1h)"),
             new("spellcasting", "Usar conjuração de uma classe", null, Classes.Where(c => c.Casting > 0 || c.Key == "bruxo").Select(c => new RuleChoice(c.Key, c.Label)).ToArray()),
@@ -67,7 +67,7 @@ public static class Dnd2014Rules
                 if (damage - s.Health >= s.MaxHealth) s.Set("morto", 1);
                 s.Health -= damage;
                 if (s.N("salvaguardas_falha") >= 3) s.Set("morto", 1);
-                return "Dano aplicado; PV temporários absorvidos primeiro. Se estava concentrado, faça Constituição CD " + Math.Max(10, c.Amount / 2) + ".";
+                return "Dano aplicado; PV temporários absorvidos primeiro." + Dnd2014Conditions.CheckConcentration(s, c.Amount);
             case "heal": s.Health += c.Amount; if (s.Health > 0) { s.Field("salvaguardas_sucesso", 0); s.Field("salvaguardas_falha", 0); s.Set("estavel", 0); } return "Cura aplicada.";
             case "temporary": s.Field("pontos_temporarios", Math.Max(s.N("pontos_temporarios"), c.Amount)); return "PV temporários não acumulam; o maior valor foi mantido.";
             case "death-save":
@@ -87,6 +87,7 @@ public static class Dnd2014Rules
                 var healed = Math.Max(0, s.Die(sides) + s.N("mod_constituicao")); s.Health += healed; return $"Dado gasto: até {healed} PV recuperados.";
             case "long-rest":
                 RuleState.Require(s.Health > 0 && Level(s) is >= 1 and <= 20, "O descanso longo exige ao menos 1 PV no início e níveis configurados.");
+                if (c.Option == "fed" && s.Get("exaustao") > 0) Dnd2014Conditions.Apply(new([], null), s, new("exhaustion", s.Get("exaustao") - 1));
                 s.Health = s.MaxHealth; s.Field("pontos_temporarios", 0);
                 for (var i = 1; i <= 9; i++) s.Set("slot_usado_" + i, 0);
                 SyncSlots(s);
