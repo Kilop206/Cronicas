@@ -130,6 +130,48 @@ try {
     if (template.id === 'call_of_cthulhu_7e') {
       const zeroMana = await request(`/api/characters/${character.id}`, owner, 'PUT', { ...afterAttack, mana: 0, maxMana: 0 });
       assert.equal(zeroMana.status, 200, JSON.stringify(zeroMana.body)); assert.equal(zeroMana.body.maxMana, 0);
+      const boosted = await request(`/api/characters/${character.id}`, owner, 'PUT', { ...zeroMana.body, fields: {...zeroMana.body.fields, per_biblioteca: 105} });
+      assert.equal(boosted.status, 200, JSON.stringify(boosted.body));
+      await page.reload({waitUntil: 'networkidle'});
+      const regularPercentile = page.waitForResponse(response => response.url().endsWith('/percentile-rolls') && response.request().method() === 'POST');
+      await page.locator('.custom-sheet-main').getByRole('button', {name: 'Rolar Biblioteca', exact: true}).click();
+      const regularResponse = await regularPercentile;
+      assert.equal(regularResponse.status(), 201); assert.equal(regularResponse.request().postDataJSON().target, 105, 'regular tests retain a skill above 100');
+      await page.locator('.custom-sheet-main').getByRole('combobox', {name: 'Dificuldade do teste', exact: true}).selectOption('2');
+      const percentile = page.waitForResponse(response => response.url().endsWith('/percentile-rolls') && response.request().method() === 'POST');
+      await page.locator('.custom-sheet-main').getByRole('button', {name: 'Rolar Biblioteca', exact: true}).click();
+      const percentileResponse = await percentile;
+      assert.equal(percentileResponse.status(), 201); assert.equal(percentileResponse.request().postDataJSON().target, 52, '105% skill uses 52% for a hard test');
+      const blankFields = Object.fromEntries(template.fields.filter(field => field.defaultValue !== undefined && field.defaultValue !== null).map(field => [field.key, field.defaultValue]));
+      const blank = await request(`/api/campaigns/${campaign.body.id}/characters`, owner, 'POST', { name: 'Novo investigador de validação', health: 12, maxHealth: 20, sanity: 50, maxSanity: 99, mana: 10, maxMana: 20, portraitUrl: null, backgroundUrl: null, fields: blankFields });
+      assert.equal(blank.status, 201, JSON.stringify(blank.body));
+      await page.goto(`${base}/characters/${blank.body.id}`, {waitUntil: 'networkidle'});
+      const creationRoute = `/api/characters/${blank.body.id}/rules`;
+      const creationControls = page.locator('app-sheet-rule-controls');
+      await creationControls.getByRole('combobox', {name: 'Ação', exact: true}).selectOption('creation-generate');
+      await creationControls.getByRole('spinbutton').fill('50');
+      let saved = page.waitForResponse(response => response.url().endsWith(creationRoute) && response.request().method() === 'POST');
+      await creationControls.getByRole('button', {name: 'Aplicar ação', exact: true}).click();
+      const generated = await (await saved).json(); assert.ok(generated.character, JSON.stringify(generated));
+      assert.equal(generated.character.fields.idade, 50);
+      assert.equal(generated.character.fields.estado_regras.find(row => row.chave === 'criacao_reducao').valor, 10);
+      await creationControls.getByRole('combobox', {name: 'Ação', exact: true}).selectOption('creation-age-reduce');
+      await creationControls.getByRole('combobox', {name: 'Opção', exact: true}).selectOption('forca');
+      await creationControls.getByRole('spinbutton').fill('10');
+      saved = page.waitForResponse(response => response.url().endsWith(creationRoute) && response.request().method() === 'POST');
+      await creationControls.getByRole('button', {name: 'Aplicar ação', exact: true}).click();
+      assert.equal((await saved).status(), 200);
+      await creationControls.getByRole('combobox', {name: 'Ação', exact: true}).selectOption('creation-vitals');
+      saved = page.waitForResponse(response => response.url().endsWith(creationRoute) && response.request().method() === 'POST');
+      await creationControls.getByRole('button', {name: 'Aplicar ação', exact: true}).click();
+      const completed = await (await saved).json(); assert.ok(completed.character, JSON.stringify(completed));
+      assert.equal(completed.character.maxHealth, Math.floor((completed.character.fields.constituicao + completed.character.fields.tamanho) / 10));
+      assert.equal(completed.character.maxMana, Math.floor(completed.character.fields.poder / 5));
+      assert.equal(completed.character.sanity, completed.character.fields.poder);
+      await page.reload({waitUntil: 'networkidle'});
+      assert.equal((await request(`/api/characters/${blank.body.id}`, owner)).body.fields.estado_regras.find(row => row.chave === 'criacao_fase').valor, 2);
+      await page.screenshot({path: path.join(out, 'call_of_cthulhu_7e-creation-desktop.png'), fullPage: true});
+      await page.goto(`${base}/characters/${character.id}`, {waitUntil: 'networkidle'});
     }
     await page.reload({ waitUntil: 'networkidle' });
     for (const [name, width, height] of [['desktop', 1440, 900], ['wide', 1920, 1080], ['tablet', 768, 1024], ['mobile', 390, 844]]) {

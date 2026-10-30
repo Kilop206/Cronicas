@@ -104,10 +104,18 @@ export function coc7eDamageProfile(strength: number, size: number): { bonus: str
 
 // The target is the number required for success, including the selected difficulty.
 export function coc7eSuccessDegree(total: number, target: number): string | null {
-  if (!Number.isInteger(total) || total < 1 || total > 100 || !Number.isInteger(target) || target < 0 || target > 100) return null;
+  if (!Number.isInteger(total) || total < 1 || total > 100 || !Number.isInteger(target) || target < 0 || target > 9999) return null;
   if (total === 1) return 'crítico';
   if (total === 100 || target < 50 && total >= 96) return 'falha crítica';
   if (total <= Math.floor(target / 5)) return 'extremo';
   if (total <= Math.floor(target / 2)) return 'difícil';
   return total <= target ? 'regular' : 'falha';
+}
+
+export function coc7eTestOutcome(total: number, skill: number, difficulty: 1 | 2 | 5): string | null {
+  if (![1, 2, 5].includes(difficulty)) return null;
+  const threshold = Math.floor(skill / difficulty);
+  const outcome = coc7eSuccessDegree(total, threshold);
+  if (outcome === null || outcome === 'crítico' || outcome === 'falha crítica' || outcome === 'falha') return outcome;
+  return coc7eSuccessDegree(total, skill);
 }

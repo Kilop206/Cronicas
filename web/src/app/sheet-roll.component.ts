@@ -23,7 +23,7 @@ export class SheetRollComponent {
   resultLabel() {
     const total = this.total(); if (total === null) return '';
     const target = this.percentileTarget;
-    const percentile = target !== null && Number.isFinite(target) && target >= 0 && target <= 100;
+    const percentile = target !== null && Number.isFinite(target) && target >= 0 && target <= 9999;
     const degree = percentile ? total <= Math.floor(target / 5) ? 'sucesso extremo' : total <= Math.floor(target / 2) ? 'sucesso difícil' : total <= target ? 'sucesso regular' : 'falha' : '';
     return `${this.detail()} = ${total}${percentile ? ` · ${degree} (alvo ${target}%)` : ''}`;
   }

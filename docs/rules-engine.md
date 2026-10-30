@@ -61,6 +61,16 @@ Os botões nativos de atributos, perícias, resistências, iniciativa e ações 
 
 Recursos agora aceitam máximo zero no cliente e servidor. O OBS e as barras tratam divisão por zero. Alterar um máximo usa o valor concluído ao sair do controle, evitando cortar recursos durante a digitação de um novo valor com vários dígitos. Um máximo em branco não é convertido silenciosamente em zero.
 
+### Criação por características e desenvolvimento em CoC 7e
+
+O método aleatório do livro básico gera cinco características por 3d6×5 e três por (2d6+6)×5. A ação só aparece quando as oito características estão zeradas e a geração ainda não foi usada; não substitui características de um investigador existente. A idade é informada na própria ação. Adolescentes recebem duas rolagens de sorte, conservando a maior, e a redução de EDU; adultos recebem as melhorias sequenciais de EDU e ajustes de aparência da faixa etária. O jogador distribui o saldo de redução física entre os atributos permitidos. Finalizar essa etapa exige saldo zero e aplica PV, PM e SAN iniciais uma única vez, com histórico e dados registrados no servidor.
+
+A tabela local cobre explicitamente 15–89 anos; geração em outras idades permanece dependente de decisão do Guardião. Constituição e Tamanho não podem ser reduzidos a zero pela criação de um investigador vivo. O método por compra, as ocupações, as especializações e a distribuição dos pontos de perícia ainda são etapas pendentes; concluir características não significa concluir o personagem. O indicador de interesses pessoais calcula INT×2 para essa etapa futura.
+
+O desenvolvimento mantém o aumento de 1d10 e permite ultrapassar 100%, como estabelece o livro. A primeira passagem de uma perícia de menos de 90 para 90 ou mais recupera 2d6 SAN, respeitando os limites. A recompensa não se repete em desenvolvimentos posteriores da mesma perícia. Testes de CON/INT continuam tratando 01 como sucesso e 100 como falha, mesmo com características altas; as rolagens de melhoria usam seu procedimento próprio.
+
+A ficha oferece dificuldade regular, difícil ou extrema. O alvo usa o valor completo, metade ou quinto arredondados para baixo; a classificação não divide a dificuldade duas vezes. A API percentual e a ficha aceitam valores acima de 100 sem truncar os limiares: uma perícia de 105% exige 52 para um teste difícil. O 100 continua sendo falha crítica. Essas regras foram conferidas no PDF local, páginas PDF 31–37, 91–92 e 95 (numeração impressa uma página menor), incluindo o exemplo que altera o intervalo de falha crítica conforme a dificuldade.
+
 - `dotnet run --project tests/Chronicles.Rules.Tests`: testes determinísticos de custos, recursos, morte, descanso, espaços, multiclasse, ferimentos, sanidade e desenvolvimento.
 - `node scripts/check-sheet-templates.mjs`: schemas, fórmulas, versões e resolução dos quatro renderizadores.
 - `npm run build` e `npm run lint` em `web`.
@@ -72,7 +82,7 @@ Recursos agora aceitam máximo zero no cliente e servidor. O OBS e as barras tra
 - Condições específicas dos alvos e suas fontes, múltiplas fontes independentes com duração própria, ação obrigatória por medo/confusão, orçamento de ações (incluindo enjoado), venenos/doenças com efeitos individuais, imunidades e exceções de classe. Os modificadores, relações, durações, concentração e efeitos de turno descritos acima já estão integrados para Ordem/Tormenta20; as condições de D&D afetam testes, ataques e concentração.
 - Catálogos de escolhas de origem, espécie/raça, classe, trilha/subclasse, poderes, talentos, equipamentos e magias/rituais; pré-requisitos e escolhas em cada nível.
 - Conjuração completa: preparação/conhecimento, componentes, concentração, sustentação, alcance, áreas e efeitos específicos; recuperação de recursos de características individuais.
-- Criação de investigador por idade/ocupação, distribuição de pontos, perícias especializadas, tratamentos, crises de insanidade, perseguições e combate percentual completo.
+- Ocupações e seus pontos/perícias, métodos alternativos de criação, envelhecimento entre aventuras, distribuição de pontos, perícias especializadas, tratamentos, crises de insanidade, perseguições e combate percentual completo. A geração aleatória de características e ajustes iniciais por idade descritos acima já estão implementados.
 - Exploração, sobrevivência, ambientes, viagens, fabricação, economia, regras opcionais e adversários dos suplementos.
 
 Uma interface com campo livre para registrar uma exceção não constitui implementação automática dessa regra. O checklist só deve mudar quando houver regra executável, integração persistida e teste verificável.

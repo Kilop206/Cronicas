@@ -60,8 +60,8 @@ public static class DiceEndpoints
             var role = await Role(db, campaignId, userId);
             if (role is null) return Results.NotFound();
             if (role == "spectator" || input.Visibility == "gm" && !Master(role)) return Results.Problem("Sem permissão para esta rolagem.", statusCode: 403);
-            if (input.RequestId == Guid.Empty || input.Visibility is not ("campaign" or "private" or "gm") || input.BonusDice is < -2 or > 2 || input.Target is < 0 or > 100)
-                return Results.ValidationProblem(new Dictionary<string, string[]> { ["roll"] = ["Informe alvo entre 0 e 100, de 0 a 2 dados de bônus ou penalidade, visibilidade e ID válido."] });
+            if (input.RequestId == Guid.Empty || input.Visibility is not ("campaign" or "private" or "gm") || input.BonusDice is < -2 or > 2 || input.Target is < 0 or > 9999)
+                return Results.ValidationProblem(new Dictionary<string, string[]> { ["roll"] = ["Informe alvo entre 0 e 9999, de 0 a 2 dados de bônus ou penalidade, visibilidade e ID válido."] });
             var existing = await db.DiceRolls.Include(x => x.User).AsNoTracking().SingleOrDefaultAsync(x => x.CampaignId == campaignId && x.UserId == userId && x.RequestId == input.RequestId);
             if (existing is not null) return Results.Ok(View(existing));
             var result = PercentileDice.Roll(input.BonusDice, () => RandomNumberGenerator.GetInt32(0, 10));
