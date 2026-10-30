@@ -23,6 +23,8 @@ As fórmulas novas passam pelo mesmo interpretador limitado no cliente e na API.
 
 ## Regras ainda não automatizadas
 
+Em 30/10/2026, os apêndices de condições foram conferidos integralmente: Ordem, páginas impressas 310–312, e Tormenta20, 394–395. O motor agora distingue penalidades em dados e penalidades numéricas, mantém durações explícitas, resolve efeitos de turno e integra prévias de testes, Defesa e OBS. As regras de conjuração adversa foram conferidas em Ordem p. 119 e Tormenta20 p. 170–171. A ambiguidade de atributo zero com penalidade em Ordem exige decisão explícita da mesa, documentada em `rules-engine.md`.
+
 Atualização de 30/10/2026: o motor de ações no servidor acrescentou dano, recuperação, morte, custos, conjuração por espaços, multiclasse, ferimentos, sanidade e desenvolvimento. Consulte a cobertura e as pendências atuais em [rules-engine.md](rules-engine.md). A lista abaixo registra o ponto de partida da auditoria e não substitui esse acompanhamento.
 
 - Ordem Paranormal: totais básicos de PV, PE e SAN agora são sugeridos; bônus de origem, poderes, transcendência, trilhas, rituais, dano e condições exigem escolhas e exceções que não podem ser inferidas apenas do nome da classe. Personagens existentes preservam seus recursos até o jogador selecionar a classe estruturada e aplicar os valores.

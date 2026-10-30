@@ -37,11 +37,11 @@ public static partial class WeaponActions
             var baseKey = Text(row, "base", dnd ? "mod_forca" : "per_luta");
             RuleState.Require(system.Fields.Any(f => f.Key == baseKey && f.Type == "number"), "Escolha a chave de um atributo, modificador ou perícia numérica do sistema.");
             string expression;
-            if (system.TemplateId == "ordem_paranormal")
+            if (!dnd)
             {
-                var field = system.Fields.Single(f => f.Key == baseKey);
-                RuleState.Require(field.RollExpression is not null, "A perícia base precisa de rolagem configurada.");
-                expression = Resolve(field.RollExpression!, s, true);
+                RuleState.Require(!D20Conditions.CannotAct(s), "As condições atuais impedem atacar.");
+                RuleState.Require(!D20Conditions.Has(s, "agarrado") || s.Get("arma_leve") == 1, "Agarrado só permite atacar com arma leve. Confirme a arma em Configuração.");
+                expression = D20Checks.Expression(system, s, baseKey, attack: true, ranged: baseKey == "per_pontaria");
             }
             else
             {
@@ -56,7 +56,9 @@ public static partial class WeaponActions
             var margin = dnd ? 20 : Number(row, "margem", 20); var multiplier = dnd ? 2 : Number(row, "multiplicador", 2);
             RuleState.Require(margin is >= 2 and <= 20 && multiplier is >= 2 and <= 5, "Margem ou multiplicador de crítico inválidos.");
             var critical = hit && natural >= margin;
-            if (!hit) message = $"{name}: {expression} = {total}; errou. Munição consumida quando aplicável.";
+            var camouflage = !dnd && s.Get("ignora_camuflagem") == 0 ? D20Conditions.Has(s, "cego") || s.Get("camuflagem_alvo") == 2 ? 5 : s.Get("camuflagem_alvo") == 1 ? 2 : 0 : 0;
+            var camouflageMiss = camouflage > 0 && s.Die(10) <= camouflage;
+            if (!hit || camouflageMiss) message = $"{name}: {expression} = {total}; {(camouflageMiss ? "falha pela camuflagem" : "errou")}. Munição consumida quando aplicável.";
             else
             {
                 var damage = Math.Max(0, DamageFormula.Evaluate(damageFormula, s, critical ? multiplier : 1) + DamageFormula.Evaluate(extra, s, critical && dnd ? 2 : 1));

@@ -78,6 +78,24 @@ try {
     assert.equal(afterAttack.fields.ataques_regras[0].municao, 2, 'ammunition consumed and persisted');
     assert.ok((await request(`/api/campaigns/${campaign.body.id}/rolls`, owner)).body.length >= 1);
     assert.equal((await request(`/api/campaigns/${campaign.body.id}/rolls`, player)).body.length, 0, 'private attack rolls stay private');
+    if (['ordem_paranormal', 'tormenta20'].includes(template.id)) {
+      await controls.getByRole('combobox', { name: 'Ação', exact: true }).selectOption('condition-persistent');
+      await controls.getByRole('combobox', { name: 'Opção', exact: true }).selectOption('fraco');
+      const conditionSaved = page.waitForResponse(response => response.url().endsWith(route) && response.request().method() === 'POST');
+      await controls.getByRole('button', { name: 'Aplicar ação', exact: true }).click();
+      const condition = await (await conditionSaved).json(); assert.ok(condition.character, JSON.stringify(condition));
+      await page.reload({ waitUntil: 'networkidle' });
+      if (template.id === 'ordem_paranormal') await page.locator('.custom-sheet-main .skill-row').filter({has: page.locator('.skill-name', {hasText: /^Atletismo$/})}).locator('.skill-dice').filter({hasText: '2d20↓'}).waitFor();
+      const nativeRoll = page.waitForResponse(response => response.url().endsWith(route) && response.request().method() === 'POST');
+      await page.locator('.custom-sheet-main').getByRole('button', { name: 'Rolar Atletismo', exact: true }).click();
+      const nativeResult = await (await nativeRoll).json();
+      assert.ok(nativeResult.rolls?.length, JSON.stringify(nativeResult));
+      if (template.id === 'ordem_paranormal') assert.equal(nativeResult.rolls[0].expression, '2d20kl1+0', 'OP condition reduces dice across positive attribute threshold');
+      else assert.equal(nativeResult.rolls[0].modifier, condition.character.fields.per_atletismo - 2, 'T20 condition subtracts two from native skill roll');
+      assert.equal(nativeResult.character.version, condition.character.version, 'conditioned tests do not flood revisions');
+      const actual = (await request(`/api/characters/${character.id}`, owner)).body;
+      assert.equal(actual.fields.estado_regras.find(row => row.chave === 'cond_fraco').valor, -1, 'persistent condition survives reload and native test');
+    }
     if (template.id === 'dnd_5e') {
       const configured = await request(route, owner, 'POST', { expectedVersion: afterAttack.version, command: { action: 'configure', amount: 5, option: 'nivel_clerigo', visibility: 'private' } });
       assert.equal(configured.status, 200, JSON.stringify(configured.body));

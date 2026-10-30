@@ -39,6 +39,20 @@ O Livro Básico de CoC 7e consultado trata dano **maior** que PV máximos como m
 
 ## Validação reproduzível
 
+### Condições de Ordem 1.3 e Tormenta20 Jogo do Ano
+
+As relações entre condições ficam em `D20Conditions`; `D20Checks` resolve testes conforme a edição. Ordem retira um ou dois dados, enquanto Tormenta20 aplica −2 ou −5. Penalidades equivalentes usam a mais severa. As dependências de atributo vêm da expressão ou fórmula do campo, por chave estável. Os botões nativos de atributos e perícias usam o servidor, incluindo treinamento de Ordem. `RuleView.checks` fornece prévias das expressões para a interface mostrar os dados/modificadores efetivos sem reimplementar o algoritmo no navegador.
+
+Condições podem durar até o fim da cena, um número explícito de rodadas ou até remoção. A ação de concluir rodada avança somente as durações por rodada; iniciar cena encerra somente as condições de cena. Reaplicar uma duração curta não apaga uma persistente. Agravamentos de medo, fraqueza, frustração e fadiga preservam condições subjacentes. Reflexos falha automaticamente quando indefeso; Percepção pode informar se exige visão ou audição. Agarrado exige confirmar arma leve. Incapacidade impede ataques; paralisia ainda permite o comando de habilidade puramente mental.
+
+Defesa e deslocamento consideram as relações implícitas, inclusive inconsciência, lentidão, vulnerabilidade e sobrecarga. A Defesa de caído em Tormenta20 acumula com outras condições, conforme seu apêndice. A ficha, o painel de indicadores e a resposta pública do OBS mostram a Defesa ajustada corpo a corpo; os controles de regras também mostram o valor contra distância. Editar o campo altera a base, preservando a fórmula e os valores anteriores. A sobrecarga é aplicada explicitamente; ainda não é inferida da lista de itens.
+
+O início de turno resolve confusão (1d6 e direção em 1d8 quando pertinente), chamas com resistência configurada e sangramento. Ordem usa Vigor DT 20; Tormenta20 usa Constituição CD 15. Asfixia em Ordem permite prender a respiração por Vigor rodadas, depois testa Fortitude com DT crescente; a falha causa inconsciência e perdas por rodada. Voltar a respirar remove apenas essa fonte de inconsciência. Petrificação protege contra o dano de chamas. A chance de falha por camuflagem usa 1d10, inclusive quando o ataque obtém crítico, e pode ser dispensada por uma habilidade confirmada no contexto.
+
+Alquebrado aumenta o custo de PE/PM. Tormenta20 distingue o limite de habilidade de classe, o nível total para poderes gerais/origem/raça e a exceção de custo mínimo. Conjuração conhecida tem comandos próprios: situações ruins/terríveis e dano durante a execução exigem Vontade; uma falha perde o recurso. Ordem executa em seguida o custo paranormal apenas se o ritual não foi perdido. Tormenta20 oferece o teste de Misticismo para magia arcana sujeita à armadura e dispensa essa restrição para magia de raça/poder/item. O usuário deve declarar a situação e as exceções pertinentes; nomes digitados não ativam regras automaticamente. Isso não implementa os efeitos individuais das magias ou rituais.
+
+Fontes locais: Ordem, páginas impressas 11, 53, 119 e 310–312; Tormenta20, páginas impressas 153, 170–171, 224 e 394–395. O texto de Ordem descreve como inverter a escolha quando uma penalidade reduz uma quantidade positiva de dados abaixo de um. A combinação desse procedimento com o atributo já igual a zero não é inequívoca no material consultado. Nesse caso, o motor pede uma quantidade explícita decidida pela mesa e conserva o menor resultado; não aplica silenciosamente a regra de atributos negativos de outro suplemento.
+
 ### Condições de D&D 2014
 
 O motor registra as 14 condições do apêndice e os seis níveis de exaustão. Ações próprias aplicam e removem condições. Ataques combinam fontes de vantagem/desvantagem sem empilhá-las; perícias, atributos e resistências usam os efeitos pertinentes. Paralisia, petrificação, atordoamento e inconsciência provocam falha automática em resistências de FOR/DES. Incapacidade bloqueia ataques e encerra concentração. O contexto permite informar se a fonte do medo está fora de vista, se o alvo vê invisibilidade, se o alvo é o encantador e qual sentido é necessário à Percepção.
@@ -55,7 +69,7 @@ Recursos agora aceitam máximo zero no cliente e servidor. O OBS e as barras tra
 ## Regras pendentes — não declarar cobertura integral
 
 - Aplicação de dano diretamente ao alvo, resistências/imunidades por tipo, alcance, munições e propriedades especiais de cada arma. Ataques, críticos e múltiplos componentes de dano já estão integrados ao motor.
-- Condições de Ordem e Tormenta20 com modificadores automáticos; contexto de condições dos alvos, durações, efeitos acumulados e exceções de classe. As condições de D&D já afetam testes, ataques, concentração e os indicadores descritos acima.
+- Condições específicas dos alvos e suas fontes, múltiplas fontes independentes com duração própria, ação obrigatória por medo/confusão, orçamento de ações (incluindo enjoado), venenos/doenças com efeitos individuais, imunidades e exceções de classe. Os modificadores, relações, durações, concentração e efeitos de turno descritos acima já estão integrados para Ordem/Tormenta20; as condições de D&D afetam testes, ataques e concentração.
 - Catálogos de escolhas de origem, espécie/raça, classe, trilha/subclasse, poderes, talentos, equipamentos e magias/rituais; pré-requisitos e escolhas em cada nível.
 - Conjuração completa: preparação/conhecimento, componentes, concentração, sustentação, alcance, áreas e efeitos específicos; recuperação de recursos de características individuais.
 - Criação de investigador por idade/ocupação, distribuição de pontos, perícias especializadas, tratamentos, crises de insanidade, perseguições e combate percentual completo.

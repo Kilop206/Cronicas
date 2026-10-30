@@ -6,6 +6,7 @@ public static class SheetRuleActionTests
 {
     public static void Run()
     {
+        D20ConditionTestCases.Run();
         var stateField = new SystemField("estado_regras", "Estado", "table", "Regras", null, null, null, Columns: [new("chave", "Chave", "text"), new("valor", "Valor", "number")]);
         SystemDefinition System(string id, int version, string edition) => new([stateField], null, id, version, edition);
         var op = System("ordem_paranormal", 6, "1.3"); var dnd = System("dnd_5e", 3, "2014");
@@ -116,6 +117,9 @@ public static class SheetRuleActionTests
         var opWeapon = Weapon(Make(("forca", 1), ("per_luta", 30)), new { nome = "Teste OP", @base = "per_luta", dano = "2d6+3", dano_extra = "1d4", margem = 20, multiplicador = 2, municao = -1 });
         Check(Apply(armedOp, opWeapon, "attack", 20, "0", 1).Message.Contains("dano"), "OP natural 1 is not an automatic failure");
         Check(Apply(armedOp, opWeapon, "attack", 100, "0", 20).Message.Contains("dano 31"), "OP critical excludes extra damage dice");
+        var blind = Configure(opWeapon, ("cond_cego", 1));
+        var concealed = SheetRuleActions.Apply(armedOp, blind, new("attack", 1, "0"), sides => sides == 10 ? 1 : 20);
+        Check(concealed.Message.Contains("camuflagem") && concealed.Rolls[^1].Expression == "1d10", "blindness concealment can make even a critical roll miss");
         var trainedOp = Make(("forca", 1), ("per_luta", 1), ("pericias_detalhes", new[] { new { chave = "per_luta", treino = 5, outros = 2 } }));
         Check(WeaponActions.Resolve("{forca}d20kh1+{per_luta}", new RuleState(trainedOp), true) == "1d20+8", "OP server attacks include training and other modifiers");
         var automatic = Apply(op, Make(("nex", 35), ("intelecto", 1), ("per_ocultismo", 0)), "ritual", 3, "other", 20).Character;

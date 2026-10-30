@@ -15,6 +15,10 @@ public static class TormentaRules
     public static RuleView Describe(RuleState s) => new("Tormenta20 Jogo do Ano v1.3", [
         new("damage", "Sofrer dano", "Dano após resistências"), new("heal", "Receber cura", "PV"),
         new("spend", "Gastar PM em habilidade", "Custo", Classes.Select(c => new RuleChoice(c.Key, c.Label)).ToArray()),
+        new("spend-general", "Gastar PM: raça, origem ou poder geral", "Custo"), new("spend-minimum", "Usar habilidade em seu custo mínimo", "Custo mínimo"),
+        new("cast", "Conjurar magia conhecida", "Custo em PM", [.. Classes.Select(c => new RuleChoice(c.Key, c.Label)), new("general", "Raça, origem, poder ou item")]),
+        new("cast-minimum", "Conjurar magia conhecida em seu custo mínimo", "Custo mínimo em PM"),
+        new("scene", "Iniciar nova cena"),
         new("sleep", "Concluir noite de descanso (8h)", null, RuleState.RestOptions), new("turn", "Iniciar turno e resolver sangramento"), new("stabilize", "Cura CD 15 bem-sucedida"),
         new("baseline", "Aplicar PV e PM básicos de criação", null, Classes.Select(c => new RuleChoice(c.Key, $"Classe inicial: {c.Label}")).ToArray())
     ], [new("Níveis configurados", Level(s).ToString()), new("PV efetivos", Current(s).ToString()),
@@ -22,8 +26,10 @@ public static class TormentaRules
         new("Carga sem penalidade (espaços)", (10 + s.N("forca") * 2 + s.Get("carga_bonus")).ToString()),
         new("Limite de morte (PV)", (-Math.Max(10, s.MaxHealth / 2)).ToString())],
         [.. Classes.Select(c => new RuleSetting("nivel_" + c.Key, $"Níveis de {c.Label}", 0, 20)),
-            new("pm_bonus", "Ajuste de PM: atributo-chave e demais efeitos", -100, 100), new("pv_bonus", "Ajuste de PV: raça, poderes e demais efeitos", -100, 100), new("carga_bonus", "Espaços adicionais de carga", 0, 100)], s.State);
-    public static string Apply(RuleState s, RuleCommand c)
+            new("pm_bonus", "Ajuste de PM: atributo-chave e demais efeitos", -100, 100), new("pv_bonus", "Ajuste de PV: raça, poderes e demais efeitos", -100, 100), new("carga_bonus", "Espaços adicionais de carga", 0, 100), new("resistencia_fogo", "Redução aplicável ao dano de fogo", 0, 9999),
+            new("condicao_conjuracao", "Conjuração: 0 normal, 1 ruim, 2 terrível", 0, 2), new("dano_durante_conjuracao", "Dano sofrido durante a execução da próxima magia", 0, 9999),
+            new("magia_arcana_armadura", "Magia atual exige teste por armadura arcana (0 ou 1)", 0, 1), new("penalidade_armadura_magia", "Penalidade de armadura para Misticismo (valor positivo)", 0, 50)], s.State);
+    public static string Apply(SystemDefinition system, RuleState s, RuleCommand c)
     {
         RuleState.Require(s.Get("morto") == 0, "Personagens mortos precisam de um efeito específico.");
         switch (c.Action)
@@ -32,14 +38,44 @@ public static class TormentaRules
             case "heal": Health(s, Current(s) + c.Amount); if (c.Amount > 0) s.Set("sangrando", 0); return "Cura aplicada aos PV efetivos, incluindo o saldo negativo.";
             case "stabilize": s.Set("sangrando", 0); return "Estabilização confirmada.";
             case "turn":
-                if (s.Get("sangrando") == 0) return "Turno iniciado; sem sangramento.";
-                var bleedingCon = s.N("constituicao"); var test = s.Roll($"1d20{(bleedingCon < 0 ? bleedingCon.ToString() : "+" + bleedingCon)}");
-                var natural = s.Rolls[^1].Rolls[0];
-                if (natural == 20 || natural != 1 && test >= 15) { s.Set("sangrando", 0); return $"Constituição {test}: sangramento encerrado."; }
-                Health(s, Current(s) - s.Die(6)); Death(s); return $"Constituição {test}: sangramento causou perda de 1d6 PV.";
+                var turnMessage = D20Conditions.StartTurn(s);
+                if (D20Conditions.Has(s, "em_chamas")) { Health(s, Current(s) - D20Conditions.FireDamage(s, false)); Death(s); turnMessage += "Chamas resolvidas com a redução configurada. "; }
+                if (s.Get("sangrando") == 0) return turnMessage + "Turno iniciado; sem sangramento.";
+                var penalty = D20Conditions.Severity(s, "constituicao", "constituicao", false, false, false);
+                var bleedingCon = s.N("constituicao") - (penalty == 2 ? 5 : penalty == 1 ? 2 : 0); var test = s.Roll($"1d20{(bleedingCon < 0 ? bleedingCon.ToString() : "+" + bleedingCon)}");
+                if (D20Checks.Passed(s, test, 15, false)) { s.Set("sangrando", 0); return turnMessage + $"Constituição {test}: sangramento encerrado."; }
+                Health(s, Current(s) - s.Die(6)); Death(s); return turnMessage + $"Constituição {test}: sangramento causou perda de 1d6 PV.";
             case "spend":
-                RuleState.Require(c.Amount <= s.Get("nivel_" + c.Option), "O custo ultrapassa o nível na classe que fornece a habilidade. Aprimoramentos de limite exigem configuração própria.");
-                s.SpendMana(c.Amount); return "Custo descontado dos PM.";
+            case "spend-general":
+            case "spend-minimum":
+                RuleState.Require(!D20Conditions.CannotAct(s, physical: false), "As condições atuais impedem usar habilidades.");
+                var cost = c.Amount + D20Conditions.CostIncrease(s);
+                var limit = c.Action == "spend" ? s.Get("nivel_" + c.Option) : s.N("nivel");
+                RuleState.Require(cost <= limit || c.Action == "spend-minimum", "O custo ultrapassa o nível correspondente. Use a ação de custo mínimo somente para o custo mínimo da habilidade.");
+                s.SpendMana(cost); return "Custo descontado dos PM, incluindo alquebrado quando aplicável.";
+            case "cast":
+            case "cast-minimum":
+                RuleState.Require(!D20Conditions.CannotAct(s), "As condições atuais impedem conjurar magias.");
+                var castCost = c.Amount + D20Conditions.CostIncrease(s);
+                var castLimit = c.Option == "general" ? s.N("nivel") : s.Get("nivel_" + c.Option);
+                RuleState.Require(c.Action == "cast-minimum" || castCost <= castLimit, "O custo da magia ultrapassa o nível correspondente.");
+                s.SpendMana(castCost);
+                var circumstance = Math.Max(s.Get("condicao_conjuracao"), D20Conditions.Has(s, "agarrado") ? 2 : D20Conditions.Has(s, "caido") || D20Conditions.Has(s, "surdo") ? 1 : 0);
+                var damageTarget = s.Get("dano_durante_conjuracao"); s.Set("dano_durante_conjuracao", 0);
+                foreach (var target in new[] { circumstance == 0 ? 0 : (circumstance == 2 ? 20 : 15) + castCost, damageTarget }.Where(t => t > 0))
+                {
+                    var result = s.Roll(D20Checks.Expression(system, s, "per_vontade"));
+                    if (!D20Checks.Passed(s, result, target, false)) return $"Magia perdida: Vontade {result} / CD {target}; {castCost} PM gastos.";
+                }
+                if (s.Get("magia_arcana_armadura") > 0 && c.Option != "general")
+                {
+                    var expression = D20Checks.Expression(system, s, "per_misticismo");
+                    DiceExpression.TryParse(expression, out var dice); var modifier = dice!.Modifier - s.Get("penalidade_armadura_magia");
+                    var result = s.Roll("1d20" + (modifier >= 0 ? "+" : "") + modifier);
+                    if (!D20Checks.Passed(s, result, 20 + castCost, false)) return $"Magia perdida pela armadura: Misticismo {result} / CD {20 + castCost}; {castCost} PM gastos.";
+                }
+                return $"Magia conhecida conjurada: {castCost} PM gastos. Aplique o efeito da magia escolhida.";
+            case "scene": D20Conditions.EndScene(s); return "Condições da cena encerradas; condições persistentes e sangramento foram mantidos.";
             case "sleep":
                 RuleState.Require(s.Health > 0, "O personagem precisa estar consciente para descansar normalmente.");
                 var recovery = RuleState.Recovery(s.N("nivel", 1), c.Option);

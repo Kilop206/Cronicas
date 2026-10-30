@@ -12,13 +12,21 @@ function load(file) {
   const source = fs.readFileSync(path.join(root, file), 'utf8');
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   const exports = {};
-  vm.runInNewContext(code, { exports, structuredClone }, { filename: file });
+  vm.runInNewContext(code, { exports, structuredClone, require: name => { assert.ok(name.startsWith('./')); return load(name.slice(2) + '.ts'); } }, { filename: file });
   return exports;
 }
 
 const { SHEET_TEMPLATES: templates } = load('system-templates.ts');
 const { calculateSheet, fieldRoll, paranormalFieldRoll, paranormalV13BaseResources, dnd2014NextLevelXp, coc7eDamageProfile, coc7eSuccessDegree, resourceMaximum } = load('sheet-rules.ts');
 const { resolveSheetRenderer, sheetResources, sheetIndicators } = load('sheet-renderer-registry.ts');
+const { d20Defense, d20Speed } = load('d20-condition-display.ts');
+const conditionValues = { defesa: 15, deslocamento: 9, estado_regras: [{chave: 'cond_desprevenido', valor: -1}, {chave: 'cond_caido', valor: 1}] };
+assert.equal(d20Defense(conditionValues, false), 5, 'T20 stacks prone defense with flat-footed');
+assert.equal(d20Defense(conditionValues, true), 10, 'OP uses the worst defense penalty');
+assert.equal(d20Defense(conditionValues, false, true), 15, 'Prone ranged defense bonus applies');
+assert.equal(d20Speed({health: 20, fields: conditionValues}), 1.5);
+assert.equal(d20Speed({health: 0, fields: conditionValues}), 0);
+assert.equal(d20Defense({...conditionValues, estado_regras: [{chave: 'cond_petrificado', valor: -1}]}, false), 5, 'Implied helplessness is projected recursively');
 assert.equal(templates.length, 4);
 assert.equal(new Set(templates.map(template => template.layout.skin)).size, templates.length, 'Each template should have its own visual style');
 assert.equal(new Set(templates.map(template => template.layout.headerLabel)).size, templates.length, 'Each template should have its own heading');

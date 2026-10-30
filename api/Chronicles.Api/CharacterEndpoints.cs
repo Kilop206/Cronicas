@@ -263,7 +263,8 @@ public static partial class CharacterEndpoints
                     .Select(block => new { Label = block.Title ?? definition.Fields.FirstOrDefault(field => field.Key == block.Key)?.Label ?? "Recurso",
                         current = ResourceValue(character, values, block.Key!), max = block.MaxKey is { } maxKey ? ResourceValue(character, values, maxKey) : ResourceMax(character, block.Key!) })
                 : resourceKeys.Select(item => new { item.Label, current = ResourceValue(character, values, item.Key), max = ResourceMax(character, item.Key) });
-            var indicators = indicatorKeys.Where(item => values.ContainsKey(item.Key)).Select(item => new { item.Label, value = values[item.Key].ToString() });
+            var conditionState = definition is not null && SheetRuleActions.Supports(definition) && definition.TemplateId is "ordem_paranormal" or "tormenta20" ? new RuleState(RuleInput(character)) : null;
+            var indicators = indicatorKeys.Where(item => values.ContainsKey(item.Key)).Select(item => new { item.Label, value = item.Key == "defesa" && conditionState is not null ? D20Conditions.Defense(conditionState, false, definition!.TemplateId == "ordem_paranormal").ToString() : values[item.Key].ToString() });
             return Results.Ok(new
             {
                 character.Name, character.PortraitUrl, character.BackgroundUrl,

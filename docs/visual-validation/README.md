@@ -1,5 +1,11 @@
 # Validação visual das fichas
 
+## Validação integrada de regras — 30/10/2026
+
+As capturas atuais em [rules](rules/) foram feitas com `web/rules-integration.mjs`, Chrome, a API .NET local e PostgreSQL de teste. Esse conjunto usa autenticação e persistência reais e cobre os quatro sistemas nas resoluções 1440×900, 1920×1080, 768×1024 e 390×844. O script verifica permissões, conflito de versões, histórico, ataques privados, consumo de munição, aplicação de condições pelo formulário, rolagens nativas e leitura após recarregar. Em Ordem, a coluna de dados usa a prévia do servidor; em Tormenta20, o modificador da perícia considera as condições. As capturas não utilizam contas de produção.
+
+## Capturas iniciais de composição
+
 Capturas reais do Angular local em Chrome headless, feitas com `web/visual-validation.mjs`. O navegador recebe respostas de API simuladas com personagens de ensaio; nenhum dado fictício é embutido nas fichas da aplicação. Para repetir: `cd web`, `npm start` e, em outro terminal, `npm run visual:capture`.
 
 | Ficha | 1440×900 | 1920×1080 | 768×1024 | 390×844 |

@@ -1,4 +1,5 @@
 import type { CharacterInput, OverlayResource, RpgSystem, SheetFieldValue } from './api';
+import { d20Defense, hasD20Conditions } from './d20-condition-display';
 
 export type SheetRendererId = 'ordem_paranormal' | 'dnd_5e' | 'tormenta20' | 'call_of_cthulhu_7e' | 'custom';
 
@@ -87,7 +88,7 @@ const indicatorKeys: Record<string, { key: string; label: string }[]> = {
   call_of_cthulhu_7e: [{ key: 'sorte', label: 'Sorte' }]
 };
 
-export function sheetIndicators(system: RpgSystem | null, values: Record<string, SheetFieldValue>) {
+export function sheetIndicators(system: RpgSystem | null, values: Record<string, SheetFieldValue>, health?: number) {
   const renderer = resolveSheetRenderer(system);
   const configured = !renderer && system?.layout ? system.layout.pages.flatMap(page => page.blocks)
     .filter(block => block.kind === 'field' && block.style === 'score' && !!block.key)
@@ -95,5 +96,5 @@ export function sheetIndicators(system: RpgSystem | null, values: Record<string,
     .map(block => ({ key: block.key!, label: block.title || system.fields.find(field => field.key === block.key)?.label || 'Indicador' })) : [];
   return (renderer ? indicatorKeys[renderer.id] || [] : configured)
     .filter(item => values[item.key] !== undefined)
-    .map(item => ({ label: item.label, value: String(values[item.key]) }));
+    .map(item => ({ label: item.label, value: String(item.key === 'defesa' && hasD20Conditions(system) ? d20Defense(values, renderer?.id === 'ordem_paranormal', false, health) : values[item.key]) }));
 }

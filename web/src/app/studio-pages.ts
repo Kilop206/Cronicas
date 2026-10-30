@@ -250,7 +250,7 @@ export class OverlayCardComponent {
     if ('resources' in this.character) return this.character.resources;
     return sheetOverlayResources(this.system, this.character);
   }
-  indicators(): OverlayIndicator[] { return 'indicators' in this.character ? this.character.indicators : sheetIndicators(this.system, this.character.fields); }
+  indicators(): OverlayIndicator[] { return 'indicators' in this.character ? this.character.indicators : sheetIndicators(this.system, this.character.fields, this.character.health); }
   maxKey(key: 'health' | 'sanity' | 'mana'): 'maxHealth' | 'maxSanity' | 'maxMana' { return key === 'health' ? 'maxHealth' : key === 'sanity' ? 'maxSanity' : 'maxMana'; }
   percent(value: number, max: number) { return Math.max(0, Math.min(100, max ? value / max * 100 : 0)); }
 }

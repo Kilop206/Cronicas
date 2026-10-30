@@ -1,6 +1,8 @@
+import { D20RuleRollContext } from './d20-rule-roll-context';
+import { d20Defense, d20Speed, hasD20Conditions } from './d20-condition-display';
 import { SheetWeaponListComponent } from './sheet-weapon-list.component';
 import { CommonModule } from '@angular/common';
-import { Component, EventEmitter, Input, Output, inject, signal } from '@angular/core';
+import { Component, EventEmitter, Input, OnChanges, Output, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { finalize } from 'rxjs';
 import { ApiService, Character, CharacterInput, RpgSystem, SheetCellValue, SheetFieldValue, SystemField, apiError } from './api';
@@ -28,8 +30,10 @@ export class ParanormalRollComponent {
   @Input() visibility: Visibility = 'campaign';
   @Output() rolled = new EventEmitter<string>();
   private api = inject(ApiService);
+  private context = inject(D20RuleRollContext, { optional: true });
   busy = signal(false);
   roll() {
+    if (this.context?.roll(this.expression, this.visibility, this.label, message => this.rolled.emit(message), busy => this.busy.set(busy))) return;
     const expression = paranormalFieldRoll(this.expression, this.values);
     if (!expression) { this.rolled.emit(`${this.label}: confira os atributos e a expressão da rolagem.`); return; }
     this.busy.set(true);
@@ -119,7 +123,7 @@ function keyOf(key: ResourceKey): ResourceKey { return key; }
   <div class="paranormal-skills" role="region" aria-label="Perícias do agente">
     <div class="skill-head"><span>PERÍCIA</span><span>ATR</span><span>DADOS</span><span>BÔNUS</span><span>TREINO</span><span>OUTROS</span><span>ROLAR</span></div>
     <div *ngFor="let skill of skills()" class="skill-row">
-      <span class="skill-name">{{ skill.label }}</span><span class="skill-attr">{{ attributeShort(skill) }}</span><span class="skill-dice">{{ skillDiceLabel(skill) }}</span>
+      <span class="skill-name">{{ skill.label }}</span><span class="skill-attr">{{ attributeShort(skill) }}</span><span class="skill-dice" [title]="skillPreview(skill)">{{ skillDiceLabel(skill) }}</span>
       <input *ngIf="canEdit(skill); else baseValue" type="number" [attr.aria-label]="'Bônus base de ' + skill.label" [ngModel]="number(skill.key)" (ngModelChange)="setBase(skill,$event)" [ngModelOptions]="{standalone:true}" min="-999" max="999">
       <ng-template #baseValue><strong class="skill-number">{{ signed(number(skill.key)) }}</strong></ng-template>
       <input *ngIf="canEditDetail(); else trainingValue" type="number" [attr.aria-label]="'Treino de ' + skill.label" [ngModel]="detail(skill.key,'treino')" (ngModelChange)="setDetail(skill.key,'treino',$event)" [ngModelOptions]="{standalone:true}" min="-99" max="99">
@@ -139,6 +143,7 @@ function keyOf(key: ResourceKey): ResourceKey { return key; }
 `]
 })
 export class ParanormalSkillTableComponent {
+  private context = inject(D20RuleRollContext, {optional: true});
   @Input({ required: true }) system!: RpgSystem;
   @Input({ required: true }) draft!: CharacterInput;
   @Input({ required: true }) character!: Character;
@@ -152,7 +157,8 @@ export class ParanormalSkillTableComponent {
   attributeKey(skill: SystemField) { return /^\{([a-z][a-z0-9_]*)\}d20/.exec(skill.rollExpression || '')?.[1] || ''; }
   attributeShort(skill: SystemField) { return ({ agilidade:'AGI', forca:'FOR', intelecto:'INT', presenca:'PRE', vigor:'VIG' } as Record<string,string>)[this.attributeKey(skill)] || '—'; }
   attributeValue(skill: SystemField) { return this.number(this.attributeKey(skill)); }
-  skillDiceLabel(skill: SystemField) { const count = this.attributeValue(skill); return count === 0 ? '2d20↓' : `${count}d20`; }
+  skillPreview(skill: SystemField) { const preview = this.context?.checks()[skill.key]; return preview?.error || preview?.expression || ''; }
+  skillDiceLabel(skill: SystemField) { const preview = this.mode === 'edit' ? null : this.context?.checks()[skill.key]; if (preview) { if (!preview.expression) return '?'; const match = /^(\d+d20)(kl1|kh1)?/.exec(preview.expression); if (match) return match[1] + (match[2] === 'kl1' ? '\u2193' : ''); } const count = this.attributeValue(skill); return count === 0 ? '2d20↓' : `${count}d20`; }
   private details(): Record<string, SheetCellValue>[] { const value = this.draft.fields['pericias_detalhes']; return Array.isArray(value) && value.every(row => row && typeof row === 'object' && !Array.isArray(row)) ? value as Record<string, SheetCellValue>[] : []; }
   detail(key: string, column: 'treino' | 'outros') { const row = this.details().find(item => item['chave'] === key); return typeof row?.[column] === 'number' ? row[column] as number : 0; }
   canEdit(skill: SystemField) { return this.mode === 'edit' && this.character.canEdit && !skill.formula && skill.editRole !== 'gm'; }
@@ -162,7 +168,7 @@ export class ParanormalSkillTableComponent {
   rollValues(skill: SystemField) { return { ...this.draft.fields, [skill.key]: this.number(skill.key) + this.detail(skill.key,'treino') + this.detail(skill.key,'outros') }; }
 }
 
-@Component({ selector: 'app-paranormal-sheet', standalone: true, imports: [SheetWeaponListComponent, CommonModule, FormsModule, ParanormalAttributeWheelComponent, ParanormalResourceBarComponent, ParanormalSkillTableComponent, SystemFieldComponent, SheetCollectionFieldComponent, CharacterInventoryComponent, CharacterAbilitiesComponent, CharacterHistoryPanelComponent], template: `
+@Component({ selector: 'app-paranormal-sheet', standalone: true, providers: [D20RuleRollContext], imports: [SheetWeaponListComponent, CommonModule, FormsModule, ParanormalAttributeWheelComponent, ParanormalResourceBarComponent, ParanormalSkillTableComponent, SystemFieldComponent, SheetCollectionFieldComponent, CharacterInventoryComponent, CharacterAbilitiesComponent, CharacterHistoryPanelComponent], template: `
   <article class="paranormal-sheet">
     <header class="paranormal-header">
       <div class="paranormal-portrait"><img *ngIf="draft.portraitUrl" [src]="draft.portraitUrl" alt=""><span *ngIf="!draft.portraitUrl">{{ draft.name.slice(0,1) || 'C' }}</span></div>
@@ -173,10 +179,10 @@ export class ParanormalSkillTableComponent {
     <div *ngIf="lastRoll() && mode !== 'print'" class="paranormal-last-roll" role="status">{{ lastRoll() }}</div>
     <div *ngIf="show('principal')" class="paranormal-primary">
       <div class="paranormal-left"><div class="paranormal-block-label">ATRIBUTOS</div><app-paranormal-attribute-wheel [system]="system" [draft]="draft" [character]="character" [mode]="mode" [visibility]="visibility()" (changed)="changed.emit()" (rolled)="lastRoll.set($event)" />
-        <div class="paranormal-facts"><div><span>NEX</span><strong>{{ number('nex') }}%</strong></div><div><span>DESLOCAMENTO</span><strong>{{ number('deslocamento') }} m</strong></div><div><span>INICIATIVA</span><strong>{{ signed(number('iniciativa')) }}</strong></div></div>
+        <div class="paranormal-facts"><div><span>NEX</span><strong>{{ number('nex') }}%</strong></div><div><span>DESLOCAMENTO</span><strong>{{ effectiveSpeed() }} m</strong></div><div><span>INICIATIVA</span><strong>{{ signed(number('iniciativa')) }}</strong></div></div>
         <div class="paranormal-resource-stack"><app-paranormal-resource [draft]="draft" key="health" label="Vida" [canEdit]="character.canEdit" [mode]="mode" (changed)="changed.emit()" /><app-paranormal-resource [draft]="draft" key="sanity" label="Sanidade" [canEdit]="character.canEdit" [mode]="mode" (changed)="changed.emit()" /><app-paranormal-resource [draft]="draft" key="mana" label="Esforço" [canEdit]="character.canEdit" [mode]="mode" (changed)="changed.emit()" /></div>
         <div *ngIf="field('classe_regra')" class="paranormal-base"><label>CLASSE PARA RECURSOS <select *ngIf="canEditField('classe_regra'); else selectedRuleClass" aria-label="Classe para recursos" [ngModel]="textValue('classe_regra')" (ngModelChange)="setField('classe_regra',$event)" [ngModelOptions]="{standalone:true}"><option value="">Selecionar</option><option value="combatente">Combatente</option><option value="especialista">Especialista</option><option value="ocultista">Ocultista</option></select><ng-template #selectedRuleClass><strong>{{ ruleClassLabel() || '—' }}</strong></ng-template></label><div *ngIf="baseResources() as base" class="paranormal-base-values"><span>BASE v1.3</span><b>PV {{ base.pv }}</b><b>PE {{ base.pe }}</b><b>SAN {{ base.san }}</b><button *ngIf="mode === 'edit' && character.canEdit" type="button" (click)="applyBaseResources()">Aplicar valores iniciais</button></div><small *ngIf="baseResources()">Ajuste manualmente bônus de origem, poderes e outras exceções.</small></div>
-        <div class="paranormal-defense"><div class="paranormal-block-label">DEFESAS</div><div class="defense-values"><div *ngFor="let key of ['defesa','bloqueio','esquiva']"><span>{{ label(key) }}</span><input *ngIf="canEditField(key); else defenseValue" type="number" [attr.aria-label]="label(key)" [ngModel]="number(key)" (ngModelChange)="setField(key,+$event)" [ngModelOptions]="{standalone:true}"><ng-template #defenseValue><strong>{{ field(key) ? number(key) : '—' }}</strong></ng-template></div></div></div>
+        <div class="paranormal-defense"><div class="paranormal-block-label">DEFESAS</div><div class="defense-values"><div *ngFor="let key of ['defesa','bloqueio','esquiva']"><span>{{ label(key) }}</span><input *ngIf="canEditField(key); else defenseValue" type="number" [attr.aria-label]="label(key)" [ngModel]="number(key)" (ngModelChange)="setField(key,+$event)" [ngModelOptions]="{standalone:true}"><ng-template #defenseValue><strong>{{ field(key) ? key === 'defesa' ? effectiveDefense() : number(key) : '—' }}</strong></ng-template></div></div></div>
         <div class="paranormal-secondary"><strong>PROTEÇÃO</strong><span>{{ textValue('protecao') || '—' }}</span><strong>RESISTÊNCIAS</strong><span>{{ textValue('resistencias') || '—' }}</span></div>
       </div>
       <div class="paranormal-right"><div class="paranormal-block-label">PERÍCIAS <small>{{ skillCount() }} TESTES</small></div><app-paranormal-skill-table [system]="system" [draft]="draft" [character]="character" [mode]="mode" [visibility]="visibility()" (changed)="changed.emit()" (rolled)="lastRoll.set($event)" /></div>
@@ -210,7 +216,12 @@ export class ParanormalSkillTableComponent {
   @media print{.paranormal-sheet{background:#fff;color:#111;border:0}.paranormal-header,.paranormal-controls{background:#fff;color:#111}.paranormal-controls{display:none}.paranormal-primary{min-height:0}.paranormal-detail{min-height:0;break-inside:avoid}.paranormal-resource,.paranormal-skills{background:#fff;color:#111}}
 `]
 })
-export class ParanormalSheetComponent {
+export class ParanormalSheetComponent implements OnChanges {
+  ngOnChanges() { this.ruleContext.refresh(); }
+  private ruleContext = inject(D20RuleRollContext);
+  constructor() { this.ruleContext.character = () => this.character; this.ruleContext.system = () => this.system; this.ruleContext.ready = () => this.rulesReady; this.ruleContext.applied = character => this.restored.emit(character); this.ruleContext.working = busy => this.working.emit(busy); }
+  effectiveDefense() { return hasD20Conditions(this.system) ? d20Defense(this.draft.fields, true, false, this.draft.health) : this.number('defesa'); }
+  effectiveSpeed() { return hasD20Conditions(this.system) ? d20Speed(this.draft) : this.number('deslocamento'); }
   @Input() rulesReady = false;
   @Output() working = new EventEmitter<boolean>();
   @Input({ required: true }) system!: RpgSystem;
