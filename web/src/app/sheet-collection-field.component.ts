@@ -20,7 +20,7 @@ type SheetRow = Record<string, SheetCellValue>;
         <app-sheet-roll *ngIf="mode !== 'print' && column.type === 'dice' && cell(row,column)" [campaignId]="campaignId" [expression]="String(cell(row,column))" [values]="draft.fields" [label]="field.label + ' ' + (index + 1)" [compact]="true" />
       </td><td *ngIf="mode === 'edit'"><button type="button" [attr.aria-label]="'Remover linha ' + (index + 1)" (click)="removeRow(index)">×</button></td></tr></tbody></table></div>
     <p *ngIf="mode !== 'edit' && !(field.type === 'list' ? items().length : rows().length)" class="muted">Nenhum registro.</p>
-    <button *ngIf="mode === 'edit'" type="button" class="button button-small secondary" [disabled]="(field.type === 'list' ? items().length : rows().length) >= 30" (click)="add()">{{ field.type === 'list' ? 'Adicionar item' : 'Adicionar linha' }}</button>
+    <button *ngIf="mode === 'edit'" type="button" class="button button-small secondary" [disabled]="(field.type === 'list' ? items().length : rows().length) >= rowLimit()" (click)="add()">{{ field.type === 'list' ? 'Adicionar item' : 'Adicionar linha' }}</button>
   </div>`, styles: [`
     .sheet-collection-field { display:grid; gap:11px; min-width:0; }
     .sheet-custom-list { margin:0; padding-left:20px; display:grid; gap:6px; }
@@ -41,6 +41,7 @@ export class SheetCollectionFieldComponent {
   @Input() mode: 'read' | 'edit' | 'print' = 'read';
   @Output() changed = new EventEmitter<void>();
   items(): string[] { const value = this.draft.fields[this.field.key]; return Array.isArray(value) && value.every(item => typeof item === 'string') ? value as string[] : []; }
+  rowLimit() { return this.field.key === 'estado_regras' ? 100 : 30; }
   rows(): SheetRow[] { const value = this.draft.fields[this.field.key]; return Array.isArray(value) && value.every(item => item && typeof item === 'object' && !Array.isArray(item)) ? value as SheetRow[] : []; }
   cell(row: SheetRow, column: SystemColumn): SheetCellValue { return row[column.key] ?? (column.type === 'boolean' ? false : column.type === 'number' ? 0 : ''); }
   String(value: SheetCellValue) { return String(value); }
@@ -50,5 +51,5 @@ export class SheetCollectionFieldComponent {
   setCell(index: number, column: SystemColumn, value: SheetCellValue) { const rows = this.rows().map(row => ({ ...row })); rows[index][column.key] = column.type === 'number' ? Number(value) : value; this.set(rows); }
   removeRow(index: number) { this.set(this.rows().filter((_, position) => position !== index)); }
   add() { if (this.field.type === 'list' && this.items().length < 30) this.set([...this.items(), '']);
-    if (this.field.type === 'table' && this.rows().length < 30) this.set([...this.rows(), Object.fromEntries((this.field.columns || []).map(column => [column.key, this.cell({}, column)]))]); }
+    if (this.field.type === 'table' && this.rows().length < this.rowLimit()) this.set([...this.rows(), Object.fromEntries((this.field.columns || []).map(column => [column.key, this.cell({}, column)]))]); }
 }

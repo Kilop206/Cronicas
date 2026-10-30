@@ -139,7 +139,7 @@ export class SystemEditorPage implements OnInit {
   removeNpcTemplate(index: number) { this.npcTemplates.splice(index, 1); }
   readonly() { return !this.isNew && this.ownerId !== this.api.user()?.id; }
   matchingTemplate() { return this.templates.find(template => template.id === this.templateId && template.version === this.templateVersion) || null; }
-  latestRulesTemplate() { if (this.isNew || this.readonly() || this.mode !== 'structured' || this.templateId === 'dnd_5e') return null; return this.templates.find(template => template.id === this.templateId && template.version > this.templateVersion) || null; }
+  latestRulesTemplate() { if (this.isNew || this.readonly() || this.mode !== 'structured' || this.templateId === 'dnd_5e' && this.rulesetVersion !== '2014') return null; return this.templates.find(template => template.id === this.templateId && template.version > this.templateVersion) || null; }
   prepareRulesUpgrade() {
     const template = this.latestRulesTemplate();
     if (!template) return;

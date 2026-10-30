@@ -26,7 +26,7 @@ public static class SheetCollectionValues
 
     public static bool ValidTable(SystemField field, JsonElement value)
     {
-        if (value.ValueKind != JsonValueKind.Array || value.GetArrayLength() > 30 || field.Columns is not { Length: > 0 } columns) return false;
+        if (value.ValueKind != JsonValueKind.Array || value.GetArrayLength() > (field.Key == SheetRuleActions.StateKey ? 100 : 30) || field.Columns is not { Length: > 0 } columns) return false;
         var byKey = columns.ToDictionary(column => column.Key, StringComparer.Ordinal);
         foreach (var row in value.EnumerateArray())
         {

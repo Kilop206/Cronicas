@@ -14,6 +14,8 @@ Call of Cthulhu 7e usa uma matriz percentual de características com metade e qu
 
 ## Adicionar um sistema especializado
 
+As versões com ações executadas no servidor são Ordem v6, D&D 2014 v3, Tormenta20 v3 e CoC v4. O contrato, o estado persistido, a cobertura das ações e os testes com banco real estão documentados em [rules-engine.md](rules-engine.md). A implementação integral dos livros ainda depende dos itens pendentes registrados ali; campos livres não contam como automação de regras.
+
 1. Identifique edição e base de regras disponível. Crie uma definição em `system-templates.ts` com `id` estável, `version`, `rulesetVersion`, campos e layout. Não reutilize um ID para mecânicas incompatíveis; publique uma nova versão.
 2. Acrescente o ID, a versão, as chaves exigidas e os recursos próprios em `sheet-renderer-registry.ts`.
 3. Crie uma apresentação própria em um componente e selecione-a em `studio-pages.ts`. Reutilize `SystemFieldComponent`, `SheetCollectionFieldComponent`, inventário, habilidades e histórico quando atenderem às mecânicas. Mantenha os cálculos em `SheetFormula` e `sheet-rules.ts` ou em funções de regras específicas, fora do template HTML. O modo de impressão precisa selecionar o mesmo renderizador.

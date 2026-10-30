@@ -1,5 +1,6 @@
 using Chronicles.Api;
 using Chronicles.Api.Services;
+SheetRuleActionTests.Run();
 
 static void Check(bool condition, string name)
 {

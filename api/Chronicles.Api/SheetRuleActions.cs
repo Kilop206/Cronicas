@@ -1,0 +1,157 @@
+using System.Text.Json;
+using static Chronicles.Api.CharacterEndpoints;
+
+namespace Chronicles.Api;
+
+public sealed record RuleCommand(string Action, int Amount = 0, string? Option = null, string Visibility = "campaign");
+public sealed record RuleChoice(string Value, string Label);
+public sealed record RuleAction(string Id, string Label, string? AmountLabel = null, RuleChoice[]? Options = null);
+public sealed record RuleStat(string Label, string Value);
+public sealed record RuleSetting(string Key, string Label, int Min = 0, int Max = 9999);
+public sealed record RuleView(string Edition, RuleAction[] Actions, RuleStat[] Stats, RuleSetting[] Settings, Dictionary<string, int> State);
+public sealed record RuleResult(CharacterInput Character, string Message, RuleRoll[] Rolls);
+public sealed record RuleRoll(string Expression, int[] Rolls, int[] KeptIndexes, int Modifier, int Total);
+
+// Pure, edition-specific actions. No database, HTTP or arbitrary expressions here.
+public static class SheetRuleActions
+{
+    public const string StateKey = "estado_regras";
+    public static bool Supports(SystemDefinition system) => system.Fields.Any(f => f.Key == StateKey && f.Type == "table") &&
+        (system.TemplateId, system.TemplateVersion, system.RulesetVersion) switch
+        {
+            ("ordem_paranormal", 6, "1.3") or ("dnd_5e", 3, "2014") or
+            ("tormenta20", 3, "jogo-do-ano-2024-v1.3") or ("call_of_cthulhu_7e", 4, "7e") => true,
+            _ => false
+        };
+
+    public static RuleView Describe(SystemDefinition system, CharacterInput input)
+    {
+        var s = new RuleState(input);
+        if (!Supports(system)) throw new ArgumentException("Atualize o modelo para usar as ações desta edição.");
+        var view = system.TemplateId switch
+        {
+            "ordem_paranormal" => ParanormalRules.Describe(s),
+            "dnd_5e" => Dnd2014Rules.Describe(s),
+            "tormenta20" => TormentaRules.Describe(s),
+            _ => CthulhuRules.Describe(s)
+        };
+        return view with { Actions = [.. view.Actions, new RuleAction("configure", "Salvar configuração", "Valor", view.Settings.Select(x => new RuleChoice(x.Key, x.Label)).ToArray())] };
+    }
+
+    public static RuleResult Apply(SystemDefinition system, CharacterInput input, RuleCommand command, Func<int, int> draw)
+    {
+        var view = Describe(system, input);
+        var action = view.Actions.SingleOrDefault(a => a.Id == command.Action) ?? throw new ArgumentException("Ação indisponível nesta edição.");
+        if (command.Amount > 9999 || command.Amount < (command.Action == "configure" ? -9999 : 0) || command.Visibility is not ("campaign" or "private" or "gm")) throw new ArgumentException("Valor ou visibilidade inválidos.");
+        if (action.Options is { Length: > 0 } && !action.Options.Any(o => o.Value == command.Option)) throw new ArgumentException("Escolha uma opção válida.");
+        var s = new RuleState(input, draw);
+        if (command.Action == "configure")
+        {
+            var setting = view.Settings.Single(x => x.Key == command.Option);
+            RuleState.Require(command.Amount >= setting.Min && command.Amount <= setting.Max, $"Informe um valor entre {setting.Min} e {setting.Max}.");
+            s.Set(setting.Key, command.Amount);
+            var totalLevels = s.State.Where(x => x.Key.StartsWith("nivel_", StringComparison.Ordinal)).Sum(x => x.Value);
+            RuleState.Require(totalLevels <= 20, "A soma dos níveis não pode ultrapassar 20.");
+            if (setting.Key.StartsWith("nivel_", StringComparison.Ordinal) && totalLevels > 0) s.Field("nivel", totalLevels);
+            return new(s.Export(), "Configuração salva.", []);
+        }
+        var message = system.TemplateId switch
+        {
+            "ordem_paranormal" => ParanormalRules.Apply(s, command),
+            "dnd_5e" => Dnd2014Rules.Apply(s, command),
+            "tormenta20" => TormentaRules.Apply(s, command),
+            _ => CthulhuRules.Apply(s, command)
+        };
+        return new(s.Export(), message, s.Rolls.ToArray());
+    }
+
+    public static string? ValidateStateAccess(SystemDefinition system, Dictionary<string, JsonElement> before, Dictionary<string, JsonElement> after, bool master)
+    {
+        if (!Supports(system)) return null;
+        try
+        {
+            var empty = new CharacterInput("Estado", null, null, 1, 1, 1, 1, 1, 1);
+            var next = new RuleState(empty with { Fields = after });
+            var old = new RuleState(empty with { Fields = before });
+            if (!master && next.Get("sorte_opcional") != old.Get("sorte_opcional")) return "Somente o mestre pode alterar a regra opcional de sorte.";
+            var settings = Describe(system, empty with { Fields = after }).Settings;
+            foreach (var setting in settings)
+                if (next.Get(setting.Key) < setting.Min || next.Get(setting.Key) > setting.Max) return $"Configuração fora dos limites: {setting.Label}.";
+            if (next.State.Where(x => x.Key.StartsWith("nivel_", StringComparison.Ordinal)).Sum(x => x.Value) > 20) return "A soma dos níveis não pode ultrapassar 20.";
+            return null;
+        }
+        catch (ArgumentException error) { return error.Message; }
+    }
+}
+
+public sealed class RuleState
+{
+    private CharacterInput character;
+    private readonly Func<int, int> draw;
+    public Dictionary<string, JsonElement> Fields { get; }
+    public Dictionary<string, int> State { get; } = [];
+    public List<RuleRoll> Rolls { get; } = [];
+    public RuleState(CharacterInput input, Func<int, int>? draw = null)
+    {
+        character = input;
+        this.draw = draw ?? (_ => throw new InvalidOperationException("Esta ação precisa de dados."));
+        Fields = input.Fields?.ToDictionary(x => x.Key, x => x.Value.Clone()) ?? [];
+        if (!Fields.TryGetValue(SheetRuleActions.StateKey, out var rows)) return;
+        if (rows.ValueKind != JsonValueKind.Array) throw new ArgumentException("Estado de regras inválido.");
+        foreach (var row in rows.EnumerateArray())
+        {
+            if (row.ValueKind != JsonValueKind.Object || !row.TryGetProperty("chave", out var key) || key.ValueKind != JsonValueKind.String ||
+                !row.TryGetProperty("valor", out var value) || !value.TryGetInt32(out var number) ||
+                key.GetString() is not { Length: > 0 and <= 64 } name || !State.TryAdd(name, number)) throw new ArgumentException("Estado de regras inválido ou duplicado.");
+        }
+    }
+    public int Health { get => character.Health; set => character = character with { Health = Math.Clamp(value, 0, character.MaxHealth) }; }
+    public int Mana { get => character.Mana; set => character = character with { Mana = Math.Clamp(value, 0, character.MaxMana) }; }
+    public int Sanity { get => character.Sanity; set => character = character with { Sanity = Math.Clamp(value, 0, character.MaxSanity) }; }
+    public int MaxHealth => character.MaxHealth;
+    public int MaxMana => character.MaxMana;
+    public int MaxSanity => character.MaxSanity;
+    public int N(string key, int fallback = 0) => Fields.TryGetValue(key, out var v) && v.ValueKind == JsonValueKind.Number && v.TryGetInt32(out var n) ? n : fallback;
+    public string Text(string key) => Fields.TryGetValue(key, out var v) && v.ValueKind == JsonValueKind.String ? v.GetString() ?? "" : "";
+    public int Get(string key, int fallback = 0) => State.GetValueOrDefault(key, fallback);
+    public void Set(string key, int value) { if (value == 0) State.Remove(key); else State[key] = value; }
+    public void Field(string key, int value) => Fields[key] = JsonSerializer.SerializeToElement(value);
+    public int Die(int sides)
+    {
+        var value = draw(sides);
+        if (value < 1 || value > sides) throw new ArgumentException("Dado fora dos limites.");
+        Rolls.Add(new($"1d{sides}", [value], [0], 0, value));
+        return value;
+    }
+    public int Roll(string expression)
+    {
+        Require(DiceExpression.TryParse(expression, out var dice) && dice is not null, "Expressão de dados inválida.");
+        var result = dice!.Roll(draw);
+        Rolls.Add(new(expression, result.Rolls, result.KeptIndexes, dice.Modifier, result.Total));
+        return result.Total;
+    }
+    public void SpendMana(int amount) { Require(amount > 0 && Mana >= amount, "Recurso insuficiente ou custo inválido."); Mana -= amount; }
+    public void HealthMaximum(int value) { Require(value is >= 1 and <= 9999, "Total de PV inválido."); character = character with { Health = value, MaxHealth = value }; }
+    public void LoseSanityMaximum(int amount)
+    {
+        var maximum = Math.Max(0, MaxSanity - amount);
+        character = character with { Sanity = Math.Min(Sanity, maximum), MaxSanity = Math.Max(1, maximum) };
+        if (maximum == 0) Set("insano", 1);
+        Set("san_permanente_perdida", Get("san_permanente_perdida") + amount);
+    }
+    public void Vitals(int health, int mana, int? sanity = null)
+    {
+        Require(health is >= 1 and <= 9999 && mana is >= 0 and <= 9999 && sanity is not (< 0 or > 9999), "Totais de recursos inválidos.");
+        character = character with { MaxHealth = health, Health = health, MaxMana = Math.Max(1, mana), Mana = mana };
+        if (sanity is { } san) character = character with { MaxSanity = Math.Max(1, san), Sanity = san };
+    }
+    public CharacterInput Export()
+    {
+        Require(State.Count <= 100, "O estado excede 100 indicadores. Remova indicadores sem uso.");
+        Fields[SheetRuleActions.StateKey] = JsonSerializer.SerializeToElement(State.Select(x => new { chave = x.Key, valor = x.Value }).ToArray());
+        return character with { Fields = Fields };
+    }
+    public static void Require(bool test, string error) { if (!test) throw new ArgumentException(error); }
+    public static RuleChoice[] RestOptions => [new("poor", "Precário"), new("normal", "Normal"), new("comfortable", "Confortável"), new("luxury", "Luxuoso")];
+    public static int Recovery(int basic, string? option) => option switch { "poor" => basic / 2, "comfortable" => basic * 2, "luxury" => basic * 3, _ => basic };
+}

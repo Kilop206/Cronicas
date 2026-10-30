@@ -16,13 +16,17 @@ const renderers: SheetRendererDefinition[] = [
   { id: 'ordem_paranormal', version: 3, required: ['nex', 'agilidade', 'forca', 'intelecto', 'presenca', 'vigor', 'defesa'], resources: [{ key: 'health', label: 'PV' }, { key: 'mana', label: 'PE' }, { key: 'sanity', label: 'SAN' }] },
   { id: 'ordem_paranormal', version: 4, required: ['nex', 'agilidade', 'forca', 'intelecto', 'presenca', 'vigor', 'defesa'], resources: [{ key: 'health', label: 'PV' }, { key: 'mana', label: 'PE' }, { key: 'sanity', label: 'SAN' }] },
   { id: 'ordem_paranormal', version: 5, required: ['nex', 'agilidade', 'forca', 'intelecto', 'presenca', 'vigor', 'defesa', 'classe_regra'], resources: [{ key: 'health', label: 'PV' }, { key: 'mana', label: 'PE' }, { key: 'sanity', label: 'SAN' }] },
+  { id: 'ordem_paranormal', version: 6, required: ['nex', 'agilidade', 'forca', 'intelecto', 'presenca', 'vigor', 'defesa', 'classe_regra'], resources: [{ key: 'health', label: 'PV' }, { key: 'mana', label: 'PE' }, { key: 'sanity', label: 'SAN' }] },
   { id: 'dnd_5e', version: 1, required: ['nivel', 'forca', 'destreza', 'constituicao', 'inteligencia', 'sabedoria', 'carisma', 'classe_armadura'], resources: [{ key: 'health', label: 'HP' }] },
   { id: 'dnd_5e', version: 2, required: ['nivel', 'forca', 'destreza', 'constituicao', 'inteligencia', 'sabedoria', 'carisma', 'classe_armadura'], resources: [{ key: 'health', label: 'HP' }] },
+  { id: 'dnd_5e', version: 3, required: ['nivel', 'forca', 'destreza', 'constituicao', 'inteligencia', 'sabedoria', 'carisma', 'classe_armadura'], resources: [{ key: 'health', label: 'HP' }] },
   { id: 'tormenta20', version: 1, required: ['nivel', 'forca', 'destreza', 'defesa'], resources: [{ key: 'health', label: 'PV' }, { key: 'mana', label: 'PM' }] },
   { id: 'tormenta20', version: 2, required: ['nivel', 'forca', 'destreza', 'defesa', 'bonus_treinamento'], resources: [{ key: 'health', label: 'PV' }, { key: 'mana', label: 'PM' }] },
+  { id: 'tormenta20', version: 3, required: ['nivel', 'forca', 'destreza', 'defesa', 'bonus_treinamento'], resources: [{ key: 'health', label: 'PV' }, { key: 'mana', label: 'PM' }] },
   { id: 'call_of_cthulhu_7e', version: 1, required: ['ocupacao', 'forca', 'poder', 'per_escutar'], resources: [{ key: 'health', label: 'HP' }, { key: 'sanity', label: 'SAN' }] },
   { id: 'call_of_cthulhu_7e', version: 2, required: ['ocupacao', 'forca', 'poder', 'per_escutar'], resources: [{ key: 'health', label: 'HP' }, { key: 'sanity', label: 'SAN' }] },
-  { id: 'call_of_cthulhu_7e', version: 3, required: ['ocupacao', 'forca', 'tamanho', 'poder', 'per_escutar'], resources: [{ key: 'health', label: 'HP' }, { key: 'sanity', label: 'SAN' }] }
+  { id: 'call_of_cthulhu_7e', version: 3, required: ['ocupacao', 'forca', 'tamanho', 'poder', 'per_escutar'], resources: [{ key: 'health', label: 'HP' }, { key: 'sanity', label: 'SAN' }] },
+  { id: 'call_of_cthulhu_7e', version: 4, required: ['ocupacao', 'forca', 'tamanho', 'poder', 'per_escutar'], resources: [{ key: 'health', label: 'HP' }, { key: 'sanity', label: 'SAN' }] }
 ];
 
 export function resolveSheetRenderer(system: RpgSystem | null): SheetRendererDefinition | null {

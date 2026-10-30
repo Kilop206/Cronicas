@@ -141,6 +141,8 @@ export class ApiService {
   updateAbility(id: string, abilityId: string, input: AbilityInput) { return this.http.put<CharacterAbility>(`/api/characters/${id}/abilities/${abilityId}`, input, { withCredentials: true }); }
   deleteAbility(id: string, abilityId: string, version: number) { return this.http.delete<void>(`/api/characters/${id}/abilities/${abilityId}`, { params: { version }, withCredentials: true }); }
   createCharacter(campaignId: string, data: CharacterInput) { return this.http.post<Character>(`/api/campaigns/${campaignId}/characters`, data, { withCredentials: true }); }
+  characterRules(id: string) { return this.http.get<{ supported: boolean; rules?: unknown }>(`/api/characters/${id}/rules`, { withCredentials: true }); }
+  applyCharacterRule(id: string, expectedVersion: number, command: { action: string; amount: number; option: string | null; visibility: DiceRoll['visibility'] }) { return this.http.post<{ character: Character; message: string }>(`/api/characters/${id}/rules`, { expectedVersion, command }, { withCredentials: true }); }
   updateCharacter(id: string, data: CharacterInput) { return this.http.put<Character>(`/api/characters/${id}`, data, { withCredentials: true }); }
   duplicateCharacter(id: string) { return this.http.post<Character>(`/api/characters/${id}/duplicate`, {}, { withCredentials: true }); }
   characterRevisions(id: string) { return this.http.get<CharacterRevision[]>(`/api/characters/${id}/revisions`, { withCredentials: true }); }

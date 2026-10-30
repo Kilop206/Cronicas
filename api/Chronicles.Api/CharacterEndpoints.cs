@@ -8,10 +8,11 @@ using Microsoft.EntityFrameworkCore;
 
 namespace Chronicles.Api;
 
-public static class CharacterEndpoints
+public static partial class CharacterEndpoints
 {
     public static void MapCharacterEndpoints(this RouteGroupBuilder api)
     {
+        MapRuleActions(api);
         api.MapGet("/campaigns/{campaignId:guid}/characters", async Task<IResult> (Guid campaignId, HttpContext http, AppDbContext db) =>
         {
             if (UserId(http) is not { } userId) return Results.Unauthorized();
@@ -284,8 +285,9 @@ public static class CharacterEndpoints
         if (definition is null || definition.RendererMode == "layout") return false;
         return definition.TemplateId switch
         {
-            "ordem_paranormal" => definition.TemplateVersion is 1 or 2 or 3,
-            "dnd_5e" or "tormenta20" or "call_of_cthulhu_7e" => definition.TemplateVersion == 1,
+            "ordem_paranormal" => definition.TemplateVersion is >= 1 and <= 6,
+            "dnd_5e" or "tormenta20" => definition.TemplateVersion is >= 1 and <= 3,
+            "call_of_cthulhu_7e" => definition.TemplateVersion is >= 1 and <= 4,
             _ => false
         };
     }
@@ -306,7 +308,8 @@ public static class CharacterEndpoints
         if (values.Count > 100 || JsonSerializer.Serialize(values).Length > 20000) return new() { ["fields"] = ["Campos excedem o limite."] };
         var systemId = await db.Campaigns.Where(x => x.Id == campaignId).Select(x => x.SystemId).SingleAsync();
         var schema = systemId is null ? null : await db.RpgSystems.Where(x => x.Id == systemId).Select(x => x.SchemaJson).SingleAsync();
-        SystemField[] fields = schema is null ? [] : SystemDefinition.Read(schema).Fields;
+        var definition = schema is null ? null : SystemDefinition.Read(schema);
+        SystemField[] fields = definition?.Fields ?? [];
         var byKey = fields.ToDictionary(x => x.Key);
         var previous = previousJson is null ? new Dictionary<string, JsonElement>() : JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(previousJson) ?? [];
         var authorizedPrevious = authorizationJson is null ? previous : JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(authorizationJson) ?? [];
@@ -332,6 +335,8 @@ public static class CharacterEndpoints
             var valid = SheetCollectionValues.ValidField(field, value);
             if (!valid) return new() { ["fields"] = [$"Valor inválido para {field.Label}."] };
         }
+        if (definition is not null && SheetRuleActions.ValidateStateAccess(definition, authorizedPrevious, values, allowGm) is { } stateError)
+            return new() { ["fields"] = [stateError] };
         var calculationError = SheetFormula.Apply(fields, values);
         if (calculationError is not null) return new() { ["fields"] = [calculationError] };
         if (values.Count > 100 || JsonSerializer.Serialize(values).Length > 20000) return new() { ["fields"] = ["Campos excedem o limite."] };
