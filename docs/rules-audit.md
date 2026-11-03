@@ -13,6 +13,8 @@ O PDF `chamado-de-cthulhu-livro do guardião-7-edicao.pdf` foi localizado, mas n
 
 ## Versionamento e compatibilidade
 
+Atualização de 03/11/2026: o template CoC v6 acrescenta criação por ocupação, interesses pessoais, bases de perícias e faixa de Crédito, conferidos no livro básico local, páginas PDF 37–43 e 57–58. A definição das ocupações é editável e versionada junto ao sistema. A conferência não usa o método simplificado de pontos do quick-start. A cobertura e as configurações de mesa estão detalhadas em [rules-engine.md](rules-engine.md); isso não implementa todas as ocupações e regras da edição.
+
 Os testes da ficha especializada de Call of Cthulhu 7e classificam 01 como crítico e 100 como falha crítica; com alvo inferior a 50, 96–100 são falhas críticas. Os demais resultados mantêm os graus regular, difícil e extremo. A classificação usa o alvo enviado ao teste; a interface atual usa dificuldade regular. A conferência foi feita no capítulo de sistema de jogo do PDF local, páginas impressas 89–90. Consequências de falhas críticas continuam sob decisão do Guardião.
 
 Um sistema salvo na campanha conserva `templateId`, `templateVersion` e `rulesetVersion`. As versões antigas continuam no registro de renderizadores. O Crônicas não altera automaticamente a edição nem converte bônus de perícia gravados em fichas antigas para fórmulas novas. Ativar o visual especializado de um modelo já associado preserva a versão existente; associar outro modelo é uma ação explícita do dono do sistema.

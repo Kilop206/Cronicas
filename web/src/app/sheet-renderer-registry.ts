@@ -31,7 +31,8 @@ const renderers: SheetRendererDefinition[] = [
   { id: 'call_of_cthulhu_7e', version: 2, required: ['ocupacao', 'forca', 'poder', 'per_escutar'], resources: [{ key: 'health', label: 'HP' }, { key: 'sanity', label: 'SAN' }] },
   { id: 'call_of_cthulhu_7e', version: 3, required: ['ocupacao', 'forca', 'tamanho', 'poder', 'per_escutar'], resources: [{ key: 'health', label: 'HP' }, { key: 'sanity', label: 'SAN' }] },
   { id: 'call_of_cthulhu_7e', version: 4, required: ['ocupacao', 'forca', 'tamanho', 'poder', 'per_escutar'], resources: [{ key: 'health', label: 'HP' }, { key: 'sanity', label: 'SAN' }] },
-  { id: 'call_of_cthulhu_7e', version: 5, required: ['ocupacao', 'forca', 'tamanho', 'poder', 'per_escutar'], resources: [{ key: 'health', label: 'HP' }, { key: 'sanity', label: 'SAN' }] }
+  { id: 'call_of_cthulhu_7e', version: 5, required: ['ocupacao', 'forca', 'tamanho', 'poder', 'per_escutar'], resources: [{ key: 'health', label: 'HP' }, { key: 'sanity', label: 'SAN' }] },
+  { id: 'call_of_cthulhu_7e', version: 6, required: ['ocupacao', 'forca', 'tamanho', 'poder', 'per_escutar'], resources: [{ key: 'health', label: 'HP' }, { key: 'sanity', label: 'SAN' }] }
 ];
 
 export function resolveSheetRenderer(system: RpgSystem | null): SheetRendererDefinition | null {

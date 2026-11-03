@@ -51,7 +51,10 @@ public static class SystemEndpoints
             if (errors.Count > 0) return Results.ValidationProblem(errors);
             var history = (previous.History ?? []).Append(Snapshot(system, previous)).TakeLast(10).ToArray();
             var next = Definition(input) with { Revision = previous.Revision + 1, History = history,
-                NpcTemplates = input.NpcTemplates ?? previous.NpcTemplates };
+                NpcTemplates = input.NpcTemplates ?? previous.NpcTemplates,
+                CthulhuOccupations = input.CthulhuOccupations ?? (input.TemplateId == previous.TemplateId && input.TemplateVersion == previous.TemplateVersion && input.RulesetVersion == previous.RulesetVersion ? previous.CthulhuOccupations : null) };
+            if (CthulhuOccupationDefinition.Validate(next.CthulhuOccupations, input.Fields) is { } occupationError)
+                return Results.ValidationProblem(new Dictionary<string, string[]> { ["occupations"] = [occupationError] });
             var renames = input.FieldRenames ?? new Dictionary<string, string>();
             if (renames.Count > 100 || renames.Values.Distinct(StringComparer.Ordinal).Count() != renames.Count
                 || renames.Any(pair => pair.Key == pair.Value
@@ -105,7 +108,7 @@ public static class SystemEndpoints
             var history = (current.History ?? []).Append(Snapshot(system, current)).TakeLast(10).ToArray();
             system.Name = target.Name; system.Description = target.Description;
             system.SchemaJson = JsonSerializer.Serialize(new SystemDefinition(target.Fields, target.Layout, target.TemplateId,
-                target.TemplateVersion, target.RulesetVersion, target.RendererMode, current.Revision + 1, history, target.NpcTemplates));
+                target.TemplateVersion, target.RulesetVersion, target.RendererMode, current.Revision + 1, history, target.NpcTemplates, target.CthulhuOccupations));
             system.UpdatedAt = DateTime.UtcNow;
             try { await db.SaveChangesAsync(); }
             catch (DbUpdateConcurrencyException) { return Results.Conflict(new { message = "O modelo mudou. Recarregue antes de restaurar." }); }
@@ -137,16 +140,16 @@ public static class SystemEndpoints
 
     private static Guid? UserId(HttpContext http) => Guid.TryParse(http.User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : null;
     private static SystemDefinition Definition(SystemInput input) => new(input.Fields, input.Layout, input.TemplateId,
-        input.TemplateVersion, input.RulesetVersion, input.RendererMode, NpcTemplates: input.NpcTemplates);
+        input.TemplateVersion, input.RulesetVersion, input.RendererMode, NpcTemplates: input.NpcTemplates, CthulhuOccupations: input.CthulhuOccupations);
     private static SystemRevision Snapshot(RpgSystem system, SystemDefinition definition) => new(definition.Revision,
         system.UpdatedAt, system.Name, system.Description, definition.Fields, definition.Layout,
-        definition.TemplateId, definition.TemplateVersion, definition.RulesetVersion, definition.RendererMode, definition.NpcTemplates);
+        definition.TemplateId, definition.TemplateVersion, definition.RulesetVersion, definition.RendererMode, definition.NpcTemplates, definition.CthulhuOccupations);
     private static object View(RpgSystem system)
     {
         var definition = SystemDefinition.Read(system.SchemaJson);
         return new { system.Id, system.OwnerId, system.Name, system.Description, fields = definition.Fields, layout = definition.Layout,
             definition.TemplateId, definition.TemplateVersion, definition.RulesetVersion, definition.RendererMode,
-            definition.Revision, npcTemplates = definition.NpcTemplates ?? [], revisions = (definition.History ?? []).Select(item => new { item.Revision, item.SavedAt, item.Name }),
+            definition.Revision, npcTemplates = definition.NpcTemplates ?? [], cthulhuOccupations = definition.CthulhuOccupations, revisions = (definition.History ?? []).Select(item => new { item.Revision, item.SavedAt, item.Name }),
             system.CreatedAt, system.UpdatedAt };
     }
     private static Dictionary<string, string[]> Validate(SystemInput input)
@@ -186,6 +189,8 @@ public static class SystemEndpoints
             { errors["fields"] = ["Campo inválido, chave repetida ou limites fora do intervalo."]; break; }
         }
         if (errors.ContainsKey("fields")) return errors;
+        if (input.CthulhuOccupations is not null && (input.TemplateId != "call_of_cthulhu_7e" || input.TemplateVersion != 6 || input.RulesetVersion != "7e")) errors["occupations"] = ["O modelo de ocupações exige Call of Cthulhu 7e, versão 6."];
+        if (CthulhuOccupationDefinition.Validate(input.CthulhuOccupations, input.Fields) is { } occupationError) errors["occupations"] = [occupationError];
         var formulaError = SheetFormula.Validate(input.Fields);
         if (formulaError is not null) errors["fields"] = [formulaError];
         if (errors.ContainsKey("fields")) return errors;
@@ -212,7 +217,7 @@ public static class SystemEndpoints
     public sealed record SystemInput(string Name, string Description, SystemField[] Fields, SheetLayout? Layout = null,
         string? TemplateId = null, int TemplateVersion = 1, string? RulesetVersion = null,
         string? RendererMode = null, int? Revision = null, Dictionary<string, string>? FieldRenames = null,
-        NpcTemplate[]? NpcTemplates = null);
+        NpcTemplate[]? NpcTemplates = null, CthulhuOccupationDefinition? CthulhuOccupations = null);
     public sealed record RestoreSystemInput(int ExpectedRevision);
     public sealed record SetSystemInput(Guid? SystemId);
 }

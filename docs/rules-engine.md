@@ -102,13 +102,37 @@ Conferência no Livro do Jogador local: tabelas de classe e seções de caracter
 - `npm run build` e `npm run lint` em `web`.
 - API local com PostgreSQL de teste, frontend na porta 4200 e `node rules-integration.mjs` em `web`: persistência real, autenticação, permissões, versão otimista, histórico e ações no navegador, com screenshots nas quatro resoluções em `docs/visual-validation/rules`.
 
+### Ocupações e distribuição de pontos em CoC 7e · template v6
+
+A aba **Criação** distribui pontos profissionais e interesses pessoais depois da geração aleatória de características e dos ajustes de idade. O template inicial contém Professor, Bibliotecário, Médico e duas variantes de Investigador privado, para escolher explicitamente FOR ou DES no orçamento. São quatro ocupações, representadas por cinco perfis; não representam um catálogo completo. Trinta perícias com bases identificadas, incluindo especializações concretas de idioma, ciência e arte, acompanham esses perfis. Novas especializações podem ser adicionadas pelo criador do sistema.
+
+`cthulhuOccupations` pertence à definição versionada do sistema e aos seus snapshots, importação e exportação. Cada perfil tem identificador estável, nome, fórmula de pontos, faixa de Crédito e oito posições de escolha. Uma posição pode aceitar uma lista restrita de chaves de perícia ou qualquer perícia elegível da configuração. O editor visual permite criar ocupações, configurar as escolhas e editar as bases/fórmulas, sem alterar o código do motor. Mitos não é elegível. Fórmulas usam o interpretador permitido de `SheetFormula`, com validação de referências numéricas; não executam JavaScript.
+
+Os comandos são:
+
+| Comando | Entrada e efeito |
+| --- | --- |
+| `occupation-start` | `option`: identificador do perfil. Exige `criacao_fase = 2`, perícias/Crédito zerados e ausência de distribuição anterior. Aplica bases, fixa orçamento profissional e INT × 2 e grava a impressão SHA-256 da definição. |
+| `occupation-choice` | `option`: posição; `expression`: chave da perícia. Rejeita escolhas incompatíveis e duplicadas. Uma escolha com investimento profissional deve ser reembolsada antes da troca. |
+| `occupation-allocate` | `option`: perícia ou `credito`; `expression`: `occupation` ou `interest`; `amount`: investimento absoluto, inteiro, incluindo zero para devolução. Atualiza a perícia real para base + profissionais + interesses, verificando ambos os orçamentos. |
+| `occupation-finish` | Exige oito escolhas distintas e Crédito na faixa. Arquiva a criação; pontos não gastos são descartados. Desenvolvimento posterior altera a perícia atual sem reescrever o investimento inicial. |
+| `occupation-reset` | Disponível apenas durante a distribuição. Devolve os pontos e restaura perícias/Crédito ao estado zerado anterior à ocupação; mantém as características. Permite escolher outro perfil. |
+
+O livro básico foi conferido nas páginas PDF 37–43 (impressas 36–42), e bases no capítulo de perícias, PDF 57–58. O método de pontos do livro básico não é o método de valores predefinidos do quick-start. Nenhum teto adicional de 75%/90% é presumido; a mesa pode configurar `skillCap`. O perfil padrão destina apenas pontos profissionais ao Crédito; `personalCredit` permite mudar explicitamente essa configuração da mesa, sem alegar uma proibição universal para interesses pessoais. Os idiomas escolhidos e especialidades adicionais precisam ser identificados pelo jogador/mestre; a interface não supõe qual idioma estrangeiro alguém conhece.
+
+`criacao_pericias` registra `chave`, `base`, `ocupacao` e `interesse`; `criacao_escolhas` registra `slot` e `pericia`. O ledger admite até 100 linhas, mantendo o limite global de tamanho JSON da ficha e as 30 linhas das tabelas comuns. O servidor valida as tabelas e seus controles reservados no autosave, importação e restauração. Esses caminhos não podem mudar a etapa ou o orçamento de uma ficha existente; durante a distribuição, também não podem alterar o total de uma perícia por fora dos comandos. Um personagem novo importado pode trazer dados estruturados válidos, sem representar uma certificação de origem ou de todas as escolhas anteriores.
+
+Os controles aguardam o autosave e usam a versão otimista da ficha. Os comandos geram histórico na transação existente. Uma definição alterada durante a distribuição é detectada e bloqueia novos gastos: reinicie a distribuição ou restaure a revisão anterior do sistema. Se campos reservados tiverem sido removidos, restaure primeiro o modelo compatível. Fichas concluídas mantêm o ledger histórico. Investigadores com perícias já preenchidas não são reiniciados nem recebem bases sobre os valores existentes. Templates v1–v5 continuam no registro; atualizar para v6 é uma ação explícita do dono do sistema.
+
+`CthulhuOccupationTests` cobre orçamentos, escolhas, bases, Crédito, devoluções, configuração de teto, mudança de definição, dados malformados e bloqueio de sobrescrita. A integração real testa também o editor, snapshots e exportação/importação de regras. Capturas da distribuição em 1440×900, 1920×1080, 768×1024 e 390×844 estão em `docs/visual-validation/rules/call_of_cthulhu_7e-occupation-*.png`.
+
 ## Regras pendentes — não declarar cobertura integral
 
 - Aplicação de dano diretamente ao alvo, resistências/imunidades por tipo, alcance, munições e propriedades especiais de cada arma. Ataques, críticos e múltiplos componentes de dano já estão integrados ao motor.
 - Condições específicas dos alvos e suas fontes, múltiplas fontes independentes com duração própria, ação obrigatória por medo/confusão, orçamento de ações (incluindo enjoado), venenos/doenças com efeitos individuais, imunidades e exceções de classe. Os modificadores, relações, durações, concentração e efeitos de turno descritos acima já estão integrados para Ordem/Tormenta20; as condições de D&D afetam testes, ataques e concentração.
 - Catálogos de escolhas de origem, espécie/raça, classe, trilha/subclasse, poderes, talentos, equipamentos e magias/rituais; pré-requisitos e escolhas em cada nível.
 - Conjuração completa: preparação/conhecimento, componentes, concentração, sustentação, alcance, áreas e efeitos específicos; efeitos de características de classe, reservas de subclasses e recursos ainda não descritos na cobertura acima. As reservas básicas de D&D 2014 e suas recuperações já estão implementadas conforme a seção específica.
-- Ocupações e seus pontos/perícias, métodos alternativos de criação, envelhecimento entre aventuras, distribuição de pontos, perícias especializadas, tratamentos, crises de insanidade, perseguições e combate percentual completo. A geração aleatória de características e ajustes iniciais por idade descritos acima já estão implementados.
+- Demais ocupações e especialidades além dos perfis configurados, métodos alternativos de criação, envelhecimento entre aventuras, tratamentos, crises de insanidade, perseguições e combate percentual completo. A geração aleatória, ajustes iniciais por idade e distribuição por ocupação/interesses descritos acima já estão implementados.
 - Exploração, sobrevivência, ambientes, viagens, fabricação, economia, regras opcionais e adversários dos suplementos.
 
 Uma interface com campo livre para registrar uma exceção não constitui implementação automática dessa regra. O checklist só deve mudar quando houver regra executável, integração persistida e teste verificável.

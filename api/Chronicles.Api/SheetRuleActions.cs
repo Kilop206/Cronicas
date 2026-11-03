@@ -8,7 +8,7 @@ public sealed record RuleChoice(string Value, string Label);
 public sealed record RuleAction(string Id, string Label, string? AmountLabel = null, RuleChoice[]? Options = null, bool Hidden = false);
 public sealed record RuleStat(string Label, string Value);
 public sealed record RuleSetting(string Key, string Label, int Min = 0, int Max = 9999);
-public sealed record RuleView(string Edition, RuleAction[] Actions, RuleStat[] Stats, RuleSetting[] Settings, Dictionary<string, int> State, Dictionary<string, RuleCheckPreview>? Checks = null, RuleResource[]? Resources = null);
+public sealed record RuleView(string Edition, RuleAction[] Actions, RuleStat[] Stats, RuleSetting[] Settings, Dictionary<string, int> State, Dictionary<string, RuleCheckPreview>? Checks = null, RuleResource[]? Resources = null, OccupationView? Occupation = null);
 public sealed record RuleCheckPreview(string? Expression, string? Error);
 public sealed record RuleResult(CharacterInput Character, string Message, RuleRoll[] Rolls);
 public sealed record RuleRoll(string Expression, int[] Rolls, int[] KeptIndexes, int Modifier, int Total);
@@ -21,7 +21,7 @@ public static class SheetRuleActions
         (system.TemplateId, system.TemplateVersion, system.RulesetVersion) switch
         {
             ("ordem_paranormal", 6 or 7, "1.3") or ("dnd_5e", 3 or 4, "2014") or
-            ("tormenta20", 3 or 4, "jogo-do-ano-2024-v1.3") or ("call_of_cthulhu_7e", 4 or 5, "7e") => true,
+            ("tormenta20", 3 or 4, "jogo-do-ano-2024-v1.3") or ("call_of_cthulhu_7e", 4 or 5 or 6, "7e") => true,
             _ => false
         };
 
@@ -37,6 +37,7 @@ public static class SheetRuleActions
             _ => CthulhuRules.Describe(s)
         };
         var weapon = WeaponActions.Describe(system, s);
+        if (system.TemplateId == "call_of_cthulhu_7e") view = view with { Actions = [.. view.Actions, .. CthulhuOccupationRules.Actions(system, s)], Occupation = CthulhuOccupationRules.Describe(system, s) };
         if (system.Fields.Any(f => f.Key == WeaponActions.FieldKey))
         {
             if (system.TemplateId == "dnd_5e") view = view with { Settings = [.. view.Settings, new("modo_ataque", "Ataques: −1 desvantagem, 0 normal, 1 vantagem", -1, 1)] };
@@ -81,6 +82,10 @@ public static class SheetRuleActions
             var attackMessage = WeaponActions.Apply(system, s, command);
             return new(s.Export(), attackMessage, s.Rolls.ToArray());
         }
+        if (system.TemplateId == "call_of_cthulhu_7e" && CthulhuOccupationRules.Handles(command.Action))
+        {
+            var occupationMessage = CthulhuOccupationRules.Apply(system, s, command); return new(s.Export(), occupationMessage, s.Rolls.ToArray());
+        }
         if (system.TemplateId == "dnd_5e" && Dnd2014ClassResources.Handles(command.Action))
         {
             var classMessage = Dnd2014ClassResources.Apply(system, s, command);
@@ -106,7 +111,7 @@ public static class SheetRuleActions
         return new(s.Export(), message, s.Rolls.ToArray());
     }
 
-    public static string? ValidateStateAccess(SystemDefinition system, Dictionary<string, JsonElement> before, Dictionary<string, JsonElement> after, bool master)
+    public static string? ValidateStateAccess(SystemDefinition system, Dictionary<string, JsonElement> before, Dictionary<string, JsonElement> after, bool master, bool ruleExecution = false, bool newCharacter = false)
     {
         if (!Supports(system)) return null;
         try
@@ -114,6 +119,7 @@ public static class SheetRuleActions
             var empty = new CharacterInput("Estado", null, null, 1, 1, 1, 1, 1, 1);
             var next = new RuleState(empty with { Fields = after });
             var old = new RuleState(empty with { Fields = before });
+            if (CthulhuOccupationRules.Validate(system, old, next, ruleExecution, newCharacter) is { } occupationError) return occupationError;
             foreach (var key in new[] { "morto", "insano", "estavel", "morrendo", "enlouquecendo", "ferimento_grave", "inconsciente", "insanidade_temporaria", "insanidade_indefinida", "sangrando", "dormiu", "relaxou" })
                 if (next.Get(key) is < 0 or > 1) return $"Indicador inválido: {key}.";
             if (system.TemplateId == "dnd_5e" && (next.Get("exaustao") is < 0 or > 6)) return "Exaustão fora dos limites.";

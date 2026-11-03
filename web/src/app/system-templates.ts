@@ -1,4 +1,4 @@
-import type { SheetBlock, SheetLayout, SheetPage, SystemField } from './api';
+import type { CthulhuOccupationDefinition, CthulhuOccupationSlot, SheetBlock, SheetLayout, SheetPage, SystemField } from './api';
 
 export interface SheetTemplate {
   id: string;
@@ -9,6 +9,7 @@ export interface SheetTemplate {
   sourceUrl: string;
   fields: SystemField[];
   layout: SheetLayout;
+  cthulhuOccupations?: CthulhuOccupationDefinition;
 }
 
 const numberField = (key: string, label: string, section: string, initial = 0, rollExpression: string | null = null, formula: string | null = null, span = 3): SystemField =>
@@ -167,15 +168,35 @@ const cocCharacteristics: [string, string][] = [
   ['aparencia', 'Aparência (APP)'], ['educacao', 'Educação (EDU)'], ['inteligencia', 'Inteligência (INT)'], ['poder', 'Poder (POW)']
 ];
 const cocSkills: [string, string][] = [
-  ['antropologia', 'Antropologia'], ['arqueologia', 'Arqueologia'], ['arte', 'Arte/Ofício'], ['biblioteca', 'Biblioteca'],
-  ['charm', 'Charme'], ['ciencia', 'Ciência'], ['contabilidade', 'Contabilidade'], ['direito', 'Direito'],
+  ['antropologia', 'Antropologia'], ['arqueologia', 'Arqueologia'], ['biblioteca', 'Biblioteca'],
+  ['charm', 'Charme'], ['contabilidade', 'Contabilidade'], ['direito', 'Direito'],
   ['escutar', 'Escutar'], ['esquivar', 'Esquivar'], ['furtividade', 'Furtividade'], ['historia', 'História'],
-  ['intimidar', 'Intimidar'], ['lutar', 'Lutar'], ['medicina', 'Medicina'], ['mundo_natural', 'Mundo Natural'],
-  ['ocultismo', 'Ocultismo'], ['persuadir', 'Persuadir'], ['psicologia', 'Psicologia'], ['rastrear', 'Rastrear']
+  ['intimidar', 'Intimidar'], ['lutar', 'Lutar (Briga)'], ['medicina', 'Medicina'], ['mundo_natural', 'Mundo Natural'],
+  ['ocultismo', 'Ocultismo'], ['persuadir', 'Persuadir'], ['psicologia', 'Psicologia'], ['rastrear', 'Rastrear'],
+  ['encontrar', 'Encontrar'], ['disfarce', 'Disfarce'], ['labia', 'Lábia'], ['idioma_nativo', 'Idioma nativo'],
+  ['idioma_estrangeiro', 'Outro idioma (escolhido)'], ['fotografia', 'Arte/Ofício (Fotografia)'], ['primeiros_socorros', 'Primeiros Socorros'],
+  ['biologia', 'Ciência (Biologia)'], ['farmacia', 'Ciência (Farmácia)'], ['latim', 'Idioma (Latim)'], ['psicanalise', 'Psicanálise'], ['avaliacao', 'Avaliação']
 ];
+const occupationSlot = (id: string, label: string, skills: string[] | null = null): CthulhuOccupationSlot => ({id, label, skills: skills?.map(key => `per_${key}`) || null});
+const fixedSlots = (...keys: string[]) => keys.map(key => occupationSlot(key, cocSkills.find(([id]) => id === key)?.[1] || key, [key]));
+const freeSlots = (count: number) => Array.from({length: count}, (_, index) => occupationSlot(`livre_${index + 1}`, `Escolha livre ${index + 1}`));
+const privateInvestigatorSlots = () => [...fixedSlots('fotografia', 'disfarce', 'direito', 'biblioteca'), occupationSlot('interpessoal', 'Uma perícia interpessoal', ['charm','labia','intimidar','persuadir']), ...fixedSlots('psicologia', 'encontrar'), ...freeSlots(1)];
+const cocOccupations: CthulhuOccupationDefinition = {
+  skills: Object.entries({antropologia:'1', arqueologia:'1', biblioteca:'20', charm:'15', contabilidade:'5', direito:'5', escutar:'20', esquivar:'floordiv(destreza, 2)', furtividade:'20', historia:'5', intimidar:'15', lutar:'25', medicina:'1', mundo_natural:'10', ocultismo:'5', persuadir:'10', psicologia:'10', rastrear:'10', encontrar:'25', disfarce:'5', labia:'5', idioma_nativo:'educacao', idioma_estrangeiro:'1', fotografia:'5', primeiros_socorros:'30', biologia:'1', farmacia:'1', latim:'1', psicanalise:'1', avaliacao:'5'}).map(([key, formula]) => ({key:`per_${key}`, formula})),
+  occupations: [
+    {id:'professor', name:'Professor', points:'educacao * 4', creditMin:20, creditMax:70, slots:[...fixedSlots('biblioteca','idioma_estrangeiro','idioma_nativo','psicologia'), ...freeSlots(4)]},
+    {id:'bibliotecario', name:'Bibliotecário', points:'educacao * 4', creditMin:9, creditMax:35, slots:[...fixedSlots('contabilidade','biblioteca','idioma_estrangeiro','idioma_nativo'), ...freeSlots(4)]},
+    {id:'investigador_destreza', name:'Investigador privado · Destreza', points:'educacao * 2 + destreza * 2', creditMin:9, creditMax:30, slots:privateInvestigatorSlots()},
+    {id:'investigador_forca', name:'Investigador privado · Força', points:'educacao * 2 + forca * 2', creditMin:9, creditMax:30, slots:privateInvestigatorSlots()},
+    {id:'medico', name:'Médico', points:'educacao * 4', creditMin:30, creditMax:80, slots:[...fixedSlots('primeiros_socorros','latim','medicina','psicologia','biologia','farmacia'), ...freeSlots(2)]}
+  ], skillCap:null, personalCredit:false
+};
 const cocFields: SystemField[] = [
   weaponField('coc'),
   ruleStateField(),
+  { ...tableField('criacao_pericias', 'Distribuição inicial de pontos', 'Criação', [['chave','Perícia','text'],['base','Base','number'],['ocupacao','Profissionais','number'],['interesse','Interesses','number']]), defaultValue:[] },
+  { ...tableField('criacao_escolhas', 'Escolhas ocupacionais', 'Criação', [['slot','Escolha','text'],['pericia','Perícia','text']]), defaultValue:[] },
+  textField('ocupacao_regra', 'Identificador da ocupação', 'Criação'), textField('ocupacao_versao', 'Versão da distribuição', 'Criação'),
   numberField('sorte', 'Sorte', 'Progressão', 0, '1d100'),
   longField('contatos', 'Contatos e notas', 'Identidade'),
   listField('condicoes', 'Condições e consequências', 'Investigação'),
@@ -220,11 +241,12 @@ export const SHEET_TEMPLATES: SheetTemplate[] = [
       { id: 'mochila', title: 'Mochila', items: [inventory()] },
       { id: 'cronica', title: 'Crônica', items: [history()] }
     ], 'mythic', '#be825d', 'CRÔNICAS / LENDA', { Atributos: { style: 'score', span: 4 }, Perícias: { style: 'compact', span: 6 } }) },
-  { id: 'call_of_cthulhu_7e', version: 5, rulesetVersion: '7e', name: 'Call of Cthulhu 7e', summary: 'Características percentuais, limiares, recursos derivados e investigação.', sourceUrl: 'https://www.chaosium.com/content/FreePDFs/CoC/CHA23131%20Call%20of%20Cthulhu%207th%20Edition%20Quick-Start%20Rules.pdf', fields: cocFields,
+  { id: 'call_of_cthulhu_7e', version: 6, rulesetVersion: '7e', name: 'Call of Cthulhu 7e', summary: 'Criação por características, idade, ocupação e interesses; investigação e desenvolvimento.', sourceUrl: 'https://www.chaosium.com/call-of-cthulhu-keeper-rulebook-hardcover/', fields: cocFields, cthulhuOccupations: cocOccupations,
     layout: makeLayout(cocFields, [
       { id: 'investigador', title: 'Arquivo do investigador', items: [identity(), portrait(), ...sectionKeys(cocFields, 'Identidade'), 'credito', 'sorte', 'desenvolvimento', resource('health', 'PV', 4), resource('sanity', 'SAN', 4), resource('mana', 'Magia', 4), ...sectionKeys(cocFields, 'Valores derivados')] },
       { id: 'caracteristicas', title: 'Características e limiares', items: [note('nota_limiares', 'Valores percentuais', 'Metade e quinto são calculados a partir de cada característica.'), ...cocCharacteristics.flatMap(([key]) => [key, `${key}_metade`, `${key}_quinto`])] },
       { id: 'pericias', title: 'Perícias', items: sectionKeys(cocFields, 'Perícias') },
+      { id: 'criacao', title: 'Criação por ocupação', items: [...sectionKeys(cocFields, 'Criação')] },
       { id: 'pertences', title: 'Pertences e conhecimentos', items: [inventory(), abilities()] },
       { id: 'anotacoes', title: 'Anotações', items: ['condicoes', history()] }
     ], 'archive', '#748d85', 'CRÔNICAS / ARQUIVO DO INVESTIGADOR', { Características: { style: 'score', span: 4 }, Limiares: { style: 'compact', span: 4 }, Perícias: { style: 'compact', span: 6 } }) }

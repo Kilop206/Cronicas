@@ -80,7 +80,11 @@ const cocValues = { inteligencia: 65 };
 assert.equal(calculateSheet(coc.fields, cocValues), null);
 assert.equal(cocValues.inteligencia_metade, 32);
 assert.equal(cocValues.inteligencia_quinto, 13);
-assert.equal(coc.version, 5);
+assert.equal(coc.version, 6);
+assert.equal(coc.cthulhuOccupations.skills.length, 30);
+assert.equal(coc.cthulhuOccupations.occupations.length, 5);
+for (const profile of coc.cthulhuOccupations.occupations) assert.equal(profile.slots.length, 8);
+assert.equal(resolveSheetRenderer({ ...dndSystem, templateId: coc.id, templateVersion: 6, fields: coc.fields })?.id, coc.id);
 for (const [total, bonus, build] of [[64, '−2', -2], [65, '−1', -1], [84, '−1', -1], [85, '0', 0], [124, '0', 0], [125, '+1d4', 1], [164, '+1d4', 1], [165, '+1d6', 2], [204, '+1d6', 2], [205, '+2d6', 3], [284, '+2d6', 3], [285, '+3d6', 4], [445, '+5d6', 6]]) {
   const profile = coc7eDamageProfile(total, 0);
   assert.equal(profile?.bonus, bonus);

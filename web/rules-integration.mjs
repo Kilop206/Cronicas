@@ -30,7 +30,7 @@ const errors = []; page.on('pageerror', error => errors.push(error.message));
 const out = path.resolve(import.meta.dirname, '../docs/visual-validation/rules'); fs.mkdirSync(out, { recursive: true });
 try {
   for (const template of exports.SHEET_TEMPLATES.filter(template => !process.argv[2] || template.id === process.argv[2])) {
-    const system = await request('/api/systems', owner, 'POST', { name: `Teste ${template.id}`, description: '', fields: template.fields, layout: template.layout, templateId: template.id, templateVersion: template.version, rulesetVersion: template.rulesetVersion, rendererMode: 'specialized', npcTemplates: [] });
+    const system = await request('/api/systems', owner, 'POST', { name: `Teste ${template.id}`, description: '', fields: template.fields, layout: template.layout, templateId: template.id, templateVersion: template.version, rulesetVersion: template.rulesetVersion, rendererMode: 'specialized', npcTemplates: [], cthulhuOccupations: template.cthulhuOccupations });
     assert.equal(system.status, 201, JSON.stringify(system.body));
     const campaign = await request('/api/campaigns', owner, 'POST', { name: `Regras ${template.id}`, description: '', accentColor: '#a54d52' });
     assert.equal(campaign.status, 201);
@@ -229,6 +229,101 @@ try {
       await page.reload({waitUntil: 'networkidle'});
       assert.equal((await request(`/api/characters/${blank.body.id}`, owner)).body.fields.estado_regras.find(row => row.chave === 'criacao_fase').valor, 2);
       await page.screenshot({path: path.join(out, 'call_of_cthulhu_7e-creation-desktop.png'), fullPage: true});
+      await page.locator('.custom-sheet-main').getByRole('button', {name:'Criação',exact:true}).click();
+      const occupation = page.locator('app-coc-occupation');
+      await occupation.getByRole('combobox',{name:'Ocupação na criação',exact:true}).selectOption('professor');
+      saved = page.waitForResponse(response => response.url().endsWith(creationRoute) && response.request().method() === 'POST');
+      await occupation.getByRole('button',{name:'Iniciar distribuição',exact:true}).click();
+      const started = await (await saved).json(); assert.ok(started.character, JSON.stringify(started));
+      assert.equal(started.character.fields.per_biblioteca,20);
+      assert.equal(started.character.fields.per_idioma_nativo,completed.character.fields.educacao);
+      assert.equal(started.character.fields.criacao_pericias.length,31,'all skill bases plus Credit are saved beyond the ordinary 30-row table limit');
+      const forged = await request(`/api/characters/${blank.body.id}`,owner,'PUT',{...started.character,fields:{...started.character.fields,per_biblioteca:999}});
+      assert.equal(forged.status,400,'ordinary autosave cannot bypass creation budgets');
+      const profile = template.cthulhuOccupations.occupations.find(p => p.id === 'professor');
+      const freelyChosen = ['per_historia','per_antropologia','per_arqueologia','per_ocultismo'];
+      let freeIndex=0;
+      for (const slot of profile.slots) {
+        const skill=slot.skills?.[0] || freelyChosen[freeIndex++];
+        saved=page.waitForResponse(response => response.url().endsWith(creationRoute) && response.request().method() === 'POST');
+        await occupation.getByRole('combobox',{name:`Perícia ocupacional: ${slot.label}`,exact:true}).selectOption(skill);
+        assert.equal((await saved).status(),200);
+        await page.waitForFunction(() => !document.querySelector('app-coc-occupation select[aria-label^="Perícia ocupacional:"]')?.disabled);
+      }
+      async function allocate(label,value) {
+        const input=occupation.getByRole('spinbutton',{name:label,exact:true});
+        await input.fill(String(value));
+        const response=page.waitForResponse(response => response.url().endsWith(creationRoute) && response.request().method() === 'POST');
+        await input.press('Tab');
+        const result=await response; assert.equal(result.status(),200,await result.text());
+        await page.waitForFunction(() => !document.querySelector('app-coc-occupation select[aria-label^="Perícia ocupacional:"]')?.disabled);
+      }
+      await allocate('Pontos profissionais: Crédito',20);
+      await allocate('Pontos profissionais: Biblioteca',40);
+      await allocate('Interesses pessoais: Biblioteca',10);
+      await allocate('Pontos profissionais: Biblioteca',35);
+      let allocated=(await request(`/api/characters/${blank.body.id}`,owner)).body;
+      assert.equal(allocated.fields.per_biblioteca,65,'base + revised occupational points + personal interests persist');
+      await page.reload({waitUntil:'networkidle'});
+      await page.locator('.custom-sheet-main').getByRole('button',{name:'Criação',exact:true}).click();
+      assert.equal(await occupation.getByRole('spinbutton',{name:'Pontos profissionais: Biblioteca',exact:true}).inputValue(),'35');
+      for (const [name,width,height] of [['desktop',1440,900],['wide',1920,1080],['tablet',768,1024],['mobile',390,844]]) {
+        await page.setViewportSize({width,height});
+        await page.screenshot({path:path.join(out,`call_of_cthulhu_7e-occupation-${name}.png`),fullPage:true});
+        assert.ok(await page.evaluate(() => document.documentElement.scrollWidth <= innerWidth),`occupation overflow at ${width}`);
+      }
+      await page.setViewportSize({width:1440,height:900});
+      saved=page.waitForResponse(response => response.url().endsWith(creationRoute) && response.request().method() === 'POST');
+      await occupation.getByRole('button',{name:'Concluir ocupação e perícias',exact:true}).click();
+      const finished=await (await saved).json(); assert.ok(finished.character,JSON.stringify(finished));
+      assert.equal(finished.character.fields.estado_regras.find(r=>r.chave==='ocupacao_fase').valor,2);
+      const progressed=await request(`/api/characters/${blank.body.id}`,owner,'PUT',{...finished.character,fields:{...finished.character.fields,per_biblioteca:70}});
+      assert.equal(progressed.status,200,JSON.stringify(progressed.body));
+      allocated=(await request(`/api/characters/${blank.body.id}`,owner)).body;
+      assert.equal(allocated.fields.per_biblioteca,70);
+      assert.equal(allocated.fields.criacao_pericias.find(r=>r.chave==='per_biblioteca').ocupacao,35,'creation ledger remains historical after advancement');
+      await page.goto(`${base}/systems/${system.body.id}`,{waitUntil:'networkidle'});
+      const editor=page.locator('app-coc-occupation-editor');
+      await editor.getByText('Criação 7e · bases e ocupações',{exact:true}).click();
+      await editor.getByRole('button',{name:'Adicionar ocupação',exact:true}).click();
+      await editor.locator('.profile').nth(5).waitFor();
+      await editor.locator('.profile').nth(5).locator('summary').first().click();
+      await editor.getByRole('textbox',{name:'Nome da ocupação 6',exact:true}).fill('Ocupação da mesa');
+      const systemSaved=page.waitForResponse(response=>response.url().endsWith(`/api/systems/${system.body.id}`) && response.request().method()==='PUT');
+      await page.getByRole('button',{name:'Salvar sistema',exact:true}).click();
+      assert.equal((await systemSaved).status(),200);
+      const configured=(await request(`/api/systems/${system.body.id}`,owner)).body;
+      assert.equal(configured.cthulhuOccupations.occupations.at(-1).name,'Ocupação da mesa');
+      const restored=await request(`/api/systems/${system.body.id}/revisions/1/restore`,owner,'POST',{expectedRevision:configured.revision});
+      assert.equal(restored.status,200,JSON.stringify(restored.body));
+      assert.equal(restored.body.cthulhuOccupations.occupations.length,5,'system revision restores rule definitions as well as fields');
+      await page.reload({waitUntil:'networkidle'});
+      const downloading=page.waitForEvent('download');
+      await page.getByRole('button',{name:'Exportar modelo JSON',exact:true}).click();
+      const download=await downloading;
+      const exported=JSON.parse(fs.readFileSync(await download.path(),'utf8'));
+      assert.equal(exported.cthulhuOccupations.occupations.length,5,'template export includes editable rule definitions');
+      const upload=page.locator('input[type=file][accept="application/json,.json"]');
+      await upload.setInputFiles({name:'invalid.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify({...exported,cthulhuOccupations:{skills:[null],occupations:[null]}}))});
+      await page.getByRole('alert').filter({hasText:'Arquivo de modelo inválido'}).waitFor();
+      await upload.setInputFiles({name:'occupation-template.json',mimeType:'application/json',buffer:Buffer.from(JSON.stringify(exported))});
+      assert.equal(await page.locator('app-coc-occupation-editor .profile').count(),5,'template import restores editable rule definitions');
+      const legacyArt={...template.fields.find(f=>f.key==='per_fotografia'),key:'per_arte',label:'Arte/Ofício legado'};
+      const olderFields=template.fields.filter(f=>f.section!=='Criação');
+      const oldSystem=await request('/api/systems',owner,'POST',{...exported,name:'CoC legado v5',fields:[...olderFields,legacyArt],templateVersion:5,cthulhuOccupations:null,npcTemplates:[],layout:null});
+      assert.equal(oldSystem.status,201,JSON.stringify(oldSystem.body));
+      const oldCampaign=await request('/api/campaigns',owner,'POST',{name:'Campanha de migração',description:'',accentColor:'#748d85'});
+      assert.equal(oldCampaign.status,201);
+      assert.equal((await request(`/api/campaigns/${oldCampaign.body.id}/system`,owner,'PATCH',{systemId:oldSystem.body.id})).status,204);
+      const oldCharacter=await request(`/api/campaigns/${oldCampaign.body.id}/characters`,owner,'POST',{name:'Investigador existente',health:7,maxHealth:11,sanity:41,maxSanity:99,mana:4,maxMana:12,fields:{per_lutar:55,per_arte:22,educacao:60,inteligencia:65,estado_regras:[{chave:'criacao_fase',valor:2}]}});
+      assert.equal(oldCharacter.status,201,JSON.stringify(oldCharacter.body));
+      const upgraded=await request(`/api/systems/${oldSystem.body.id}`,owner,'PUT',{...exported,name:'CoC atualizado v6',fields:[...template.fields,legacyArt],revision:oldSystem.body.revision,npcTemplates:[]});
+      assert.equal(upgraded.status,200,JSON.stringify(upgraded.body));
+      const retained=(await request(`/api/characters/${oldCharacter.body.id}`,owner)).body;
+      assert.equal(retained.fields.per_lutar,55); assert.equal(retained.fields.per_arte,22); assert.equal(retained.health,7); assert.equal(retained.sanity,41);
+      const rejected=await request(`/api/characters/${retained.id}/rules`,owner,'POST',{expectedVersion:retained.version,command:{action:'occupation-start',option:'professor'}});
+      assert.equal(rejected.status,400,'explicit v6 upgrade does not permit occupation initialization over an existing investigator');
+      assert.equal((await request(`/api/characters/${retained.id}`,owner)).body.version,retained.version,'rejected creation does not create a revision or overwrite data');
       await page.goto(`${base}/characters/${character.id}`, {waitUntil: 'networkidle'});
     }
     await page.reload({ waitUntil: 'networkidle' });
@@ -242,6 +337,7 @@ try {
   assert.deepEqual(errors, []);
 } catch (error) {
   console.error('Browser errors:', errors);
+  console.error(await page.locator('app-coc-occupation-editor input[aria-label]').evaluateAll(nodes => nodes.map(n => n.getAttribute('aria-label'))).catch(() => []));
   console.error(await page.locator('app-sheet-rule-controls').innerText({ timeout: 1000 }).catch(() => 'No rule controls'));
   await page.screenshot({ path: path.join(out, 'failure.png'), fullPage: true }).catch(() => undefined);
   throw error;

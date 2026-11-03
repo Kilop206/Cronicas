@@ -8,6 +8,7 @@ public static class SheetRuleActionTests
     {
         D20ConditionTestCases.Run();
         CthulhuCreationTests.Run();
+        CthulhuOccupationTests.Run();
         DndClassResourceTests.Run();
         var stateField = new SystemField("estado_regras", "Estado", "table", "Regras", null, null, null, Columns: [new("chave", "Chave", "text"), new("valor", "Valor", "number")]);
         SystemDefinition System(string id, int version, string edition) => new([stateField], null, id, version, edition);

@@ -288,7 +288,7 @@ public static partial class CharacterEndpoints
         {
             "ordem_paranormal" => definition.TemplateVersion is >= 1 and <= 7,
             "dnd_5e" or "tormenta20" => definition.TemplateVersion is >= 1 and <= 4,
-            "call_of_cthulhu_7e" => definition.TemplateVersion is >= 1 and <= 5,
+            "call_of_cthulhu_7e" => definition.TemplateVersion is >= 1 and <= 6,
             _ => false
         };
     }
@@ -303,7 +303,7 @@ public static partial class CharacterEndpoints
     private static bool ValidUrl(string? value) => string.IsNullOrWhiteSpace(value) || value.Length <= 2048 && Uri.TryCreate(value, UriKind.Absolute, out var url) && url.Scheme == Uri.UriSchemeHttps;
     private static bool ValidResource(int value, int max) => max is >= 0 and <= 9999 && value >= 0 && value <= max;
     private static async Task<Dictionary<string, string[]>?> ValidateFields(AppDbContext db, Guid campaignId, Dictionary<string, JsonElement>? values, string? previousJson = null,
-        bool allowGm = false, string? authorizationJson = null)
+        bool allowGm = false, string? authorizationJson = null, bool ruleExecution = false)
     {
         if (values is null) return null;
         if (values.Count > 100 || JsonSerializer.Serialize(values).Length > 20000) return new() { ["fields"] = ["Campos excedem o limite."] };
@@ -336,7 +336,7 @@ public static partial class CharacterEndpoints
             var valid = SheetCollectionValues.ValidField(field, value);
             if (!valid) return new() { ["fields"] = [$"Valor inválido para {field.Label}."] };
         }
-        if (definition is not null && SheetRuleActions.ValidateStateAccess(definition, authorizedPrevious, values, allowGm) is { } stateError)
+        if (definition is not null && SheetRuleActions.ValidateStateAccess(definition, authorizedPrevious, values, allowGm, ruleExecution, previousJson is null) is { } stateError)
             return new() { ["fields"] = [stateError] };
         var calculationError = SheetFormula.Apply(fields, values);
         if (calculationError is not null) return new() { ["fields"] = [calculationError] };

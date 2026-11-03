@@ -45,7 +45,7 @@ public static partial class CharacterEndpoints
             catch (ArgumentException error) { return RuleError(error.Message); }
             var errors = Validate(result.Character);
             if (errors is not null) return Results.ValidationProblem(errors);
-            var fieldErrors = await ValidateFields(db, character.CampaignId, result.Character.Fields, character.FieldsJson, allowGm: master, authorizationJson: character.FieldsJson);
+            var fieldErrors = await ValidateFields(db, character.CampaignId, result.Character.Fields, character.FieldsJson, allowGm: master, authorizationJson: character.FieldsJson, ruleExecution: true);
             if (fieldErrors is not null) return Results.ValidationProblem(fieldErrors);
             var changed = character.Health != result.Character.Health || character.MaxHealth != result.Character.MaxHealth || character.Mana != result.Character.Mana || character.MaxMana != result.Character.MaxMana
                 || character.Sanity != result.Character.Sanity || character.MaxSanity != result.Character.MaxSanity
