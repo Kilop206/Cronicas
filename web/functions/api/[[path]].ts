@@ -1,4 +1,6 @@
-interface Env { API_ORIGIN?: string; }
+import { setProxyIdentity } from '../../proxy-identity.mjs';
+
+interface Env { API_ORIGIN?: string; PROXY_IDENTITY_KEY?: string; }
 
 export const onRequest: PagesFunction<Env> = async context => {
   let origin: URL;
@@ -15,6 +17,7 @@ export const onRequest: PagesFunction<Env> = async context => {
   const target = new URL(incoming.pathname + incoming.search, origin);
   const request = new Request(target, context.request);
   request.headers.delete('host');
+  await setProxyIdentity(request.headers, context.request, context.env.PROXY_IDENTITY_KEY);
   try {
     const response = await fetch(request, { redirect: 'manual' });
     if (response.status === 101) return response;

@@ -1,3 +1,5 @@
+import { setProxyIdentity } from './proxy-identity.mjs';
+
 // Alternate host for networks that reset TLS connections to pages.dev.
 export default {
   async fetch(request, env) {
@@ -11,6 +13,7 @@ export default {
       const headers = new Headers(request.headers);
       headers.delete('host');
       headers.delete('origin');
+      await setProxyIdentity(headers, request, env.PROXY_IDENTITY_KEY);
       const forwarded = new Request(upstream, { method: request.method, headers, body: request.body, redirect: 'manual' });
       try {
         const response = await fetch(forwarded, { redirect: 'manual' });

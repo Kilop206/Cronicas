@@ -20,3 +20,5 @@ services:
         sync: false
       - key: ALLOWED_ORIGINS
         sync: false
+      - key: PROXY_IDENTITY_KEY
+        sync: false

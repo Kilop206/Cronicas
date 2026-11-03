@@ -1,9 +1,21 @@
 import assert from 'node:assert/strict';
 import { after, test } from 'node:test';
+import { createHmac } from 'node:crypto';
 import { onRequest } from '../web/functions/api/[[path]].ts';
 
 const originalFetch = globalThis.fetch;
 after(() => { globalThis.fetch = originalFetch; });
+
+test('Pages signs the actual visitor IP and replaces caller assertions', async () => {
+  const key = 'test-only-pages-proxy-signature-key';
+  globalThis.fetch = async request => {
+    const time = request.headers.get('X-Cronicas-Proxy-Time');
+    assert.equal(request.headers.get('X-Cronicas-Client-IP'), '203.0.113.8');
+    assert.equal(request.headers.get('X-Cronicas-Proxy-Signature'), createHmac('sha256', key).update(`v1\n${time}\n203.0.113.8`).digest('hex'));
+    return new Response('{}');
+  };
+  await onRequest({ env: { API_ORIGIN:'https://api.example.test', PROXY_IDENTITY_KEY:key }, request: new Request('https://site.example.test/api/auth/me', {headers:{'CF-Connecting-IP':'203.0.113.8','X-Cronicas-Client-IP':'forged','X-Cronicas-Proxy-Signature':'forged'}}) });
+});
 
 test('forwards method, path, query and session cookie to the fixed API origin', async () => {
   let forwarded;

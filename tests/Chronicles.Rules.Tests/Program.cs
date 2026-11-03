@@ -1,5 +1,6 @@
 using Chronicles.Api;
 using Chronicles.Api.Services;
+await RequestRateLimitTests.RunAsync();
 SheetRuleActionTests.Run();
 
 static void Check(bool condition, string name)

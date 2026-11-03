@@ -1,6 +1,5 @@
 using System.ComponentModel.DataAnnotations;
 using System.Security.Claims;
-using System.Threading.RateLimiting;
 using Chronicles.Api;
 using Chronicles.Api.Data;
 using Chronicles.Api.Models;
@@ -22,16 +21,7 @@ builder.Services.AddSingleton<RoomRegistry>();
 builder.Services.AddSingleton<RoomAccessService>();
 builder.Services.AddOpenApi();
 builder.Services.AddHealthChecks().AddDbContextCheck<AppDbContext>();
-builder.Services.AddRateLimiter(options =>
-{
-    options.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
-    options.AddPolicy("auth", context => RateLimitPartition.GetFixedWindowLimiter(
-        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-        _ => new FixedWindowRateLimiterOptions { PermitLimit = 20, Window = TimeSpan.FromMinutes(5), QueueLimit = 0 }));
-    options.AddPolicy("rolls", context => RateLimitPartition.GetFixedWindowLimiter(
-        context.Connection.RemoteIpAddress?.ToString() ?? "unknown",
-        _ => new FixedWindowRateLimiterOptions { PermitLimit = 120, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 }));
-});
+builder.Services.AddRequestRateLimits(builder.Configuration);
 var allowedOrigins = builder.Configuration["ALLOWED_ORIGINS"]?.Split(',', StringSplitOptions.RemoveEmptyEntries | StringSplitOptions.TrimEntries) ?? [];
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
 
@@ -43,7 +33,6 @@ app.UseExceptionHandler(handler => handler.Run(async context =>
     await Results.Problem("Ocorreu um erro inesperado.").ExecuteAsync(context);
 }));
 app.UseCors();
-app.UseRateLimiter();
 app.Use(async (context, next) =>
 {
     if (context.Request.Path.StartsWithSegments("/api/hubs/campaign") &&
@@ -71,6 +60,8 @@ app.Use(async (context, next) =>
     await context.RequestServices.GetRequiredService<SessionService>().AuthenticateAsync(context);
     await next();
 });
+// SessionService must populate the verified user before partitioning authenticated requests.
+app.UseRateLimiter();
 
 app.MapHealthChecks("/health");
 app.MapHub<CampaignRoomHub>("/api/hubs/campaign");
@@ -145,7 +136,7 @@ auth.MapDelete("/sessions/{sessionId:guid}", async Task<IResult> (Guid sessionId
     if (changed == 0) return Results.NotFound();
     await rooms.RevokeSession(sessionId);
     return Results.NoContent();
-}).RequireRateLimiting("auth");
+}).RequireRateLimiting("account");
 
 auth.MapPost("/logout", async Task<IResult> (HttpContext http, SessionService sessions) =>
 {

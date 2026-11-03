@@ -186,7 +186,12 @@ export function apiError(error: unknown): string {
     }
     if (error.status === 401) return 'Email ou senha incorretos.';
     if (error.status === 403) return 'Você não tem permissão para realizar esta ação.';
-    if (error.status === 429) return 'Muitas tentativas. Aguarde alguns minutos.';
+    if (error.status === 429) {
+      const seconds = Number(error.headers.get('Retry-After'));
+      return Number.isFinite(seconds) && seconds > 0 && seconds <= 3600
+        ? `Limite temporário de requisições atingido. Tente novamente em ${Math.ceil(seconds)} segundos.`
+        : 'Limite temporário de requisições atingido. Aguarde um pouco e tente novamente.';
+    }
   }
   return 'Não foi possível concluir a ação. Tente novamente.';
 }

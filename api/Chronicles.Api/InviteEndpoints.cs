@@ -26,7 +26,7 @@ public static class InviteEndpoints
             await db.SaveChangesAsync();
             http.Response.Headers.CacheControl = "no-store";
             return Results.Created($"/api/invites/{token}", new { token, invite.Role, invite.ExpiresAt });
-        }).RequireRateLimiting("auth");
+        }).RequireRateLimiting("account");
 
         api.MapGet("/invites/{token}", async Task<IResult> (string token, HttpContext http, AppDbContext db) =>
         {
@@ -55,7 +55,7 @@ public static class InviteEndpoints
             await db.SaveChangesAsync(http.RequestAborted);
             await transaction.CommitAsync(http.RequestAborted);
             return Results.Ok(new { invite.CampaignId });
-        }).RequireRateLimiting("auth");
+        }).RequireRateLimiting("account");
     }
 
     private static Guid? UserId(HttpContext http) => Guid.TryParse(http.User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : null;
