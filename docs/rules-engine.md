@@ -71,6 +71,32 @@ O desenvolvimento mantém o aumento de 1d10 e permite ultrapassar 100%, como est
 
 A ficha oferece dificuldade regular, difícil ou extrema. O alvo usa o valor completo, metade ou quinto arredondados para baixo; a classificação não divide a dificuldade duas vezes. A API percentual e a ficha aceitam valores acima de 100 sem truncar os limiares: uma perícia de 105% exige 52 para um teste difícil. O 100 continua sendo falha crítica. Essas regras foram conferidas no PDF local, páginas PDF 31–37, 91–92 e 95 (numeração impressa uma página menor), incluindo o exemplo que altera o intervalo de falha crítica conforme a dificuldade.
 
+### Recursos de classe de D&D 2014 — 03/11/2026
+
+`Dnd2014ClassResources` define reservas com identificadores estáveis, capacidade por nível de classe, saldo e forma de recuperação. Os níveis são configurados dentro da ficha por classe; o nome livre da identidade não determina regras. `RuleView.resources` fornece os dados ao painel nativo `DndClassResourcesComponent` e aos controles comuns, inclusive quando o sistema usa um layout personalizado. O painel permite registrar gastos, escolher quantidades, executar os efeitos próprios implementados e selecionar descansos. Os comandos passam pelo mesmo controle de versão, permissões, histórico e transação das demais ações. Rolagens de Retomar o Fôlego e Indomável respeitam a visibilidade escolhida, inclusive exclusiva dos mestres.
+
+| Reserva | Cálculo e recuperação |
+| --- | --- |
+| Fúria | 2/3/4/5/6 usos nos patamares 1/3/6/12/17; ilimitada em bárbaro 20; descanso longo. |
+| Inspiração de Bardo | Modificador de CAR, mínimo 1; d6/d8/d10/d12 nos níveis 1/5/10/15; descanso longo e, a partir de bardo 5, também curto. Bardo 20 recupera um uso ao rolar iniciativa se estiver vazio. |
+| Canalizar Divindade | Reserva compartilhada de clérigo/paladino; 1 uso, 2 em clérigo 6, 3 em clérigo 18; descanso curto/longo. Multiclasse não soma reservas. |
+| Forma Selvagem | Dois usos a partir de druida 2; ilimitada em druida 20; descanso curto/longo. O consumo não substitui os atributos pela ficha de uma besta. |
+| Retomar o Fôlego | Um uso; descanso curto/longo. A ação própria rola 1d10 + nível de guerreiro, cura o próprio personagem e registra o dado. |
+| Surto de Ação | Um uso em guerreiro 2, dois em guerreiro 17; descanso curto/longo; no máximo um por turno. O início de turno é confirmado por comando. |
+| Indomável | 1/2/3 usos nos níveis de guerreiro 9/13/17; descanso longo. Executa uma nova resistência, considerando as condições, e exige usar esse novo resultado. Não rerrola uma falha automática. |
+| Ki/Chi | Nível de monge a partir do 2; descanso com pelo menos 30 minutos de meditação. A confirmação de descanso comum não presume meditação. Monge 20 recupera quatro pontos na iniciativa se estiver vazio. |
+| Cura pelas Mãos / Sentido Divino | Nível de paladino × 5 pontos; 1 + modificador de CAR usos de Sentido Divino, mínimo técnico zero; descanso longo. Cura própria tem ação específica; gasto destinado a outra criatura apenas registra o consumo, sem alterar o alvo. |
+| Pontos de Feitiçaria | Nível de feiticeiro a partir do 2; descanso longo. Feiticeiro 20 recupera até quatro no descanso curto. |
+| Arcana Mística / Mestre Místico | Arcanas de níveis 6/7/8/9 são reservas independentes, adquiridas em bruxo 11/13/15/17 e recuperadas no descanso longo. Mestre Místico em bruxo 20 restaura pacto após confirmar um minuto e gasta seu uso até o descanso longo. |
+
+Conjuração flexível cria espaços de níveis 1–5 por 2/3/5/6/7 pontos, inclusive um nível acima da progressão normal se houver pontos suficientes. Espaços criados ficam separados em `slot_criado_N`, são utilizáveis pela ação comum de conjurar e desaparecem no descanso longo. Converter um espaço comum ou de pacto consome o espaço na mesma transação e recupera pontos até o limite da reserva; o nível do pacto é calculado pelo servidor. O saldo manual da aba de magias é reconciliado para que criar um espaço não restaure outros já gastos.
+
+Recuperação Arcana exige o descanso curto confirmado, permite recuperar espaços gastos até a soma de metade do nível de mago arredondada para cima e proíbe espaços de nível 6 ou superior. A seleção é uma etapa transitória: outra atividade encerra o orçamento não utilizado. A edição local consultada diz **uma vez por dia**; um novo descanso longo não zera esse indicador automaticamente. Há um comando separado para confirmar um novo dia de jogo. O motor não confunde tempo real com tempo do personagem.
+
+As reservas novas começam completas quando não há gastos anteriores registrados. Fichas já jogadas devem conferir os saldos; o motor não tenta inferir usos antigos a partir de anotações. O registro de gasto de uma reserva não equivale à implementação de todos os efeitos da habilidade: efeitos de Fúria, domínios, formas de besta, alvos de cura, Metamágicas específicas, ação bônus e demais requisitos contextuais ainda precisam de regras próprias. Esse bloco não se aplica a D&D 2024.
+
+Conferência no Livro do Jogador local: tabelas de classe e seções de características; páginas PDF 46–47 (bárbaro), 53–54 (bardo), 58 (bruxo), 64–65 (clérigo), 72–73 (druida), 78–79 (feiticeiro), 84–85 (guerreiro), 96 (mago), 103–104 (monge), 109–111 (paladino) e 165 (multiclasse). Os PDFs e as descrições integrais continuam fora do repositório e da publicação.
+
 - `dotnet run --project tests/Chronicles.Rules.Tests`: testes determinísticos de custos, recursos, morte, descanso, espaços, multiclasse, ferimentos, sanidade e desenvolvimento.
 - `node scripts/check-sheet-templates.mjs`: schemas, fórmulas, versões e resolução dos quatro renderizadores.
 - `npm run build` e `npm run lint` em `web`.
@@ -81,7 +107,7 @@ A ficha oferece dificuldade regular, difícil ou extrema. O alvo usa o valor com
 - Aplicação de dano diretamente ao alvo, resistências/imunidades por tipo, alcance, munições e propriedades especiais de cada arma. Ataques, críticos e múltiplos componentes de dano já estão integrados ao motor.
 - Condições específicas dos alvos e suas fontes, múltiplas fontes independentes com duração própria, ação obrigatória por medo/confusão, orçamento de ações (incluindo enjoado), venenos/doenças com efeitos individuais, imunidades e exceções de classe. Os modificadores, relações, durações, concentração e efeitos de turno descritos acima já estão integrados para Ordem/Tormenta20; as condições de D&D afetam testes, ataques e concentração.
 - Catálogos de escolhas de origem, espécie/raça, classe, trilha/subclasse, poderes, talentos, equipamentos e magias/rituais; pré-requisitos e escolhas em cada nível.
-- Conjuração completa: preparação/conhecimento, componentes, concentração, sustentação, alcance, áreas e efeitos específicos; recuperação de recursos de características individuais.
+- Conjuração completa: preparação/conhecimento, componentes, concentração, sustentação, alcance, áreas e efeitos específicos; efeitos de características de classe, reservas de subclasses e recursos ainda não descritos na cobertura acima. As reservas básicas de D&D 2014 e suas recuperações já estão implementadas conforme a seção específica.
 - Ocupações e seus pontos/perícias, métodos alternativos de criação, envelhecimento entre aventuras, distribuição de pontos, perícias especializadas, tratamentos, crises de insanidade, perseguições e combate percentual completo. A geração aleatória de características e ajustes iniciais por idade descritos acima já estão implementados.
 - Exploração, sobrevivência, ambientes, viagens, fabricação, economia, regras opcionais e adversários dos suplementos.
 

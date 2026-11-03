@@ -63,6 +63,7 @@ public static class Dnd2014Conditions
                 if (field.Key == "per_percepcao" && (s.Get("sentido_percepcao") == 1 && Has(s, "cego") || s.Get("sentido_percepcao") == 2 && Has(s, "surdo"))) return $"{field.Label}: falha automática no sentido necessário.";
                 var expression = Expression(s, WeaponActions.Resolve(field.RollExpression!, s, false), save ? "save" : "ability", s.Get("modo_testes"));
                 var result = s.Roll(expression);
+                if (field.Key == "iniciativa") Dnd2014ClassResources.Initiative(s);
                 return $"{field.Label}: {expression} = {result}" + (command.Amount > 0 ? $" / CD {command.Amount}: {(result >= command.Amount ? "sucesso" : "falha")}." : ".");
             case "test-expression":
                 RuleState.Require(command.Expression is { Length: > 0 and <= 40 }, "Informe expressão numérica de um d20.");

@@ -2,6 +2,8 @@
 
 ## Validação integrada de regras — 30/10/2026
 
+Atualização de 03/11/2026: [recursos de classe de D&D](rules/dnd_5e-class-resources-desktop.png) incluem configuração de níveis na ficha, reservas calculadas no servidor, cura por Retomar o Fôlego, rolagem exclusiva do mestre, consumo de Ki, meditação e criação/expiração de espaços por feitiçaria. O teste integrado executa essas ações e recarrega a página para verificar os dados persistidos.
+
 As capturas atuais em [rules](rules/) foram feitas com `web/rules-integration.mjs`, Chrome, a API .NET local e PostgreSQL de teste. Esse conjunto usa autenticação e persistência reais e cobre os quatro sistemas nas resoluções 1440×900, 1920×1080, 768×1024 e 390×844. O script verifica permissões, conflito de versões, histórico, ataques privados, consumo de munição, aplicação de condições pelo formulário, rolagens nativas e leitura após recarregar. Em Ordem, a coluna de dados usa a prévia do servidor; em Tormenta20, o modificador da perícia considera as condições. As capturas não utilizam contas de produção.
 
 ## Capturas iniciais de composição

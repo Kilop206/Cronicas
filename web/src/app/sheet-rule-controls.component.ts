@@ -6,12 +6,13 @@ import { ApiService, Character, CharacterInput, RpgSystem, apiError } from './ap
 import { SheetCollectionFieldComponent, numericColumnOptions } from './sheet-collection-field.component';
 
 interface RuleAction { id: string; label: string; amountLabel: string | null; options: { value: string; label: string }[] | null; hidden?: boolean; }
-interface RuleView { edition: string; actions: RuleAction[]; stats: { label: string; value: string }[]; settings: { key: string; label: string; min: number; max: number }[]; state: Record<string, number>; }
+interface RuleView { edition: string; actions: RuleAction[]; stats: { label: string; value: string }[]; settings: { key: string; label: string; min: number; max: number }[]; state: Record<string, number>; resources?: {id: string; label: string; current: number; maximum: number | null; recharge: string}[]; }
 
 @Component({ selector: 'app-sheet-rule-controls', standalone: true, imports: [CommonModule, FormsModule, SheetCollectionFieldComponent], template: `
   <section *ngIf="view() as rules" class="rule-controls" aria-label="Ações das regras do sistema">
     <details open><summary>{{ rules.edition }} · Ações e recursos</summary>
       <dl><div *ngFor="let stat of rules.stats"><dt>{{ stat.label }}</dt><dd>{{ stat.value }}</dd></div></dl>
+      <details *ngIf="rules.resources?.length"><summary>Saldos de recursos de classe</summary><dl><div *ngFor="let resource of rules.resources"><dt>{{ resource.label }}</dt><dd>{{ resource.maximum === null ? '∞' : resource.current + ' / ' + resource.maximum }}</dd><small>{{ resource.recharge }}</small></div></dl></details>
       <form *ngIf="character.canEdit" (ngSubmit)="apply()">
         <label>Ação<select name="ruleAction" [ngModel]="actionId" (ngModelChange)="choose($event)" [disabled]="busy()"><option *ngFor="let item of rules.actions" [value]="item.id">{{ item.label }}</option></select></label>
         <label *ngIf="action()?.amountLabel">{{ action()?.amountLabel }}<input type="number" name="amount" [(ngModel)]="amount" [min]="minimum()" [max]="maximum()" required [disabled]="busy()"></label>
