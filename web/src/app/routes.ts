@@ -9,7 +9,7 @@ import { NarrativePage } from './narrative.page';
 import { WorldsPage, WorldDetailPage } from './worlds.page';
 import { SearchPage } from './search.page';
 import { EncountersPage } from './encounters.page';
-import { NpcsPage } from './npcs.page';
+import type { NpcsPage } from './npcs.page';
 
 const protectedRoute: CanActivateFn = (_route, state: RouterStateSnapshot) => {
   const api = inject(ApiService), router = inject(Router);
@@ -35,7 +35,7 @@ export const routes: Routes = [
     { path: 'campaigns/new', component: CampaignFormPage },
     { path: 'campaigns/:id', component: CampaignDetailPage },
     { path: 'campaigns/:id/characters', loadComponent: () => import('./studio-pages').then(m => m.CharactersPage) },
-    { path: 'campaigns/:id/npcs', component: NpcsPage },
+    { path: 'campaigns/:id/npcs', loadComponent:()=>import('./npcs.page').then(m=>m.NpcsPage), canDeactivate:[(component:NpcsPage)=>component.canLeave()] },
     { path: 'campaigns/:id/sessions', component: NarrativePage, data: { section: 'sessions' } },
     { path: 'campaigns/:id/documents', component: NarrativePage, data: { section: 'documents' } },
     { path: 'campaigns/:id/wiki', component: NarrativePage, data: { section: 'wiki' } },

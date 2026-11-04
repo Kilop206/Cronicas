@@ -20,7 +20,7 @@ export interface OverlayIndicator { label: string; value: string; }
 export type OverlayCharacter = Pick<CharacterInput, 'name' | 'portraitUrl' | 'backgroundUrl' | 'health' | 'maxHealth' | 'sanity' | 'maxSanity' | 'mana' | 'maxMana'> & { templateId: string | null; resources: OverlayResource[]; indicators: OverlayIndicator[]; };
 export interface CharacterRevision { id: string; version: number; createdAt: string; editedBy: string; }
 export interface CharacterSecret { notes: string; revision: number; updatedAt: string | null; }
-export interface Npc { id: string; campaignId: string; name: string; portraitUrl: string | null; appearance: string; personality: string; motivation: string; relationships: string; location: string; secrets?: string; status: 'active' | 'missing' | 'deceased' | 'unknown'; visibility: 'gm' | 'campaign'; health: number; maxHealth: number; version: number; createdAt: string; updatedAt: string; }
+export interface Npc { id: string; campaignId: string; name: string; portraitUrl: string | null; appearance: string; personality: string; motivation: string; relationships: string; location: string; secrets?: string; status: 'active' | 'missing' | 'deceased' | 'unknown'; visibility: 'gm' | 'campaign'; health: number; maxHealth: number; version: number; createdAt: string; updatedAt: string; sheet?:import('./paranormal-threat').ParanormalThreatSheet|null; }
 export type NpcInput = Omit<Npc, 'id' | 'campaignId' | 'createdAt' | 'updatedAt' | 'secrets'> & { secrets: string };
 export interface InventoryItem { id: string; characterId: string; name: string; category: 'item' | 'equipment' | 'weapon' | 'consumable' | 'other'; quantity: number; weight: number; notes: string; version: number; createdAt: string; updatedAt: string; }
 export type InventoryInput = Pick<InventoryItem, 'name' | 'category' | 'quantity' | 'weight' | 'notes' | 'version'>;
@@ -35,7 +35,7 @@ export interface SystemRevision { revision: number; savedAt: string; name: strin
 export interface CthulhuOccupationSlot { id: string; label: string; skills?: string[] | null; }
 export interface CthulhuOccupation { id: string; name: string; points: string; creditMin: number; creditMax: number; slots: CthulhuOccupationSlot[]; }
 export interface CthulhuOccupationDefinition { skills: { key: string; formula: string }[]; occupations: CthulhuOccupation[]; skillCap?: number | null; personalCredit?: boolean; }
-export interface NpcTemplate { id: string; name: string; appearance: string; personality: string; motivation: string; relationships: string; location: string; status: Npc['status']; visibility: Npc['visibility']; health: number; maxHealth: number; }
+export interface NpcTemplate { id: string; name: string; appearance: string; personality: string; motivation: string; relationships: string; location: string; status: Npc['status']; visibility: Npc['visibility']; health: number; maxHealth: number; sheet?:import('./paranormal-threat').ParanormalThreatSheet|null; }
 export interface RpgSystem { id: string; ownerId: string | null; name: string; description: string; fields: SystemField[]; layout: SheetLayout | null; templateId: string | null; templateVersion: number; rulesetVersion: string | null; rendererMode: 'specialized' | 'layout' | null; revision: number; revisions: SystemRevision[]; npcTemplates: NpcTemplate[]; cthulhuOccupations?: CthulhuOccupationDefinition | null; createdAt: string; updatedAt: string; }
 export interface CampaignMember { userId: string; displayName: string; role: string; joinedAt: string; }
 export interface World { id: string; ownerId: string; name: string; description: string; createdAt: string; updatedAt: string; }
@@ -43,7 +43,7 @@ export interface WorldDetail extends World { campaigns: { campaignId: string; na
 export interface WorldArticle { id: string; worldId: string; authorId: string; title: string; body: string; category: string; visibility: 'campaign' | 'private' | 'gm'; revision: number; createdAt: string; updatedAt: string; }
 export interface WorldArticleLink { id: string; label: string; direction: 'incoming' | 'outgoing'; article: Pick<WorldArticle, 'id' | 'title' | 'category' | 'visibility'>; }
 export interface ChatMessage { id: string; campaignId: string; userId: string; userName: string; body: string; kind: 'chat' | 'announcement'; createdAt: string; }
-export interface EncounterParticipant { id: string; characterId: string | null; npcId: string | null; name: string; initiative: number; health: number; maxHealth: number; conditions: string; }
+export interface EncounterParticipant { id: string; characterId: string | null; npcId: string | null; name: string; initiative: number; health: number; maxHealth: number; conditions: string; npcSheet?:boolean; }
 export interface Encounter { id: string; campaignId: string; title: string; status: 'planning' | 'active' | 'completed'; round: number; turnIndex: number; createdAt: string; updatedAt: string; participants: EncounterParticipant[]; }
 export type EncounterSummary = Omit<Encounter, 'participants' | 'createdAt'>;
 export type WorldArticleInput = Pick<WorldArticle, 'title' | 'body' | 'category' | 'visibility' | 'revision'>;
@@ -138,6 +138,10 @@ export class ApiService {
   createNpc(campaignId: string, input: NpcInput) { return this.http.post<Npc>(`/api/campaigns/${campaignId}/npcs`, input, { withCredentials: true }); }
   updateNpc(id: string, input: NpcInput) { return this.http.put<Npc>(`/api/npcs/${id}`, input, { withCredentials: true }); }
   deleteNpc(id: string, version: number) { return this.http.delete<void>(`/api/npcs/${id}`, { params: { version }, withCredentials: true }); }
+  npcRevisions(id:string){return this.http.get<{version:number;savedAt:string;editedById:string;name:string}[]>(`/api/npcs/${id}/revisions`,{withCredentials:true});}
+  validateNpcSheet(campaignId:string,sheet:unknown){return this.http.post<import('./paranormal-threat').ParanormalThreatSheet>(`/api/campaigns/${campaignId}/npcs/validate-sheet`,sheet,{withCredentials:true});}
+  restoreNpc(id:string,version:number,expectedVersion:number){return this.http.post<Npc>(`/api/npcs/${id}/revisions/${version}/restore`,{expectedVersion},{withCredentials:true});}
+  npcRule(id:string,expectedVersion:number,command:import('./paranormal-threat').ThreatCommand){return this.http.post<{npc:Npc;message:string;rolls:{expression:string;rolls:number[];total:number}[];attacks?:{index:number;total:number;natural:number;hit:boolean|null;critical:boolean;damage:number;damageType:string;extraDamage:number;extraType:string}[];damage?:{raw:number;afterSave:number;multiplier:number;reduction:number;applied:number;immune:boolean;sources:string[]};targetId?:string;targetVersion?:number;sanity?:number}>(`/api/npcs/${id}/rules`,{expectedVersion,command},{withCredentials:true});}
   character(id: string) { return this.http.get<Character>(`/api/characters/${id}`, { withCredentials: true }); }
   inventory(id: string) { return this.http.get<InventoryItem[]>(`/api/characters/${id}/inventory`, { withCredentials: true }); }
   createInventoryItem(id: string, input: InventoryInput) { return this.http.post<InventoryItem>(`/api/characters/${id}/inventory`, input, { withCredentials: true }); }

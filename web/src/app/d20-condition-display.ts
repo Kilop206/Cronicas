@@ -6,6 +6,7 @@ export function d20ConditionState(values: Record<string, SheetFieldValue>, healt
   const state: Record<string, number> = {};
   if (Array.isArray(rows)) for (const row of rows) if (row && typeof row === 'object' && !Array.isArray(row) && typeof row['chave'] === 'string' && typeof row['valor'] === 'number') state[row['chave']] = row['valor'];
   const active = new Set(Object.keys(state).filter(key => key.startsWith('cond_') && state[key] !== 0).map(key => key.slice(5)));
+  if(state['sangrando'])active.add('sangrando');
   if (health === 0 || state['morto'] || state['asfixia_inconsciente']) active.add('inconsciente');
   const relationships: Record<string, string[]> = { agarrado: ['desprevenido', 'imovel'], atordoado: ['desprevenido'], cego: ['desprevenido', 'lento'], enredado: ['lento', 'vulneravel'], exausto: ['debilitado', 'lento', 'vulneravel'], fatigado: ['fraco', 'vulneravel'], inconsciente: ['indefeso'], indefeso: ['desprevenido'], paralisado: ['imovel', 'indefeso'], petrificado: ['inconsciente'], surpreendido: ['desprevenido'] };
   for (const key of active) for (const implied of relationships[key] || []) active.add(implied);

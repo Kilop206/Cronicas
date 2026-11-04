@@ -13,6 +13,8 @@ O PDF `chamado-de-cthulhu-livro do guardião-7-edicao.pdf` foi localizado, mas n
 
 ## Versionamento e compatibilidade
 
+Atualização de 04/11/2026: o capítulo de ameaças e as clarificações foram conferidos no PDF Ordem 1.3, páginas PDF 188–190 e 320–323. Inimigos agora têm schema próprio versionado, com bônus finais, ataques múltiplos, RD por fonte, Presença Perturbadora e demais mecanismos descritos em [paranormal-threats.md](paranormal-threats.md). A estrutura não concede automaticamente bloqueio, esquiva ou contra-ataque de agentes às ameaças. Não foram copiados bestiários nem cadastradas criaturas oficiais automaticamente.
+
 Atualização de 04/11/2026: o combate de D&D 2014 v5 também executa Ataque Descuidado e Crítico Brutal. As seções foram verificadas no PDF local, páginas PDF 47–48. A escolha de turno é explícita e o dado adicional usa a arma estruturada, sem inferir propriedades pelo nome. Limites da associação entre atacante/alvo estão registrados em [rules-engine.md](rules-engine.md).
 
 Atualização de 03/11/2026: D&D 2014 v5 incorpora processamento de dano por tipo e efeitos de Fúria, Fúria Implacável e Fúria Persistente. As seções correspondentes do Livro do Jogador local foram conferidas nas páginas PDF 47–48 e 197, com conferência pública da edição 2014 no D&D Beyond. A interface exige confirmação de contexto; não infere armadura, hostilidade ou resistências pelo nome dos itens. Veja a cobertura executável e os limites em [rules-engine.md](rules-engine.md).

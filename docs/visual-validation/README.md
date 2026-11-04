@@ -1,5 +1,16 @@
 # Validação visual das fichas
 
+## Ameaças de Ordem Paranormal · 04/11/2026
+
+Capturas reais de NPCs gravados na API e no PostgreSQL de teste, feitas por `web/threats-integration.mjs` com Chrome/Playwright. A ficha utiliza o agrupamento de estatísticas de ameaças do PDF 1.3: nome/VD, descritores, atributos, sentidos/testes, defesas, PV e ações. O cabeçalho do módulo fica compacto ao abrir um inimigo; o elenco pode ser recolhido no celular. Não usa a estrutura de ficha de agente nem reproduz arte ou fichas oficiais.
+
+| Interface | 1440×900 | 1920×1080 | 768×1024 | 390×844 |
+| --- | --- | --- | --- | --- |
+| Ameaça | [desktop](rules/ordem_paranormal-threat-desktop.png) | [amplo](rules/ordem_paranormal-threat-wide.png) | [tablet](rules/ordem_paranormal-threat-tablet.png) | [mobile](rules/ordem_paranormal-threat-mobile.png) |
+| Editor | [desktop](rules/ordem_paranormal-threat-editor-desktop.png) | — | — | [mobile](rules/ordem_paranormal-threat-editor-mobile.png) |
+
+A inspeção considera hierarquia, densidade, reorganização das colunas e controles utilizáveis. O teste verifica ausência de overflow horizontal do documento, criação pela interface, autosave com resposta real atrasada, foco, conflitos, erros sem descarte do rascunho, sequências de ataque, privacidade de estatísticas/modelos, Presença e SAN, sincronização de encontros, histórico/restauração, templates e importação/exportação. O schema/motor também têm testes determinísticos e a migração foi aplicada no banco local existente. A documentação de [arquitetura, cobertura e pendências](../paranormal-threats.md) distingue regras executáveis de descrições consultáveis.
+
 ## Validação integrada de regras — 30/10/2026
 
 Atualização de 04/11/2026: D&D 2014 v5 foi validado com dano por tipo, defesas, Fúria e seus controles de turno, Ataque Descuidado e Crítico Brutal. As capturas abaixo usam personagens gravados na API e no PostgreSQL local, com Chrome/Playwright. A regressão dos quatro sistemas, testes .NET, smoke, templates, lint e build passaram. A inspeção verificou reorganização do combate no tablet/celular, legibilidade e ausência de overflow do documento. A correspondência estrutural com as referências mantém as limitações descritas adiante.

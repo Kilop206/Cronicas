@@ -1,5 +1,7 @@
 # Ações de regras por edição
 
+Atualização de 04/11/2026: fichas próprias de inimigos de Ordem 1.3 estão documentadas em [paranormal-threats.md](paranormal-threats.md). O módulo acrescenta criação/edição, ataques múltiplos, habilidades, defesas por fonte, condições, Enigma, Cura Acelerada, Presença sobre SAN real, histórico, modelos e integração com encontros. Ameaças não recebem a estrutura nem as reações defensivas dos agentes. A cobertura e os limites dessa implementação são independentes dos templates de personagem abaixo.
+
 O motor em `SheetRuleActions` resolve o identificador estável, a versão do template e a edição. As primeiras versões com ações no servidor são Ordem v6/1.3, D&D v3/2014, Tormenta20 v3/Jogo do Ano v1.3 e CoC v4/7e. Versões anteriores continuam abrindo e só recebem a estrutura nova após atualização explícita pelo dono do sistema. D&D 2024 não recebe regras de 2014.
 
 ## Fluxo integrado
