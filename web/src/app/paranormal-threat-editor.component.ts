@@ -3,6 +3,7 @@ import {Component,EventEmitter,Input,Output} from '@angular/core';
 import {FormsModule} from '@angular/forms';
 import {ParanormalThreatSheet,ThreatAbility,THREAT_ACTIONS,THREAT_ATTRIBUTES,THREAT_CONDITIONS,THREAT_DAMAGE_TYPES,THREAT_ELEMENTS,THREAT_SIZES,THREAT_IMMUNITY_GROUPS,threatImmunities,threatId} from './paranormal-threat';
 import {ThreatSensoryAbilities,ThreatSensoryContext,blankSensoryAbilities,blankSensoryContext} from './paranormal-threat';
+import {ThreatManeuverProfile,blankManeuverProfile} from './paranormal-threat';
 import {ParanormalThreatContextComponent} from './paranormal-threat-context.component';
 
 @Component({selector:'app-paranormal-threat-editor',standalone:true,imports:[CommonModule,FormsModule,ParanormalThreatContextComponent],templateUrl:'./paranormal-threat-editor.component.html',styleUrls:['./paranormal-threat.css'],host:{'(input)':'changed.emit()','(change)':'changed.emit()'}})
@@ -12,6 +13,8 @@ export class ParanormalThreatEditorComponent {
   standalone={standalone:true};nex=[...Array.from({length:20},(_,i)=>i*5),99];
   sources=[{value:'base',label:'Estatística base'},{value:'ability',label:'Habilidade'},{value:'item',label:'Item'},{value:'ritual',label:'Ritual'},{value:'ally',label:'Aliado'}];
   immunityGroups=THREAT_IMMUNITY_GROUPS;immunityNotice='';
+  maneuver(){return this.sheet.maneuverProfile||blankManeuverProfile();}
+  setManeuver(value:Partial<ThreatManeuverProfile>){this.sheet.maneuverProfile={...this.maneuver(),...value};this.changed.emit();}
   sensory(){return this.sheet.sensoryAbilities||blankSensoryAbilities();}
   setSensory(value:Partial<ThreatSensoryAbilities>){this.sheet.sensoryAbilities={...this.sensory(),...value};this.changed.emit();}
   senseContext(){return this.sheet.sensoryContext||blankSensoryContext();}

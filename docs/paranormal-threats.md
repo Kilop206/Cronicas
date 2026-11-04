@@ -83,6 +83,32 @@ Defesa, Reflexos e a listagem de condições na ficha consideram o oponente decl
 
 `ParanormalThreatPerception` resolve o comportamento no servidor; `paranormal-threat-perception.ts` é a prévia de leitura no cliente; `ParanormalThreatContextComponent` compartilha os controles entre editor e ficha em uso. A nova suíte `web/threat-perception-integration.mjs` compara a prévia com as respostas reais do servidor, testa recarga/privacidade/conflitos e captura quatro resoluções. Fontes locais: PDF 1.3, páginas PDF 65 (alcances), 99 (camuflagem), 189–190 (habilidades comuns) e 320–321 (condições de sentidos/desprevenido).
 
+## Manobras entre ameaça e alvo
+
+**Derrubar** e **Empurrar** têm resolução de Luta contra Luta, operada pelo mestre na ficha da ameaça. O alvo pode ser um personagem ou outra ameaça da mesma campanha. Não são testes contra a Defesa nem sequências de ataques comuns: cada comando representa uma manobra que substitui um ataque corpo a corpo.
+
+1. Em **Editar NPC → Luta em manobras**, habilite o perfil após conferir o atributo, o bônus e se o modificador de tamanho já está incluído. Fichas anteriores continuam com `configured: false`; nenhum bônus é inferido de uma arma, de Pontaria ou de uma descrição. A defesa de outra ameaça também exige perfil configurado.
+2. Em **Manobras corpo a corpo**, selecione alvo/tipo de manobra e confirme o alcance corpo a corpo. O Crônicas não possui mapa ou posição suficiente para inferir esse alcance.
+3. Para personagens, o servidor lê `per_luta` e os detalhes de treino/outros da ficha real. O mestre confirma o tamanho. Força é a base normal; selecionar Agilidade exige confirmação de uma arma ágil aplicável. Modelos personalizados podem declarar que o bônus de Luta já inclui tamanho, evitando dupla contagem. Bônus circunstanciais são informados separadamente.
+4. O contexto sensorial da ameaça só é usado se o mestre confirmar que corresponde ao alvo selecionado. Um contexto de outro oponente não é reutilizado silenciosamente. Condições físicas ainda modificam os dados. Se a ameaça vencer, a chance de falha por camuflagem é resolvida antes do efeito.
+
+O motor compara os totais da oposição, seguindo a descrição específica de testes opostos. Não chama o helper de acerto contra uma DT/Defesa fixa, não cria críticos e não presume dano. Em empate, ambos rolam novamente. Após vinte empates consecutivos, a resolução permanece pendente, sem efeito ou vencedor; o mestre pode iniciar outra oposição para prosseguir. Esse limite técnico evita uma operação sem fim, sem converter o empate em vitória.
+
+| Manobra | Resultado de uma vitória |
+| --- | --- |
+| Derrubar | Aplica Caído à ficha-alvo. Uma margem de pelo menos 5 também registra deslocamento de 1,5m; essa distância adicional não escala com outras faixas de 5. |
+| Empurrar | Registra 1,5m mais 1,5m por faixa inteira de 5 na margem de vitória. Não aplica Caído. Direção, posição real, bordas e acompanhamento com movimento são adjudicados na mesa. |
+
+Tamanho usa −5/−2/0/+2/+5/+10 para minúsculo/pequeno/médio/grande/enorme/colossal, somente quando não incluído no bônus final. Ameaças incorpóreas usam Agilidade. A origem do efeito é explícita e continua sujeita à incorporeidade e à Origem Paranormal do alvo. **Imune a manobras de combate** bloqueia ambas as manobras; imunidade a Caído bloqueia Derrubar, sem conceder automaticamente imunidade a Empurrar. O mestre também pode confirmar uma imunidade de outra habilidade para essa resolução. Alvos inconscientes/paralisados e exceções de reações exigem adjudicação específica; o motor não inventa uma oposição física ou vitória automática nesses casos.
+
+`POST /api/npcs/{id}/maneuvers` verifica campanha, papel de mestre, versões de atacante/alvo e edição de regras. As rolagens usam RNG no servidor e privacidade de mestre por padrão. Condição, revisões, registro do atacante e dados são salvos em um único `SaveChanges` transacional. Versões são verificadas também quando a ficha-alvo permanece igual; conflitos retornam 409 e não gravam efeitos/dados parciais. Atualizações concorrentes do histórico são tratadas como conflito. Testes com duas requisições simultâneas conferem esse comportamento.
+
+`maneuverProfile`, `maneuverImmune` e `maneuverLog` estendem aditivamente o schema 1, sem migração SQL. A ameaça conserva dez registros privados, incluindo alvo, totais, empates, condição aplicada e distância calculada. Esses registros entram na exportação e no histórico de vinte versões. Templates e cópias novas conservam o perfil/imunidades, mas limpam o registro de instâncias anteriores. Restaurar a ameaça restaura apenas sua ficha; efeitos feitos em personagens ou outras ameaças têm histórico próprio e não são desfeitos silenciosamente.
+
+Personagens de Ordem 1.3 sincronizam suas condições mecânicas com encontros ainda não concluídos ao receber uma manobra, usar regras, salvar ou restaurar a ficha. Marcadores gerenciados recebem o prefixo **Ficha:**; notas livres do encontro são preservadas. Adicionar o personagem ou editar seus recursos no encontro também projeta o estado atual. Remover Caído na ficha remove o marcador gerenciado; encontros concluídos conservam seus registros. Caso não haja espaço nos mil caracteres do encontro, a ação retorna erro em vez de truncar notas ou gravar alterações parciais.
+
+Fontes locais: PDF 1.3, páginas PDF 69 (armas ágeis), 85–86 (testes/oposição), 95 (manobras), 189 (tamanho) e 320–321 (condições). `ParanormalThreatManeuvers` resolve regras puras; `NpcManeuverEndpoints` aplica acesso/persistência; `CharacterEncounterConditions` projeta as condições em encontros; `ParanormalThreatManeuversComponent` apresenta alvos, controles, dados de cada participante e registros. A suíte `web/threat-maneuvers-integration.mjs` exercita o fluxo com API/PostgreSQL reais e captura quatro resoluções.
+
 ## Permissões, histórico e encontros
 
 Somente dono, mestre e co-mestre criam, editam ou operam ameaças. NPCs privados continuam invisíveis a jogadores. Em um NPC apresentado à campanha, jogadores recebem os dados narrativos e recursos que já eram públicos, mas não recebem `sheet`, segredos ou histórico. Modelos de ameaça dentro do sistema também são filtrados para jogadores; seus Enigmas não ficam expostos pelo endpoint de sistemas. Modelos narrativos mantêm sua visibilidade anterior.
@@ -106,7 +132,8 @@ Fontes locais: PDF Ordem Paranormal v1.3, páginas PDF 92–93 (dano/crítico), 
 Este bloco **não representa todas as regras de Ordem implementadas**. Permanecem pendentes, entre outras:
 
 - Catálogo e efeitos individuais das criaturas, poderes e rituais; não são copiados nem inferidos de descrições.
-- Aplicação automática do ataque a uma ficha-alvo, defesas em fontes com vários tipos simultâneos e controle completo de ações/movimento/alcance/manobras. O recebimento atual calcula um tipo por comando; fontes mistas exigem adjudicação da RD da fonte pelo mestre.
+- Aplicação automática de dano do ataque a uma ficha-alvo, defesas em fontes com vários tipos simultâneos e controle completo de ações/movimento/alcance. O recebimento atual calcula um tipo por comando; fontes mistas exigem adjudicação da RD da fonte pelo mestre.
+- Agarrar/escapar/soltar com vínculos persistentes, Desarmar/Quebrar integrados a objetos, exceções individuais de manobras e consequências espaciais como bordas/precipícios. Derrubar/Empurrar já resolvem oposição e o efeito descrito acima, mas não gerenciam um mapa ou o orçamento completo de ações.
 - Sentidos e exceções específicos de outras habilidades, camuflagem de múltiplas fontes simultâneas e identificação automática de obstáculos/observadores; não são deduzidos de descrições. Interações espaciais de incorporeidade continuam sob adjudicação do mestre.
 - Interações particulares de habilidades que substituam as categorias e imunidades configuradas; o motor não deduz exceções de textos narrativos.
 - Gestão global de cenas/exposições, venenos/doenças individuais, inventário próprio de NPCs e apresentação específica de inimigos no OBS. O OBS existente de personagens é preservado.
@@ -118,6 +145,7 @@ Este bloco **não representa todas as regras de Ordem implementadas**. Permanece
 - `npm run lint`, `npm run build` e `node scripts/check-sheet-templates.mjs`.
 - API e PostgreSQL locais, Angular na porta 4200: `node threats-integration.mjs` em `web`. Criação real, autosave com resposta atrasada/conflito, ataques, privacidade, encontros, SAN, imunidade, histórico, modelos e importação/exportação.
 - `node threat-perception-integration.mjs`: criação pela interface, habilidades sensoriais, contexto do oponente, comparação prévia/API, rolagens, alcances, recarga, rascunhos inválidos, concorrência, sigilo, encontro, exportação/modelos e compatibilidade com JSON antigo.
+- `node threat-maneuvers-integration.mjs`: perfil configurado pela interface, alvos reais PC/NPC, oposição, detalhes de Luta, Caído, distâncias, imunidades, histórico/restauração, sincronização de encontros, notas preservadas, concorrência atômica, sigilo e capturas em quatro resoluções.
 - `node rules-integration.mjs` e smoke geral preservam a regressão dos quatro sistemas.
 
 Capturas reais ficam em `docs/visual-validation/rules/ordem_paranormal-threat-*.png`, em 1440×900, 1920×1080, 768×1024 e 390×844; o editor também possui capturas desktop/mobile. Nenhuma captura usa dados fixos embutidos no componente.

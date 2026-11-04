@@ -8,9 +8,10 @@ import {ThreatCommand,THREAT_ACTIONS,THREAT_ATTRIBUTES,THREAT_CONDITIONS,THREAT_
 import {ThreatSensoryContext,blankSensoryContext} from './paranormal-threat';
 import {threatPerception} from './paranormal-threat-perception';
 import {ParanormalThreatContextComponent} from './paranormal-threat-context.component';
+import {ParanormalThreatManeuversComponent} from './paranormal-threat-maneuvers.component';
 type AttackOutcome={index:number;total:number;hit:boolean|null;critical:boolean;damage:number;damageType:string;extraDamage:number;extraType:string;missChance:number;concealmentRoll:number|null};
 
-@Component({selector:'app-paranormal-threat-sheet',standalone:true,imports:[CommonModule,FormsModule,ParanormalThreatContextComponent],templateUrl:'./paranormal-threat-sheet.component.html',styleUrls:['./paranormal-threat.css']})
+@Component({selector:'app-paranormal-threat-sheet',standalone:true,imports:[CommonModule,FormsModule,ParanormalThreatContextComponent,ParanormalThreatManeuversComponent],templateUrl:'./paranormal-threat-sheet.component.html',styleUrls:['./paranormal-threat.css']})
 export class ParanormalThreatSheetComponent implements OnChanges,OnDestroy {
   @Input({required:true})npc!:Npc;@Output()applied=new EventEmitter<Npc>();@Output()working=new EventEmitter<boolean>();
   private api=inject(ApiService);private command?:Subscription;private lookup?:Subscription;private currentId='';
@@ -33,6 +34,7 @@ export class ParanormalThreatSheetComponent implements OnChanges,OnDestroy {
   changeContext(value:ThreatSensoryContext){this.contextDraft=value;this.contextDirty=true;}
   discardContext(){this.contextDraft=structuredClone(this.sheet.sensoryContext||blankSensoryContext());this.contextDirty=false;}
   saveContext(){this.execute({action:'perception-context',perceptionContext:this.contextDraft});}
+  maneuverWorking(value:boolean){if(value)this.started();else this.finished();}
   activeConditions(){const p=this.perception();return [...d20ConditionState(this.fields(),this.npc.health,threatImmunities(this.sheet),p.relationExemptions,p.contextConditions)];}
   immunityLabels(){return [...THREAT_IMMUNITY_GROUPS.filter(g=>(this.sheet.conditionImmunityGroups||[]).includes(g.value)).map(g=>g.label),...this.sheet.conditionImmunities.map(c=>c.replaceAll('_',' '))].join(' · ');}
   explicitCondition(key:string){return this.sheet.state[key==='sangrando'?'sangrando':'cond_'+key]!==undefined;}

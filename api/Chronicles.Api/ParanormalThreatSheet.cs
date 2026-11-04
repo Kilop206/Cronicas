@@ -18,6 +18,9 @@ public sealed record ThreatPresence(bool Enabled = false, int Difficulty = 10, s
 public sealed record ThreatFastHealing(int Amount = 0, string[]? Except = null);
 public sealed record ThreatSensoryAbilities(bool Scent = false, decimal BlindsightRange = 0, bool LowLightVision = false, bool Darkvision = false);
 public sealed record ThreatSensoryContext(bool Active = false, decimal? Distance = null, int Concealment = 0, string Cause = "other", bool OpponentUnseen = false, bool Unavailable = false);
+public sealed record ThreatManeuverProfile(bool Configured = false, string Attribute = "forca", int Bonus = 0, bool IncludesSize = true);
+public sealed record ThreatManeuverRecord(Guid Id,Guid TargetId,string TargetKind,string TargetName,string Kind,string Outcome,
+    int AttackerTotal,int DefenderTotal,int Ties,decimal Displacement,bool ProneApplied,DateTime At);
 
 public sealed record ParanormalThreatSheet
 {
@@ -33,6 +36,9 @@ public sealed record ParanormalThreatSheet
     public string Senses { get; init; } = "";
     public ThreatSensoryAbilities SensoryAbilities { get; init; } = new();
     public ThreatSensoryContext SensoryContext { get; init; } = new();
+    public ThreatManeuverProfile ManeuverProfile { get; init; } = new();
+    public bool ManeuverImmune { get; init; }
+    public ThreatManeuverRecord[] ManeuverLog { get; init; } = [];
     public string Movement { get; init; } = "";
     public decimal Speed { get; init; }
     public int Defense { get; init; } = 10;
@@ -85,6 +91,8 @@ public static class ParanormalThreatSchema
             Require(sheet.Fortification is >=0 and <=100,"Fortificação deve ficar entre 0 e 100% (100% já impede todos os críticos).");
             Require(sheet.SensoryAbilities is not null && sheet.SensoryAbilities.BlindsightRange is >=0 and <=999,"Alcance de Percepção às Cegas deve ficar entre 0 e 999m; zero desativa essa habilidade.");
             Require(ParanormalThreatPerception.ValidateContext(sheet.SensoryContext) is null,ParanormalThreatPerception.ValidateContext(sheet.SensoryContext)??"Contexto sensorial inválido.");
+            Require(sheet.ManeuverProfile is not null && Attributes.Contains(sheet.ManeuverProfile.Attribute) && sheet.ManeuverProfile.Bonus is >=-999 and <=9999,"Configure atributo e bônus de manobra válidos.");
+            Require(sheet.ManeuverLog is {Length:<=10} && sheet.ManeuverLog.All(r=>r is not null && r.Id!=Guid.Empty && r.TargetId!=Guid.Empty && r.TargetKind is "npc" or "character" && Text(r.TargetName,120) && r.Kind is "trip" or "push" && r.Outcome is "success" or "failed" or "tied" or "blocked" or "concealment" && r.AttackerTotal is >=-9999 and <=20000 && r.DefenderTotal is >=-9999 and <=20000 && r.Ties is >=0 and <=20 && r.Displacement is >=0 and <=12000),"Registro de manobras inválido.");
             Require(Text(sheet.Descriptors,500) && Text(sheet.Senses,2000) && Text(sheet.Movement,500) && Text(sheet.Enigma,5000), "Descrição de ameaça muito longa.");
             Require(sheet.Attributes is not null && new[]{sheet.Attributes.Agilidade,sheet.Attributes.Forca,sheet.Attributes.Intelecto,sheet.Attributes.Presenca,sheet.Attributes.Vigor}.All(n=>n is >= 0 and <= 20), "Atributos devem ficar entre 0 e 20.");
             Require(sheet.Effort >= 0 && sheet.Effort <= sheet.MaxEffort && sheet.MaxEffort is >= 0 and <= 9999, "PE fora dos limites.");

@@ -5,6 +5,11 @@ export interface ThreatAbility { id:string; name:string; action:string; cost:num
 export interface ThreatDefense { id:string; type:string; effect:'reduction'|'immunity'|'vulnerability'; amount:number; sourceKind:string; sourceId:string; source:string; except:string[]|null; disabledByEnigma:boolean; }
 export interface ThreatSensoryAbilities {scent:boolean;blindsightRange:number;lowLightVision:boolean;darkvision:boolean;}
 export interface ThreatSensoryContext {active:boolean;distance:number|null;concealment:number;cause:'other'|'darkness'|'paranormal-darkness'|'invisibility'|'blindness';opponentUnseen:boolean;unavailable:boolean;}
+export interface ThreatManeuverProfile {configured:boolean;attribute:keyof ThreatAttributes;bonus:number;includesSize:boolean;}
+export interface ThreatManeuverRecord {id:string;targetId:string;targetKind:'character'|'npc';targetName:string;kind:'trip'|'push';outcome:string;attackerTotal:number;defenderTotal:number;ties:number;displacement:number;proneApplied:boolean;at:string;}
+export interface ThreatManeuverRequest {kind:'trip'|'push';targetId:string;targetKind:'character'|'npc';targetVersion:number;inReach:boolean;visibility:'gm'|'private'|'campaign';targetSize:string;targetSizeConfirmed:boolean;targetAttribute:'forca'|'agilidade';agileWeaponConfirmed:boolean;attackerAdjustment:number;defenderAdjustment:number;source:string;usePerceptionContext:boolean;targetBonusIncludesSize:boolean;targetImmune:boolean;}
+export interface ThreatManeuverOutcome {outcome:string;attackerTotal:number;defenderTotal:number;ties:number;displacement:number;proneApplied:boolean;missChance:number;concealmentRoll:number|null;rounds:{attacker:number;defender:number}[];message:string;}
+export const blankManeuverProfile=():ThreatManeuverProfile=>({configured:false,attribute:'forca',bonus:0,includesSize:true});
 export const blankSensoryAbilities=():ThreatSensoryAbilities=>({scent:false,blindsightRange:0,lowLightVision:false,darkvision:false});
 export const blankSensoryContext=():ThreatSensoryContext=>({active:false,distance:null,concealment:0,cause:'other',opponentUnseen:false,unavailable:false});
 export interface ParanormalThreatSheet {
@@ -12,6 +17,7 @@ export interface ParanormalThreatSheet {
   attributes:ThreatAttributes;skills:ThreatSkill[];attacks:ThreatAttack[];abilities:ThreatAbility[];defenses:ThreatDefense[];conditionImmunities:string[];
   incorporeal?:boolean;fortification?:number;conditionImmunityGroups?:string[];
   sensoryAbilities?:ThreatSensoryAbilities;sensoryContext?:ThreatSensoryContext;
+  maneuverProfile?:ThreatManeuverProfile;maneuverImmune?:boolean;maneuverLog?:ThreatManeuverRecord[];
   presence:{enabled:boolean;difficulty:number;damage:string;immuneNex:number|null};presenceTargets:string[];fastHealing:{amount:number;except:string[]|null};effort:number;maxEffort:number;enigma:string;enigmaSolved:boolean;state:Record<string,number>;
 }
 export interface ThreatCommand { action:string;option?:string|null;amount?:number;visibility?:'gm'|'private'|'campaign';half?:boolean;ignoreResistance?:boolean;source?:string;critical?:boolean;normalAmount?:number|null;targetId?:string|null;targetVersion?:number|null;additionalCreatures?:number;sneakDamage?:number;perceptionContext?:ThreatSensoryContext; }
@@ -39,9 +45,9 @@ export function resolveThreatRenderer(sheet:ParanormalThreatSheet|null|undefined
 export function blankThreatSheet():ParanormalThreatSheet {return {
   templateId:'ordem_paranormal',version:1,rulesetVersion:'1.3',systemId:null,kind:'paranormal',challenge:0,element:'none',size:'medium',descriptors:'',senses:'',movement:'',speed:0,defense:10,criticalImmune:false,fortification:0,incorporeal:false,conditionImmunityGroups:[],
   attributes:{agilidade:1,forca:1,intelecto:1,presenca:1,vigor:1},skills:[{id:'fortitude',name:'Fortitude',attribute:'vigor',bonus:0},{id:'reflexos',name:'Reflexos',attribute:'agilidade',bonus:0},{id:'vontade',name:'Vontade',attribute:'presenca',bonus:0},{id:'iniciativa',name:'Iniciativa',attribute:'agilidade',bonus:0},{id:'percepcao',name:'Percepção',attribute:'presenca',bonus:0}],
-  attacks:[],abilities:[],defenses:[],conditionImmunities:[],sensoryAbilities:blankSensoryAbilities(),sensoryContext:blankSensoryContext(),presence:{enabled:false,difficulty:10,damage:'1d6',immuneNex:null},presenceTargets:[],fastHealing:{amount:0,except:[]},effort:0,maxEffort:0,enigma:'',enigmaSolved:false,state:{}
+  attacks:[],abilities:[],defenses:[],conditionImmunities:[],sensoryAbilities:blankSensoryAbilities(),sensoryContext:blankSensoryContext(),maneuverProfile:blankManeuverProfile(),maneuverImmune:false,maneuverLog:[],presence:{enabled:false,difficulty:10,damage:'1d6',immuneNex:null},presenceTargets:[],fastHealing:{amount:0,except:[]},effort:0,maxEffort:0,enigma:'',enigmaSolved:false,state:{}
 };}
-export function freshThreat(sheet:ParanormalThreatSheet):ParanormalThreatSheet {const copy=structuredClone(sheet);copy.systemId=null;copy.state={};copy.presenceTargets=[];copy.sensoryContext=blankSensoryContext();copy.enigmaSolved=false;copy.effort=copy.maxEffort;copy.abilities=copy.abilities.map(a=>({...a,remainingUses:a.maximumUses}));return copy;}
+export function freshThreat(sheet:ParanormalThreatSheet):ParanormalThreatSheet {const copy=structuredClone(sheet);copy.systemId=null;copy.state={};copy.presenceTargets=[];copy.sensoryContext=blankSensoryContext();copy.maneuverLog=[];copy.enigmaSolved=false;copy.effort=copy.maxEffort;copy.abilities=copy.abilities.map(a=>({...a,remainingUses:a.maximumUses}));return copy;}
 
 // Renderer safety for imported system files. The API remains authoritative for rule validation.
 export function isThreatSheet(value:unknown):value is ParanormalThreatSheet {
@@ -54,6 +60,9 @@ export function isThreatSheet(value:unknown):value is ParanormalThreatSheet {
   const sensory=value['sensoryAbilities'],context=value['sensoryContext'];
   if(sensory!==undefined&&(!object(sensory)||!numbers(sensory,['blindsightRange'])||!['scent','lowLightVision','darkvision'].every(k=>typeof sensory[k]==='boolean')))return false;
   if(context!==undefined&&(!object(context)||!['active','opponentUnseen','unavailable'].every(k=>typeof context[k]==='boolean')||!numbers(context,['concealment'])||!['other','darkness','paranormal-darkness','invisibility','blindness'].includes(String(context['cause']))||!(context['distance']===null||typeof context['distance']==='number'&&Number.isFinite(context['distance']))))return false;
+  const maneuver=value['maneuverProfile'],log=value['maneuverLog'];
+  if(maneuver!==undefined&&(!object(maneuver)||typeof maneuver['configured']!=='boolean'||typeof maneuver['includesSize']!=='boolean'||!strings(maneuver,['attribute'])||!numbers(maneuver,['bonus'])))return false;
+  if(value['maneuverImmune']!==undefined&&typeof value['maneuverImmune']!=='boolean'||log!==undefined&&(!Array.isArray(log)||!log.every(r=>object(r)&&strings(r,['id','targetId','targetKind','targetName','kind','outcome','at'])&&numbers(r,['attackerTotal','defenderTotal','ties','displacement'])&&typeof r['proneApplied']==='boolean')))return false;
   const attrs=value['attributes'],presence=value['presence'],healing=value['fastHealing'],state=value['state'];
   if(!object(attrs)||!numbers(attrs,THREAT_ATTRIBUTES.map(a=>a.key))||!object(state)||!Object.values(state).every(v=>typeof v==='number'&&Number.isInteger(v))||!stringArray(value['conditionImmunities'])||!stringArray(value['presenceTargets']))return false;
   if(!object(presence)||typeof presence['enabled']!=='boolean'||!numbers(presence,['difficulty'])||typeof presence['damage']!=='string'||!(presence['immuneNex']===null||typeof presence['immuneNex']==='number'))return false;

@@ -51,6 +51,7 @@ public static partial class CharacterEndpoints
                 || character.Sanity != result.Character.Sanity || character.MaxSanity != result.Character.MaxSanity
                 || !JsonElement.DeepEquals(JsonSerializer.SerializeToElement(result.Character.Fields), JsonSerializer.Deserialize<JsonElement>(character.FieldsJson));
             if (changed) { CharacterHistory.Capture(db, character, userId); Apply(character, result.Character); }
+            if(changed){try{await CharacterEncounterConditions.Sync(db,character,definition);}catch(ArgumentException error){return RuleError(error.Message);}}
             foreach (var roll in result.Rolls) db.DiceRolls.Add(new DiceRoll { CampaignId = character.CampaignId, UserId = userId, RequestId = Guid.NewGuid(),
                 Expression = roll.Expression, RollsJson = JsonSerializer.Serialize(roll.Rolls), KeptIndexesJson = JsonSerializer.Serialize(roll.KeptIndexes),
                 Modifier = roll.Modifier, Total = roll.Total, Visibility = input.Command.Visibility });

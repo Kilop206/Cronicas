@@ -68,6 +68,8 @@ public static partial class CharacterEndpoints
             if (fieldErrors is not null) return Results.ValidationProblem(fieldErrors);
             CharacterHistory.Capture(db, character, userId);
             Apply(character, input with { Fields = values });
+            try{if(await RulesDefinition(db,character.CampaignId) is {} ruleDefinition)await CharacterEncounterConditions.Sync(db,character,ruleDefinition);}
+            catch(ArgumentException exception){return RuleError(exception.Message);}
             try { await db.SaveChangesAsync(); }
             catch (DbUpdateConcurrencyException) { return Results.Conflict(new { message = "A ficha mudou. Atualize antes de salvar." }); }
             return Results.Ok(View(character, true));
@@ -103,6 +105,8 @@ public static partial class CharacterEndpoints
             if (fieldErrors is not null) return Results.ValidationProblem(fieldErrors);
             CharacterHistory.Capture(db, character, userId);
             CharacterHistory.Restore(character, snapshot with { FieldsJson = JsonSerializer.Serialize(restoredValues) });
+            try{if(await RulesDefinition(db,character.CampaignId) is {} ruleDefinition)await CharacterEncounterConditions.Sync(db,character,ruleDefinition);}
+            catch(ArgumentException exception){return RuleError(exception.Message);}
             try { await db.SaveChangesAsync(); }
             catch (DbUpdateConcurrencyException) { return Results.Conflict(new { message = "A ficha mudou. Atualize antes de restaurar." }); }
             return Results.Ok(View(character, true));

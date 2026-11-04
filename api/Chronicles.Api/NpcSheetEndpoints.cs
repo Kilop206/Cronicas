@@ -56,6 +56,7 @@ public static partial class NpcEndpoints
     }
     private static void MapNpcSheets(RouteGroupBuilder api)
     {
+        MapNpcManeuvers(api);
         api.MapPost("/campaigns/{campaignId:guid}/npcs/validate-sheet",async Task<IResult>(Guid campaignId,ParanormalThreatSheet sheet,HttpContext http,AppDbContext db)=>
         {
             if(UserId(http) is not {} userId)return Results.Unauthorized();var role=await Role(db,campaignId,userId);if(role is null)return Results.NotFound();if(!Master(role))return Results.Problem("Somente mestres validam modelos de ameaças.",statusCode:403);
