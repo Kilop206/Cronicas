@@ -1,3 +1,5 @@
+using System.Text.Json;
+
 namespace Chronicles.Api;
 
 // Shared condition relationships; the two editions resolve their penalties separately.
@@ -94,7 +96,7 @@ public static class D20Conditions
     public static decimal Speed(RuleState s)
     {
         var active = Effective(s); if (active.Contains("imovel") || active.Contains("inconsciente")) return 0;
-        decimal speed = s.N("deslocamento");
+        decimal speed = s.Fields.TryGetValue("deslocamento",out var value) && value.ValueKind==JsonValueKind.Number && value.TryGetDecimal(out var number)?number:0;
         if (active.Contains("lento")) speed = Math.Floor(speed / 3) * 1.5m;
         if (active.Contains("sobrecarregado")) speed = Math.Max(0, speed - 3);
         if (active.Contains("caido")) speed = Math.Min(speed, 1.5m);

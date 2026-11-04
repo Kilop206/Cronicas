@@ -28,7 +28,7 @@ public static class ProfileExportEndpoints
             var npcs = await db.Npcs.AsNoTracking().Where(x => x.Campaign.OwnerId == userId)
                 .Select(x => new { x.Id, x.CampaignId, x.Name, x.PortraitUrl, x.Appearance, x.Personality, x.Motivation,
                     x.Relationships, x.Location, x.Secrets, x.Status, x.Visibility, x.Health, x.MaxHealth,
-                    x.Version, x.CreatedAt, x.UpdatedAt }).ToListAsync();
+                      x.Version, x.SheetJson, x.HistoryJson, x.CreatedAt, x.UpdatedAt }).ToListAsync();
             var characterIds = characters.Select(x => x.Id).ToArray();
             var inventory = await db.CharacterInventoryItems.AsNoTracking().Where(x => characterIds.Contains(x.CharacterId))
                 .Select(x => new { x.Id, x.CharacterId, x.Name, x.Category, x.Quantity, x.Weight, x.Notes, x.Version, x.CreatedAt, x.UpdatedAt }).ToListAsync();

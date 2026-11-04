@@ -74,12 +74,13 @@ public static class EncounterEndpoints
                 return Results.Conflict(new { message = "Participante já está neste encontro." });
             var participant = new EncounterParticipant { EncounterId = id, CharacterId = character?.Id, NpcId = npc?.Id,
                 Initiative = input.Initiative, Health = character?.Health ?? npc!.Health, MaxHealth = character?.MaxHealth ?? npc!.MaxHealth };
+            if(npc is not null && NpcEndpoints.ConditionText(npc) is {} conditions) participant.Conditions=conditions;
             db.EncounterParticipants.Add(participant); encounter.UpdatedAt = DateTime.UtcNow;
             try { await db.SaveChangesAsync(); }
             catch (DbUpdateException ex) when (ex.InnerException is PostgresException { SqlState: PostgresErrorCodes.UniqueViolation })
             { return Results.Conflict(new { message = "Participante já está neste encontro." }); }
             return Results.Created($"/api/encounters/{id}", new { participant.Id, participant.CharacterId, participant.NpcId,
-                name = character?.Name ?? npc!.Name, participant.Initiative, participant.Health, participant.MaxHealth, participant.Conditions });
+                name = character?.Name ?? npc!.Name, participant.Initiative, participant.Health, participant.MaxHealth, participant.Conditions, npcSheet=npc?.SheetJson is not null });
         });
 
         api.MapPatch("/encounter-participants/{id:guid}", async Task<IResult> (Guid id, ParticipantInput input, HttpContext http, AppDbContext db) =>
@@ -92,6 +93,7 @@ public static class EncounterEndpoints
             if (participant.Encounter.Status == "completed") return Results.Conflict(new { message = "Encontro concluído." });
             if (input.MaxHealth is < 1 or > 9999 || input.Health < 0 || input.Health > input.MaxHealth || input.Initiative is < -999 or > 999 || input.Conditions is null || input.Conditions.Length > 1000)
                 return Results.ValidationProblem(new Dictionary<string, string[]> { ["participant"] = ["Verifique vida, iniciativa e condições."] });
+            if(participant.Npc?.SheetJson is not null && input.Conditions.Trim()!=participant.Conditions.Trim())return Results.ValidationProblem(new Dictionary<string,string[]>{["conditions"]=["Altere as condições na ficha da ameaça para aplicar suas regras e imunidades."]});
             participant.Health = input.Health; participant.MaxHealth = input.MaxHealth; participant.Initiative = input.Initiative; participant.Conditions = input.Conditions.Trim();
             if (participant.Character is { } character)
             {
@@ -100,13 +102,17 @@ public static class EncounterEndpoints
             }
             else if (participant.Npc is { } npc && (npc.Health != input.Health || npc.MaxHealth != input.MaxHealth))
             {
+                NpcEndpoints.Capture(npc,userId);
+                var previousHealth=npc.Health;
                 npc.Health = input.Health; npc.MaxHealth = input.MaxHealth; npc.Version++; npc.UpdatedAt = DateTime.UtcNow;
+                NpcEndpoints.AdjustHealingLedger(npc,previousHealth);
+                await NpcEndpoints.SyncNpcParticipants(db,npc);
             }
             participant.Encounter.UpdatedAt = DateTime.UtcNow;
             try { await db.SaveChangesAsync(); }
             catch (DbUpdateConcurrencyException) { return Results.Conflict(new { message = "Os recursos mudaram. Atualize o encontro." }); }
             return Results.Ok(new { participant.Id, participant.CharacterId, participant.NpcId,
-                name = participant.Character?.Name ?? participant.Npc!.Name, participant.Initiative, participant.Health, participant.MaxHealth, participant.Conditions });
+                name = participant.Character?.Name ?? participant.Npc!.Name, participant.Initiative, participant.Health, participant.MaxHealth, participant.Conditions, npcSheet=participant.Npc?.SheetJson is not null });
         });
 
         api.MapDelete("/encounter-participants/{id:guid}", async Task<IResult> (Guid id, HttpContext http, AppDbContext db) =>
@@ -156,7 +162,7 @@ public static class EncounterEndpoints
     private static object View(Encounter x)
     {
         var participants = x.Participants.OrderByDescending(p => p.Initiative).ThenBy(p => p.Id)
-            .Select(p => new { p.Id, p.CharacterId, p.NpcId, name = p.Character?.Name ?? p.Npc!.Name, p.Initiative, p.Health, p.MaxHealth, p.Conditions }).ToList();
+            .Select(p => new { p.Id, p.CharacterId, p.NpcId, name = p.Character?.Name ?? p.Npc!.Name, p.Initiative, p.Health, p.MaxHealth, p.Conditions, npcSheet=p.Npc?.SheetJson is not null }).ToList();
         return new { x.Id, x.CampaignId, x.Title, x.Status, x.Round, x.TurnIndex, x.CreatedAt, x.UpdatedAt, participants };
     }
     public sealed record CreateEncounterInput(string Title);

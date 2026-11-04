@@ -16,7 +16,7 @@ public sealed record SystemRevision(int Revision, DateTime SavedAt, string Name,
     string? RulesetVersion, string? RendererMode, NpcTemplate[]? NpcTemplates = null, CthulhuOccupationDefinition? CthulhuOccupations = null);
 public sealed record NpcTemplate(string Id, string Name, string? Appearance = null, string? Personality = null,
     string? Motivation = null, string? Relationships = null, string? Location = null,
-    string? Status = null, string? Visibility = null, int? Health = null, int? MaxHealth = null);
+    string? Status = null, string? Visibility = null, int? Health = null, int? MaxHealth = null, ParanormalThreatSheet? Sheet = null);
 public sealed record SystemDefinition(SystemField[] Fields, SheetLayout? Layout, string? TemplateId = null,
     int TemplateVersion = 1, string? RulesetVersion = null, string? RendererMode = null,
     int Revision = 1, SystemRevision[]? History = null, NpcTemplate[]? NpcTemplates = null, CthulhuOccupationDefinition? CthulhuOccupations = null)

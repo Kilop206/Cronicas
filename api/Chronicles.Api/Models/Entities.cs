@@ -111,6 +111,8 @@ public sealed class Npc
     public string Visibility { get; set; } = "gm";
     public int Health { get; set; } = 10;
     public int MaxHealth { get; set; } = 10;
+    public string? SheetJson { get; set; }
+    public string HistoryJson { get; set; } = "[]";
     public int Version { get; set; } = 1;
     public DateTime CreatedAt { get; set; } = DateTime.UtcNow;
     public DateTime UpdatedAt { get; set; } = DateTime.UtcNow;

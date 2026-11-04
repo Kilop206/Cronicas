@@ -17,7 +17,7 @@ public static class SystemEndpoints
         {
             if (UserId(http) is not { } userId) return Results.Unauthorized();
             var systems = await db.RpgSystems.AsNoTracking().Where(x => x.OwnerId == userId).OrderBy(x => x.Name).ToListAsync();
-            return Results.Ok(systems.Select(View));
+            return Results.Ok(systems.Select(system=>View(system)));
         });
 
         api.MapGet("/systems/{id:guid}", async Task<IResult> (Guid id, HttpContext http, AppDbContext db) =>
@@ -25,7 +25,8 @@ public static class SystemEndpoints
             if (UserId(http) is not { } userId) return Results.Unauthorized();
             var system = await db.RpgSystems.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id);
             if (system is null || system.OwnerId != userId && !await db.CampaignMemberships.AnyAsync(x => x.UserId == userId && x.Campaign.SystemId == id)) return Results.NotFound();
-            return Results.Ok(View(system));
+            var includeThreats=system.OwnerId==userId || await db.CampaignMemberships.AnyAsync(x=>x.UserId==userId && x.Campaign.SystemId==id && (x.Role=="owner"||x.Role=="gm"||x.Role=="co-gm"));
+            return Results.Ok(View(system,includeThreats));
         });
 
         api.MapPost("/systems", async Task<IResult> (SystemInput input, HttpContext http, AppDbContext db) =>
@@ -144,12 +145,12 @@ public static class SystemEndpoints
     private static SystemRevision Snapshot(RpgSystem system, SystemDefinition definition) => new(definition.Revision,
         system.UpdatedAt, system.Name, system.Description, definition.Fields, definition.Layout,
         definition.TemplateId, definition.TemplateVersion, definition.RulesetVersion, definition.RendererMode, definition.NpcTemplates, definition.CthulhuOccupations);
-    private static object View(RpgSystem system)
+    private static object View(RpgSystem system,bool includeThreats=true)
     {
         var definition = SystemDefinition.Read(system.SchemaJson);
         return new { system.Id, system.OwnerId, system.Name, system.Description, fields = definition.Fields, layout = definition.Layout,
             definition.TemplateId, definition.TemplateVersion, definition.RulesetVersion, definition.RendererMode,
-            definition.Revision, npcTemplates = definition.NpcTemplates ?? [], cthulhuOccupations = definition.CthulhuOccupations, revisions = (definition.History ?? []).Select(item => new { item.Revision, item.SavedAt, item.Name }),
+            definition.Revision, npcTemplates = (definition.NpcTemplates ?? []).Where(t=>includeThreats||t.Sheet is null), cthulhuOccupations = definition.CthulhuOccupations, revisions = (definition.History ?? []).Select(item => new { item.Revision, item.SavedAt, item.Name }),
             system.CreatedAt, system.UpdatedAt };
     }
     private static Dictionary<string, string[]> Validate(SystemInput input)
@@ -166,7 +167,8 @@ public static class SystemEndpoints
             || template.Status is not (null or "active" or "missing" or "deceased" or "unknown")
             || template.Visibility is not (null or "gm" or "campaign") || template.MaxHealth is < 1 or > 9999
             || template.Health is < 0 or > 9999 || template.Health > template.MaxHealth
-            || (template.Health is null) != (template.MaxHealth is null))
+            || (template.Health is null) != (template.MaxHealth is null)
+            || template.Sheet is not null && (input.TemplateId!="ordem_paranormal" || input.RulesetVersion!="1.3" || ParanormalThreatSchema.Validate(template.Sheet) is not null))
             || templates.Select(template => template.Id).Distinct(StringComparer.Ordinal).Count() != templates.Length))
             errors["npcTemplates"] = ["Modelo de NPC inválido ou repetido."];
         if (input.Name?.Trim().Length is not (>= 3 and <= 120) || input.Description is null || input.Description.Length > 2000) errors["system"] = ["Nome ou descrição inválidos."];

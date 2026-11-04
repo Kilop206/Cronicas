@@ -1,4 +1,5 @@
 using System.Security.Claims;
+using System.Text.Json;
 using Chronicles.Api.Data;
 using Chronicles.Api.Models;
 using Microsoft.EntityFrameworkCore;
@@ -6,10 +7,11 @@ using Npgsql;
 
 namespace Chronicles.Api;
 
-public static class NpcEndpoints
+public static partial class NpcEndpoints
 {
     public static void MapNpcEndpoints(this RouteGroupBuilder api)
     {
+        MapNpcSheets(api);
         api.MapGet("/campaigns/{campaignId:guid}/npcs", async Task<IResult> (Guid campaignId, int? page, string? search, HttpContext http, AppDbContext db) =>
         {
             if (UserId(http) is not { } userId) return Results.Unauthorized();
@@ -25,7 +27,7 @@ public static class NpcEndpoints
                 query = query.Where(x => EF.Functions.ILike(x.Name, pattern, "\\"));
             }
             var total = await query.CountAsync();
-            var npcs = await query.OrderBy(x => x.Name).Skip((currentPage - 1) * 20).Take(20).ToListAsync();
+            var npcs = await ForView(query.OrderBy(x => x.Name).Skip((currentPage - 1) * 20).Take(20)).ToListAsync();
             return Results.Ok(new { items = npcs.Select(x => View(x, Master(role))), total, page = currentPage });
         });
 
@@ -35,6 +37,8 @@ public static class NpcEndpoints
             var role = await Role(db, campaignId, userId);
             if (role is null) return Results.NotFound();
             if (!Master(role)) return Results.Problem("Apenas mestres criam NPCs.", statusCode: 403);
+            if(await SheetContextError(db,campaignId,input.Sheet,null) is {} sheetError) return SheetError(sheetError);
+            input=await BindSheetSystem(db,campaignId,input);
             var errors = Validate(input);
             if (errors.Count > 0) return Results.ValidationProblem(errors);
             var npc = new Npc { CampaignId = campaignId, Name = input.Name!.Trim() };
@@ -47,7 +51,7 @@ public static class NpcEndpoints
         api.MapGet("/npcs/{id:guid}", async Task<IResult> (Guid id, HttpContext http, AppDbContext db) =>
         {
             if (UserId(http) is not { } userId) return Results.Unauthorized();
-            var npc = await db.Npcs.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id);
+            var npc = await ForView(db.Npcs.AsNoTracking()).SingleOrDefaultAsync(x => x.Id == id);
             if (npc is null) return Results.NotFound();
             var role = await Role(db, npc.CampaignId, userId);
             if (role is null || !Master(role) && npc.Visibility != "campaign") return Results.NotFound();
@@ -63,11 +67,15 @@ public static class NpcEndpoints
             if (role is null) return Results.NotFound();
             if (!Master(role)) return Results.Problem("Apenas mestres editam NPCs.", statusCode: 403);
             if (input.Version != npc.Version) return Results.Conflict(new { message = "O NPC mudou. Atualize antes de salvar." });
+            if(await SheetContextError(db,npc.CampaignId,input.Sheet,npc.SheetJson) is {} sheetError) return SheetError(sheetError);
+            input=await BindSheetSystem(db,npc.CampaignId,input,npc.SheetJson);
             var errors = Validate(input);
             if (errors.Count > 0) return Results.ValidationProblem(errors);
+            Capture(npc,userId);
             Apply(npc, input);
             npc.Version++;
             npc.UpdatedAt = DateTime.UtcNow;
+            await SyncNpcParticipants(db,npc);
             try { await db.SaveChangesAsync(); }
             catch (DbUpdateConcurrencyException) { return Results.Conflict(new { message = "O NPC mudou. Atualize antes de salvar." }); }
             return Results.Ok(View(npc, true));
@@ -97,6 +105,7 @@ public static class NpcEndpoints
     private static Task<string?> Role(AppDbContext db, Guid campaignId, Guid userId) => db.CampaignMemberships.AsNoTracking()
         .Where(x => x.CampaignId == campaignId && x.UserId == userId).Select(x => x.Role).SingleOrDefaultAsync();
     private static bool Master(string role) => role is "owner" or "gm" or "co-gm";
+    private static IQueryable<Npc> ForView(IQueryable<Npc> query)=>query.Select(n=>new Npc{Id=n.Id,CampaignId=n.CampaignId,Name=n.Name,PortraitUrl=n.PortraitUrl,Appearance=n.Appearance,Personality=n.Personality,Motivation=n.Motivation,Relationships=n.Relationships,Location=n.Location,Secrets=n.Secrets,Status=n.Status,Visibility=n.Visibility,Health=n.Health,MaxHealth=n.MaxHealth,Version=n.Version,CreatedAt=n.CreatedAt,UpdatedAt=n.UpdatedAt,SheetJson=n.SheetJson});
     private static object View(Npc npc, bool master)
     {
         var result = new Dictionary<string, object?>
@@ -107,11 +116,12 @@ public static class NpcEndpoints
             ["visibility"] = npc.Visibility, ["health"] = npc.Health, ["maxHealth"] = npc.MaxHealth,
             ["version"] = npc.Version, ["createdAt"] = npc.CreatedAt, ["updatedAt"] = npc.UpdatedAt
         };
-        if (master) result["secrets"] = npc.Secrets;
+        if (master) {result["secrets"] = npc.Secrets;result["sheet"] = ParanormalThreatSchema.Read(npc.SheetJson);}
         return result;
     }
     private static void Apply(Npc npc, NpcInput input)
     {
+        var previousHealth=npc.Health;var oldSheet=ParanormalThreatSchema.Read(npc.SheetJson);
         npc.Name = input.Name!.Trim();
         npc.PortraitUrl = string.IsNullOrWhiteSpace(input.PortraitUrl) ? null : input.PortraitUrl.Trim();
         npc.Appearance = input.Appearance!.Trim();
@@ -124,6 +134,15 @@ public static class NpcEndpoints
         npc.Visibility = input.Visibility!;
         npc.Health = input.Health;
         npc.MaxHealth = input.MaxHealth;
+        var sheet=input.Sheet??ParanormalThreatSchema.Read(npc.SheetJson);
+        if(sheet is not null)
+        {
+            var state=new Dictionary<string,int>(sheet.State);var previousBlocked=state.GetValueOrDefault("cura_impedida");
+            var healing=oldSheet is not null && oldSheet.State.GetValueOrDefault("cura_impedida")==previousBlocked?Math.Max(0,input.Health-previousHealth):0;
+            var blocked=Math.Clamp(previousBlocked-healing,0,input.MaxHealth-input.Health);
+            if(blocked>0)state["cura_impedida"]=blocked;else state.Remove("cura_impedida");
+            npc.SheetJson=JsonSerializer.Serialize(sheet with{State=state});
+        }
     }
     private static Dictionary<string, string[]> Validate(NpcInput input)
     {
@@ -138,9 +157,10 @@ public static class NpcEndpoints
         if (input.Status is not ("active" or "missing" or "deceased" or "unknown")) errors["status"] = ["Status inválido."];
         if (input.Visibility is not ("gm" or "campaign")) errors["visibility"] = ["Visibilidade inválida."];
         if (input.MaxHealth is < 1 or > 9999 || input.Health < 0 || input.Health > input.MaxHealth) errors["health"] = ["Vida fora do limite."];
+        if(input.Sheet is not null && ParanormalThreatSchema.Validate(input.Sheet) is {} sheetError)errors["sheet"]=[sheetError];
         return errors;
     }
     public sealed record NpcInput(string? Name, string? PortraitUrl, string? Appearance, string? Personality,
         string? Motivation, string? Relationships, string? Location, string? Secrets, string? Status,
-        string? Visibility, int Health, int MaxHealth, int Version);
+        string? Visibility, int Health, int MaxHealth, int Version, ParanormalThreatSheet? Sheet = null);
 }

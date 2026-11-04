@@ -126,6 +126,8 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(x => x.Status).HasMaxLength(20);
             entity.Property(x => x.Visibility).HasMaxLength(20);
             entity.Property(x => x.Version).IsConcurrencyToken();
+            entity.Property(x => x.SheetJson).HasColumnType("jsonb");
+            entity.Property(x => x.HistoryJson).HasColumnType("jsonb");
             entity.HasOne(x => x.Campaign).WithMany().HasForeignKey(x => x.CampaignId).OnDelete(DeleteBehavior.Cascade);
         });
         model.Entity<CharacterFavorite>(entity =>
