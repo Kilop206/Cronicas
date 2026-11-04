@@ -13,6 +13,8 @@ O PDF `chamado-de-cthulhu-livro do guardião-7-edicao.pdf` foi localizado, mas n
 
 ## Versionamento e compatibilidade
 
+Atualização de 04/11/2026: ameaças de Ordem 1.3 receberam incorporeidade, fortificação contra adicionais de críticos/furtivos e imunidades por categoria, com filtragem de condições derivadas e agravamentos. Conferência no PDF local, páginas PDF 190 e 320–323. A origem do efeito é explícita; dano de um elemento não é automaticamente tratado como ritual ou item amaldiçoado. As extensões são aditivas ao schema de ameaças e neutras nas fichas antigas; ver [paranormal-threats.md](paranormal-threats.md).
+
 Atualização de 04/11/2026: o capítulo de ameaças e as clarificações foram conferidos no PDF Ordem 1.3, páginas PDF 188–190 e 320–323. Inimigos agora têm schema próprio versionado, com bônus finais, ataques múltiplos, RD por fonte, Presença Perturbadora e demais mecanismos descritos em [paranormal-threats.md](paranormal-threats.md). A estrutura não concede automaticamente bloqueio, esquiva ou contra-ataque de agentes às ameaças. Não foram copiados bestiários nem cadastradas criaturas oficiais automaticamente.
 
 Atualização de 04/11/2026: o combate de D&D 2014 v5 também executa Ataque Descuidado e Crítico Brutal. As seções foram verificadas no PDF local, páginas PDF 47–48. A escolha de turno é explícita e o dado adicional usa a arma estruturada, sem inferir propriedades pelo nome. Limites da associação entre atacante/alvo estão registrados em [rules-engine.md](rules-engine.md).

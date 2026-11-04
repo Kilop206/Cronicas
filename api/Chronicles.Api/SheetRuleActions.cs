@@ -153,6 +153,8 @@ public sealed class RuleState
     public Dictionary<string, JsonElement> Fields { get; }
     public Dictionary<string, int> State { get; } = [];
     public List<RuleRoll> Rolls { get; } = [];
+    // Only explicitly configured creature immunities use this; player editions keep their existing defaults.
+    public IReadOnlySet<string> ConditionImmunities { get; set; } = new HashSet<string>();
     public RuleState(CharacterInput input, Func<int, int>? draw = null)
     {
         character = input;

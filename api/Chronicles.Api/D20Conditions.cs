@@ -18,15 +18,16 @@ public static class D20Conditions
     public static bool Has(RuleState s, string condition) => Effective(s).Contains(condition);
     public static HashSet<string> Effective(RuleState s)
     {
-        var active = Common.Select(c => c.Value).Concat(["asfixiado", "enfeiticado"]).Where(c => s.Get(Key(c)) != 0).ToHashSet(StringComparer.Ordinal);
-        if ((s.Health == 0 && s.Get("age_pv_zero") == 0) || s.Get("morto") > 0 || s.Get("asfixia_inconsciente") > 0) active.Add("inconsciente");
+        var active = Common.Select(c => c.Value).Concat(["asfixiado", "enfeiticado"]).Where(c => s.Get(Key(c)) != 0 && !s.ConditionImmunities.Contains(c)).ToHashSet(StringComparer.Ordinal);
         var relationships = new Dictionary<string, string[]> {
             ["agarrado"] = ["desprevenido", "imovel"], ["atordoado"] = ["desprevenido"], ["cego"] = ["desprevenido", "lento"],
             ["enredado"] = ["lento", "vulneravel"], ["exausto"] = ["debilitado", "lento", "vulneravel"], ["fatigado"] = ["fraco", "vulneravel"],
             ["inconsciente"] = ["indefeso"], ["indefeso"] = ["desprevenido"], ["paralisado"] = ["imovel", "indefeso"],
             ["petrificado"] = ["inconsciente"], ["surpreendido"] = ["desprevenido"] };
         bool changed;
-        do { changed = false; foreach (var pair in relationships) if (active.Contains(pair.Key)) foreach (var implied in pair.Value) changed |= active.Add(implied); } while (changed);
+        do { changed = false; foreach (var pair in relationships) if (active.Contains(pair.Key)) foreach (var implied in pair.Value) if(!s.ConditionImmunities.Contains(implied)) changed |= active.Add(implied); } while (changed);
+        // Immunity to a condition effect does not confer permission to act at zero HP or after death/asphyxia.
+        if ((s.Health == 0 && s.Get("age_pv_zero") == 0) || s.Get("morto") > 0 || s.Get("asfixia_inconsciente") > 0) active.UnionWith(["inconsciente","indefeso","desprevenido"]);
         return active;
     }
     public static RuleAction[] Actions(bool paranormal) => [new("condition", "Aplicar condição", "Rodadas (0: até fim da cena)", Choices(paranormal)),
@@ -43,6 +44,7 @@ public static class D20Conditions
         }
         var condition = command.Option!;
         if (command.Action == "condition-remove") { s.Set(Key(condition), 0); if (condition == "asfixiado") EndAsphyxia(s); return "Condição removida; efeitos de outras fontes ainda se aplicam."; }
+        if(s.ConditionImmunities.Contains(condition))return "Condição impedida por imunidade; ficha preservada.";
         var active = Effective(s);
         var upgrade = condition switch {
             "abalado" when active.Contains("abalado") || active.Contains("apavorado") => "apavorado",
@@ -51,6 +53,7 @@ public static class D20Conditions
             "frustrado" when active.Contains("frustrado") || active.Contains("esmorecido") => "esmorecido",
             "fatigado" when active.Contains("exausto") => "inconsciente", "fatigado" when active.Contains("fatigado") => "exausto",
             "exausto" when active.Contains("exausto") => "inconsciente", _ => condition };
+        if(s.ConditionImmunities.Contains(upgrade))return "Agravamento impedido por imunidade; a condição anterior foi mantida.";
         // 1 = scene, -1 = persistent, N+1 = N rounds. Bleeding has its own recovery rule.
         var duration = upgrade == "sangrando" ? 1 : command.Action == "condition-persistent" ? -1 : command.Amount == 0 ? 1 : command.Amount + 1;
         var previous = s.Get(Key(upgrade));

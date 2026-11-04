@@ -33,12 +33,15 @@ public sealed record ParanormalThreatSheet
     public decimal Speed { get; init; }
     public int Defense { get; init; } = 10;
     public bool CriticalImmune { get; init; }
+    public int Fortification { get; init; }
+    public bool Incorporeal { get; init; }
     public ThreatAttributes Attributes { get; init; } = new();
     public ThreatSkill[] Skills { get; init; } = [];
     public ThreatAttack[] Attacks { get; init; } = [];
     public ThreatAbility[] Abilities { get; init; } = [];
     public ThreatDefense[] Defenses { get; init; } = [];
     public string[] ConditionImmunities { get; init; } = [];
+    public string[] ConditionImmunityGroups { get; init; } = [];
     public ThreatPresence Presence { get; init; } = new();
     public Guid[] PresenceTargets { get; init; } = [];
     public ThreatFastHealing FastHealing { get; init; } = new();
@@ -55,6 +58,11 @@ public static class ParanormalThreatSchema
     public static readonly string[] Elements = ["sangue", "morte", "conhecimento", "energia", "medo"];
     public static readonly string[] DamageTypes = ["balistico", "corte", "eletricidade", "fogo", "frio", "impacto", "mental", "perfuracao", "quimico", .. Elements];
     public static readonly string[] MentalConditions = ["abalado", "alquebrado", "apavorado", "atordoado", "confuso", "esmorecido", "fascinado", "frustrado", "pasmo"];
+    public static readonly Dictionary<string,string[]> ImmunityGroups = new() {
+        ["all"] = D20Conditions.Choices(true).Select(c=>c.Value).ToArray(),
+        ["mental"] = ["alquebrado","atordoado","confuso","esmorecido","fascinado","frustrado","pasmo"],
+        ["fear"] = ["abalado","apavorado"], ["paralysis"] = ["agarrado","enredado","imovel","lento","paralisado"],
+        ["fatigue"] = ["exausto","fatigado"], ["senses"] = ["cego","ofuscado","surdo"] };
     public static readonly string[] ActionKinds = ["standard", "move", "full", "reaction", "free", "passive"];
     private static readonly Regex Key = new("^[a-z][a-z0-9_]{0,39}$", RegexOptions.CultureInvariant);
     public static bool CampaignSupports(SystemDefinition? system) => system?.TemplateId == "ordem_paranormal" && system.RulesetVersion == "1.3";
@@ -70,6 +78,7 @@ public static class ParanormalThreatSchema
             Require(sheet.Kind is "paranormal" or "human" or "animal" && sheet.Size is "tiny" or "small" or "medium" or "large" or "huge" or "colossal", "Tipo ou tamanho de ameaça inválido.");
             Require(sheet.Element == "none" || Elements.Contains(sheet.Element), "Elemento inválido.");
             Require(sheet.Challenge is >= 0 and <= 9999 && sheet.Defense is >= 0 and <= 9999 && sheet.Speed is >= 0 and <= 999, "VD, Defesa ou deslocamento fora dos limites.");
+            Require(sheet.Fortification is >=0 and <=100,"Fortificação deve ficar entre 0 e 100% (100% já impede todos os críticos).");
             Require(Text(sheet.Descriptors,500) && Text(sheet.Senses,2000) && Text(sheet.Movement,500) && Text(sheet.Enigma,5000), "Descrição de ameaça muito longa.");
             Require(sheet.Attributes is not null && new[]{sheet.Attributes.Agilidade,sheet.Attributes.Forca,sheet.Attributes.Intelecto,sheet.Attributes.Presenca,sheet.Attributes.Vigor}.All(n=>n is >= 0 and <= 20), "Atributos devem ficar entre 0 e 20.");
             Require(sheet.Effort >= 0 && sheet.Effort <= sheet.MaxEffort && sheet.MaxEffort is >= 0 and <= 9999, "PE fora dos limites.");
@@ -85,6 +94,7 @@ public static class ParanormalThreatSchema
                 Require(attack!.Style is "melee" or "ranged" && attack.Bonus is >= -999 and <= 9999 && attack.Count is >= 1 and <= 10 && attack.Margin is >= 2 and <= 20 && attack.Multiplier is >= 2 and <= 5 && attack.Ammunition is >= -1 and <= 9999 && attack.Cost is >= 0 and <= 9999, "Parâmetros de ataque fora dos limites.");
                 Require(ActionKinds.Contains(attack.Action) && attack.Action!="passive" && Text(attack.Range,160) && Text(attack.Effect,2000) && DamageTypes.Contains(attack.DamageType) && DamageTypes.Contains(attack.ExtraType), "Tipo, alcance ou efeito de ataque inválido.");
                 Require(attack.Damage is not null && attack.ExtraDamage is not null,"Informe as fórmulas de dano.");
+                Require(!sheet.Incorporeal || !UsesStrength(attack.Damage!) && !UsesStrength(attack.ExtraDamage!),"Ameaças incorpóreas não têm Força. Ajuste as referências de dano antes de ativar incorporeidade.");
                 DamageFormula.Parse(attack.Damage!,state); DamageFormula.Parse(attack.ExtraDamage!,state);
             }
             ids.Clear();
@@ -92,11 +102,13 @@ public static class ParanormalThreatSchema
             {
                 Require(ability is not null && Id(ability.Id) && ids.Add(ability.Id) && Text(ability.Name,120) && ability.Name.Length>0 && ActionKinds.Contains(ability.Action) && ability.Cost is >= 0 and <= 9999 && ability.MaximumUses is >= 0 and <= 9999 && ability.RemainingUses>=0 && ability.RemainingUses<=ability.MaximumUses && ability.Recharge is "manual" or "turn" or "scene" && Text(ability.Description,4000) && Text(ability.Roll,160),"Habilidade inválida ou repetida.");
                 if(ability!.Roll.Length>0) DamageFormula.Parse(ability.Roll,state);
+                Require(!sheet.Incorporeal || !UsesStrength(ability.Roll),"Ameaças incorpóreas não têm Força. Ajuste a fórmula da habilidade.");
             }
             ids.Clear();
             foreach(var defense in sheet.Defenses!)
                 Require(defense is not null && Id(defense.Id) && ids.Add(defense.Id) && (DamageTypes.Contains(defense.Type)||defense.Type is "all" or "paranormal") && defense.Effect is "reduction" or "immunity" or "vulnerability" && defense.Amount is >=0 and <=9999 && defense.SourceKind is "base" or "ability" or "item" or "ritual" or "ally" && Id(defense.SourceId) && Text(defense.Source,160) && (defense.Except is null || defense.Except.Length<=14 && defense.Except.All(DamageTypes.Contains) && defense.Except.Distinct().Count()==defense.Except.Length),"Defesa de dano inválida ou repetida.");
             Require(sheet.ConditionImmunities is {Length: <= 35} && sheet.ConditionImmunities.All(id=>D20Conditions.Choices(true).Any(c=>c.Value==id)) && sheet.ConditionImmunities.Distinct().Count()==sheet.ConditionImmunities.Length,"Imunidades de condição inválidas.");
+            Require(sheet.ConditionImmunityGroups is {Length: <=6} && sheet.ConditionImmunityGroups.All(k=>k is not null && ImmunityGroups.ContainsKey(k)) && sheet.ConditionImmunityGroups.Distinct().Count()==sheet.ConditionImmunityGroups.Length,"Categorias de imunidade inválidas.");
             Require(sheet.Presence is not null && sheet.Presence.Difficulty is >=1 and <=9999 && (sheet.Presence.ImmuneNex is null or 99 || sheet.Presence.ImmuneNex is >=0 and <=95 && sheet.Presence.ImmuneNex%5==0) && sheet.Presence.Damage is not null,"Presença Perturbadora inválida.");
             DamageFormula.Parse(sheet.Presence!.Damage!,state);
             Require(sheet.PresenceTargets is {Length: <=100} && sheet.PresenceTargets.All(id=>id!=Guid.Empty) && sheet.PresenceTargets.Distinct().Count()==sheet.PresenceTargets.Length,"Registro de presença inválido.");
@@ -104,6 +116,7 @@ public static class ParanormalThreatSchema
             var indicators=sheet.State!;
             Require(indicators.GetValueOrDefault("cura_impedida") is >=0 and <=9999,"Dano não recuperável por Cura Acelerada inválido.");
             Require(indicators.GetValueOrDefault("dados_zero_penalidade") is >=0 and <=40,"Quantidade de dados para atributo zero inválida.");
+            Require(indicators.GetValueOrDefault("chamas_origem") is >=0 and <=5,"Origem das chamas inválida.");
             Require(indicators.GetValueOrDefault("sangrando") is >=0 and <=1 && (indicators.GetValueOrDefault("sangrando")==0||!ImmuneCondition(sheet,"sangrando")),"Sangramento inválido ou impedido por imunidade.");
             foreach(var pair in indicators.Where(p=>p.Key.StartsWith("cond_",StringComparison.Ordinal))) Require(D20Conditions.Choices(true).Any(c=>"cond_"+c.Value==pair.Key) && (pair.Value==0 || !ImmuneCondition(sheet,pair.Key[5..])),"Condição desconhecida ou impedida por imunidade.");
             Require(JsonSerializer.Serialize(sheet).Length<=60000,"A ficha de ameaça excede 60 mil caracteres.");
@@ -117,9 +130,16 @@ public static class ParanormalThreatSchema
         var a=sheet.Attributes ?? new();
         foreach(var (key,value) in new[]{("agilidade",a.Agilidade),("forca",a.Forca),("intelecto",a.Intelecto),("presenca",a.Presenca),("vigor",a.Vigor),("defesa",sheet.Defense)}) state.Field(key,value);
         state.Fields["deslocamento"]=JsonSerializer.SerializeToElement(sheet.Speed);
+        if(sheet.Incorporeal)state.Field("forca",0);
+        state.ConditionImmunities=EffectiveImmunities(sheet);
         foreach(var pair in sheet.State ?? []) state.Set(pair.Key,pair.Value);
         foreach(var skill in sheet.Skills ?? []) if(skill is not null) state.Field("per_"+skill.Id,skill.Bonus);
         return state;
     }
-    public static bool ImmuneCondition(ParanormalThreatSheet sheet,string condition) => sheet.ConditionImmunities.Contains(condition) || sheet.Kind=="paranormal" && MentalConditions.Contains(condition);
+    private static bool UsesStrength(string expression) => Regex.IsMatch(expression,@"\{\s*forca\s*\}",RegexOptions.CultureInvariant);
+    public static HashSet<string> EffectiveImmunities(ParanormalThreatSheet sheet) => new([
+        ..(sheet.ConditionImmunities ?? []),
+        ..(sheet.ConditionImmunityGroups ?? []).Where(k=>k is not null && ImmunityGroups.ContainsKey(k)).SelectMany(k=>ImmunityGroups[k]),
+        ..sheet.Kind=="paranormal"?MentalConditions:[]],StringComparer.Ordinal);
+    public static bool ImmuneCondition(ParanormalThreatSheet sheet,string condition) => EffectiveImmunities(sheet).Contains(condition);
 }

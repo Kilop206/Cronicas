@@ -2,9 +2,9 @@ namespace Chronicles.Api;
 
 public sealed record ThreatCommand(string Action, string? Option = null, int Amount = 0, string Visibility = "gm",
     bool Half = false, bool IgnoreResistance = false, string Source = "normal", bool Critical = false, int? NormalAmount = null,
-    Guid? TargetId = null, int? TargetVersion = null, int AdditionalCreatures = 0);
+    Guid? TargetId = null, int? TargetVersion = null, int AdditionalCreatures = 0, int SneakDamage = 0);
 public sealed record ThreatAttackOutcome(int Index, int Total, int Natural, bool? Hit, bool Critical, int Damage, string DamageType, int ExtraDamage, string ExtraType);
-public sealed record ThreatDamageResult(int Raw, int AfterSave, int Multiplier, int Reduction, int Applied, bool Immune, string[] Sources);
+public sealed record ThreatDamageResult(int Raw, int AfterSave, int Multiplier, int Reduction, int Applied, bool Immune, string[] Sources, bool CriticalPrevented = false, int? FortificationRoll = null, bool SneakPrevented = false);
 public sealed record ThreatResult(ParanormalThreatSheet Sheet,int Health,string Message,RuleRoll[] Rolls,ThreatAttackOutcome[]? Attacks=null,ThreatDamageResult? Damage=null);
 
 public static class ParanormalThreatRules
@@ -29,8 +29,9 @@ public static class ParanormalThreatRules
                 Spend(attack.Cost);var outcomes=new List<ThreatAttackOutcome>();
                 for(int i=0;i<attack.Count;i++)
                 {
-                    var severity=D20Conditions.Severity(s,attack.Attribute,attack.Style=="ranged"?"per_pontaria":"per_luta",true,attack.Style=="ranged",true);
-                    var expression=D20Checks.ParanormalExpression(s,attack.Attribute,attack.Bonus,severity);
+                    var attackAttribute=sheet.Incorporeal?"agilidade":attack.Attribute;
+                    var severity=D20Conditions.Severity(s,attackAttribute,attack.Style=="ranged"?"per_pontaria":"per_luta",true,attack.Style=="ranged",true);
+                    var expression=D20Checks.ParanormalExpression(s,attackAttribute,attack.Bonus,severity);
                     var total=s.Roll(expression);var roll=s.Rolls[^1];var natural=roll.Rolls[roll.KeptIndexes[0]];
                     var hit=natural==20 || command.Amount==0 || total>=command.Amount;
                     var camouflage=s.Get("ignora_camuflagem")!=0?0:D20Conditions.Has(s,"cego")||s.Get("camuflagem_alvo")==2?5:s.Get("camuflagem_alvo")==1?2:0;
@@ -46,6 +47,7 @@ public static class ParanormalThreatRules
                 var attribute=command.Option is not null && ParanormalThreatSchema.Attributes.Contains(command.Option)?command.Option:null;
                 var skill=sheet.Skills.SingleOrDefault(x=>x.Id==command.Option);
                 RuleState.Require(attribute is not null || skill is not null,"Teste não encontrado.");
+                RuleState.Require(!sheet.Incorporeal || (attribute??skill!.Attribute)!="forca","Ameaças incorpóreas não têm Força e não fazem testes desse atributo.");
                 var key=attribute??"per_"+skill!.Id;
                 if(skill?.Id=="reflexos" && D20Conditions.Has(s,"indefeso")) return Result("Reflexos: falha automática por indefeso.");
                 if(skill?.Id=="percepcao" && (s.Get("sentido_percepcao")==1 && D20Conditions.Has(s,"cego") || s.Get("sentido_percepcao")==2 && D20Conditions.Has(s,"surdo"))) return Result("Percepção: sentido indisponível.");
@@ -57,7 +59,7 @@ public static class ParanormalThreatRules
                 var resolved=ResolveDamage(sheet,s,command);
                 var before=s.Health;s.Health-=resolved.Applied;
                 if(s.Health<before && (sheet.FastHealing.Except?.Contains(command.Option!)==true || command.Source is "hunger" or "thirst" or "suffocation")) s.Set("cura_impedida",Math.Min(maximum,s.Get("cura_impedida")+before-s.Health));
-                return Result($"Dano {resolved.Raw} → {resolved.Applied}; {(resolved.Immune?"imunidade aplicada":$"multiplicador ×{resolved.Multiplier}, RD {resolved.Reduction}")}. {s.Health}/{maximum} PV.",damage:resolved);
+                return Result($"Dano {resolved.Raw} → {resolved.Applied}; {(resolved.Immune?"imunidade aplicada":$"multiplicador ×{resolved.Multiplier}, RD {resolved.Reduction}")}. {(resolved.FortificationRoll is {} fortification?$"Fortificação: d100 = {fortification}. ":"")}{(resolved.CriticalPrevented?"Crítico impedido; usado o dano normal. ":"")}{(resolved.SneakPrevented?"Dano furtivo impedido. ":"")}{s.Health}/{maximum} PV.",damage:resolved);
             case "heal":
                 var old=s.Health;s.Health+=command.Amount;s.Set("cura_impedida",Math.Max(0,s.Get("cura_impedida")-(s.Health-old)));return Result("Cura comum aplicada; não executa uma ressurreição nem remove condições automaticamente.");
             case "ability":
@@ -73,8 +75,11 @@ public static class ParanormalThreatRules
             case "condition-persistent":
             case "condition-remove":
                 RuleState.Require(D20Conditions.Choices(true).Any(c=>c.Value==command.Option),"Condição inválida.");
+                if(command.Action!="condition-remove" && ParanormalThreatDefenses.ConditionBlocked(sheet,command) is {} blocked)return Result(blocked);
                 if(command.Action!="condition-remove" && ParanormalThreatSchema.ImmuneCondition(sheet,command.Option!)) return Result("Condição impedida por imunidade; ficha preservada.");
-                message=D20Conditions.Apply(s,new(command.Action,command.Amount,command.Option));return Result(message);
+                message=D20Conditions.Apply(s,new(command.Action,command.Amount,command.Option));
+                if(command.Option=="em_chamas")s.Set("chamas_origem",command.Action=="condition-remove"?0:Array.IndexOf(ParanormalThreatDefenses.EffectSources,command.Source)+1);
+                return Result(message);
             case "round": message=D20Conditions.Apply(s,new("condition-round"));return Result(message);
             case "scene":
                 D20Conditions.EndScene(s);sheet=sheet with{PresenceTargets=[]};abilities=abilities.Select(a=>a.Recharge=="scene"?a with{RemainingUses=a.MaximumUses}:a).ToArray();return Result("Nova cena confirmada; durações de cena e registro de presença encerrados; habilidades configuradas recuperadas.");
@@ -84,7 +89,8 @@ public static class ParanormalThreatRules
                 if(recover>0)message+=$"Cura Acelerada recuperou {recover} PV. ";
                 if(D20Conditions.Has(s,"em_chamas"))
                 {
-                    var fire=ResolveDamage(sheet,s,new("damage","fogo",s.Die(6)));var oldFireHealth=s.Health;s.Health-=fire.Applied;
+                    var fireOrigin=s.Get("chamas_origem");var fireSource=fireOrigin is >=1 and <=5?ParanormalThreatDefenses.EffectSources[fireOrigin-1]:"normal";
+                    var fire=ResolveDamage(sheet,s,new("damage","fogo",s.Die(6),Source:fireSource));var oldFireHealth=s.Health;s.Health-=fire.Applied;
                     if(sheet.FastHealing.Except?.Contains("fogo")==true)s.Set("cura_impedida",Math.Min(maximum,s.Get("cura_impedida")+oldFireHealth-s.Health));
                     message+=$"Chamas: {fire.Raw} → {fire.Applied} dano. ";
                 }
@@ -115,18 +121,20 @@ public static class ParanormalThreatRules
     public static ThreatDamageResult ResolveDamage(ParanormalThreatSheet sheet,RuleState s,ThreatCommand command)
     {
         RuleState.Require(ParanormalThreatSchema.DamageTypes.Contains(command.Option!),"Escolha um tipo de dano de Ordem 1.3.");
-        RuleState.Require(command.Source is "normal" or "fear-ritual" or "hunger" or "thirst" or "suffocation","Fonte de dano inválida.");
-        var amount=command.Amount;
+        RuleState.Require(command.SneakDamage>=0 && command.SneakDamage<=command.Amount,"Dano furtivo deve estar incluído no total informado, entre zero e esse total.");
+        RuleState.Require(ParanormalThreatDefenses.EffectSources.Contains(command.Source) || command.Source is "hunger" or "thirst" or "suffocation","Fonte de dano inválida.");
         var sourceLoss=command.Source is "hunger" or "thirst" or "suffocation";
-        if(!sourceLoss && command.Critical && sheet.CriticalImmune){RuleState.Require(command.NormalAmount is >=0 and <=9999,"Alvo imune a críticos: informe o dano normal, sem os dados adicionais.");amount=command.NormalAmount!.Value;}
         var defenses=sourceLoss?[]:sheet.Defenses.Where(d=>(!d.DisabledByEnigma||!sheet.EnigmaSolved) && (d.Type=="all"||d.Type==command.Option||d.Type=="paranormal"&&ParanormalThreatSchema.Elements.Contains(command.Option!)) && d.Except?.Contains(command.Option!)!=true).ToArray();
-        var immune=!sourceLoss && (defenses.Any(d=>d.Effect=="immunity") || sheet.Kind=="paranormal"&&(command.Option=="mental"||command.Source=="fear-ritual"));
+        var incorporealBlocked=!sourceLoss && !ParanormalThreatDefenses.CanAffect(sheet,command.Source);
+        var immune=!sourceLoss && (incorporealBlocked || defenses.Any(d=>d.Effect=="immunity") || sheet.Kind=="paranormal"&&(command.Option=="mental"||command.Source=="fear-ritual"));
+        bool criticalPrevented=false,sneakPrevented=false;int? fortificationRoll=null;
+        var amount=sourceLoss||immune?command.Amount:ParanormalThreatDefenses.ProtectedDamage(sheet,s,command,out criticalPrevented,out sneakPrevented,out fortificationRoll);
         string Group(ThreatDefense d)=>d.SourceKind=="ability"?$"ability:{d.SourceId}":d.SourceKind;
         var multiplier=1+defenses.Where(d=>d.Effect=="vulnerability").Select(Group).Distinct().Count();
         var reduction=command.IgnoreResistance||sourceLoss?0:defenses.Where(d=>d.Effect=="reduction").GroupBy(Group).Sum(g=>g.Max(d=>d.Amount))+(D20Conditions.Has(s,"petrificado")?10:0);
         var afterSave=!sourceLoss&&command.Half?amount/2:amount;
         var applied=immune?0:Math.Max(0,afterSave*multiplier-reduction);
-        string[] sources=[..defenses.Select(d=>d.Source.Length>0?d.Source:d.Effect),..(sheet.Kind=="paranormal"&&(command.Option=="mental"||command.Source=="fear-ritual")?new[]{"Origem Paranormal"}:[])];
-        return new(amount,afterSave,multiplier,reduction,applied,immune,sources.Distinct().ToArray());
+        string[] sources=[..defenses.Select(d=>d.Source.Length>0?d.Source:d.Effect),..(sheet.Kind=="paranormal"&&(command.Option=="mental"||command.Source=="fear-ritual")?new[]{"Origem Paranormal"}:[]),..incorporealBlocked?new[]{"Incorpóreo"}:[],..criticalPrevented&&sheet.CriticalImmune?new[]{"Imunidade a críticos"}:[],..sneakPrevented||criticalPrevented&&!sheet.CriticalImmune?new[]{"Fortificação"}:[]];
+        return new(amount,afterSave,multiplier,reduction,applied,immune,sources.Distinct().ToArray(),criticalPrevented,fortificationRoll,sneakPrevented);
     }
 }

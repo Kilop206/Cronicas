@@ -8,6 +8,9 @@ Capturas reais de NPCs gravados na API e no PostgreSQL de teste, feitas por `web
 | --- | --- | --- | --- | --- |
 | Ameaça | [desktop](rules/ordem_paranormal-threat-desktop.png) | [amplo](rules/ordem_paranormal-threat-wide.png) | [tablet](rules/ordem_paranormal-threat-tablet.png) | [mobile](rules/ordem_paranormal-threat-mobile.png) |
 | Editor | [desktop](rules/ordem_paranormal-threat-editor-desktop.png) | — | — | [mobile](rules/ordem_paranormal-threat-editor-mobile.png) |
+| Incorporeidade, fortificação e imunidades | [desktop](rules/ordem_paranormal-threat-defenses-desktop.png) | [amplo](rules/ordem_paranormal-threat-defenses-wide.png) | [tablet](rules/ordem_paranormal-threat-defenses-tablet.png) | [mobile](rules/ordem_paranormal-threat-defenses-mobile.png) |
+
+As capturas de defesas especiais também usam uma ameaça autoral persistida pela API local. A interface configura e conserva incorporeidade, fortificação e imunidade a paralisia após recarregar; o teste confirma a ausência da condição derivada lento e usa os controles reais para dano comum bloqueado e dano de item amaldiçoado com adicionais de crítico/furtivo impedidos. As quatro resoluções foram capturadas e verificadas quanto a overflow; desktop e mobile receberam inspeção visual direta.
 
 A inspeção considera hierarquia, densidade, reorganização das colunas e controles utilizáveis. O teste verifica ausência de overflow horizontal do documento, criação pela interface, autosave com resposta real atrasada, foco, conflitos, erros sem descarte do rascunho, sequências de ataque, privacidade de estatísticas/modelos, Presença e SAN, sincronização de encontros, histórico/restauração, templates e importação/exportação. O schema/motor também têm testes determinísticos e a migração foi aplicada no banco local existente. A documentação de [arquitetura, cobertura e pendências](../paranormal-threats.md) distingue regras executáveis de descrições consultáveis.
 
