@@ -13,6 +13,8 @@ O PDF `chamado-de-cthulhu-livro do guardião-7-edicao.pdf` foi localizado, mas n
 
 ## Versionamento e compatibilidade
 
+Atualização de 04/11/2026: ameaças de Ordem 1.3 oferecem Faro, Percepção às Cegas e as duas visões especiais com alcance/origem explícitos. Conferência nas páginas PDF 65, 99, 189–190 e 320–321. O contexto de um oponente não substitui as condições gerais nem declara imunidade física a cegueira/surdez. Cobertura, limitações e testes em [paranormal-threats.md](paranormal-threats.md).
+
 Atualização de 04/11/2026: ameaças de Ordem 1.3 receberam incorporeidade, fortificação contra adicionais de críticos/furtivos e imunidades por categoria, com filtragem de condições derivadas e agravamentos. Conferência no PDF local, páginas PDF 190 e 320–323. A origem do efeito é explícita; dano de um elemento não é automaticamente tratado como ritual ou item amaldiçoado. As extensões são aditivas ao schema de ameaças e neutras nas fichas antigas; ver [paranormal-threats.md](paranormal-threats.md).
 
 Atualização de 04/11/2026: o capítulo de ameaças e as clarificações foram conferidos no PDF Ordem 1.3, páginas PDF 188–190 e 320–323. Inimigos agora têm schema próprio versionado, com bônus finais, ataques múltiplos, RD por fonte, Presença Perturbadora e demais mecanismos descritos em [paranormal-threats.md](paranormal-threats.md). A estrutura não concede automaticamente bloqueio, esquiva ou contra-ataque de agentes às ameaças. Não foram copiados bestiários nem cadastradas criaturas oficiais automaticamente.

@@ -1,15 +1,16 @@
 import type { CharacterInput, RpgSystem, SheetFieldValue } from './api';
 
 // Read-only projections; authoritative checks and mutations always run in the API.
-export function d20ConditionState(values: Record<string, SheetFieldValue>, health?: number, immunities:ReadonlySet<string>=new Set()) {
+export function d20ConditionState(values: Record<string, SheetFieldValue>, health?: number, immunities:ReadonlySet<string>=new Set(), relationExemptions:ReadonlySet<string>=new Set(), contextConditions:readonly string[]=[]) {
   const rows = values['estado_regras'];
   const state: Record<string, number> = {};
   if (Array.isArray(rows)) for (const row of rows) if (row && typeof row === 'object' && !Array.isArray(row) && typeof row['chave'] === 'string' && typeof row['valor'] === 'number') state[row['chave']] = row['valor'];
   const active = new Set(Object.keys(state).filter(key => key.startsWith('cond_') && state[key] !== 0).map(key => key.slice(5)));
   if(state['sangrando'])active.add('sangrando');
+  for(const c of contextConditions)active.add(c);
   for(const key of active)if(immunities.has(key))active.delete(key);
   const relationships: Record<string, string[]> = { agarrado: ['desprevenido', 'imovel'], atordoado: ['desprevenido'], cego: ['desprevenido', 'lento'], enredado: ['lento', 'vulneravel'], exausto: ['debilitado', 'lento', 'vulneravel'], fatigado: ['fraco', 'vulneravel'], inconsciente: ['indefeso'], indefeso: ['desprevenido'], paralisado: ['imovel', 'indefeso'], petrificado: ['inconsciente'], surpreendido: ['desprevenido'] };
-  for (const key of active) for (const implied of relationships[key] || []) if(!immunities.has(implied))active.add(implied);
+  for (const key of active) for (const implied of relationships[key] || []) if(!immunities.has(implied)&&!relationExemptions.has(key+':'+implied))active.add(implied);
   if (health === 0 && !state['age_pv_zero'] || state['morto'] || state['asfixia_inconsciente']) for(const key of ['inconsciente','indefeso','desprevenido'])active.add(key);
   return active;
 }
@@ -18,8 +19,8 @@ export function hasD20Conditions(system: RpgSystem | null) {
     system.templateId === 'ordem_paranormal' && [6, 7].includes(system.templateVersion) && system.rulesetVersion === '1.3' ||
     system.templateId === 'tormenta20' && [3, 4].includes(system.templateVersion) && system.rulesetVersion === 'jogo-do-ano-2024-v1.3');
 }
-export function d20Defense(values: Record<string, SheetFieldValue>, paranormal: boolean, ranged = false, health?: number, immunities:ReadonlySet<string>=new Set()) {
-  const active = d20ConditionState(values, health,immunities);
+export function d20Defense(values: Record<string, SheetFieldValue>, paranormal: boolean, ranged = false, health?: number, immunities:ReadonlySet<string>=new Set(), relationExemptions:ReadonlySet<string>=new Set(), contextConditions:readonly string[]=[]) {
+  const active = d20ConditionState(values, health,immunities,relationExemptions,contextConditions);
   let penalty = active.has('indefeso') ? 10 : active.has('desprevenido') ? 5 : active.has('vulneravel') ? 2 : 0;
   if (paranormal && active.has('sobrecarregado')) penalty = Math.max(penalty, 5);
   const prone = active.has('caido') ? ranged ? 5 : -5 : 0;

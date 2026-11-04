@@ -62,6 +62,27 @@ Em **Editar NPC**, configure **Incorpóreo**, **Fortificação (%)** e as catego
 
 `ParanormalThreatDefenses` mantém a seleção de fontes e a proteção de dano separadas do HTTP. `RuleState.ConditionImmunities` é uma projeção transitória das imunidades configuradas, sem novos marcadores persistidos na ficha do jogador. Personagens dos outros sistemas conservam o conjunto vazio padrão. A projeção Angular recebe o mesmo conjunto para manter Defesa, deslocamento e condições coerentes com o servidor.
 
+## Habilidades de percepção e contexto do oponente
+
+Em **Editar NPC → Habilidades de percepção**, configure Faro, Percepção às Cegas (alcance em metros), Visão na Penumbra e Visão no Escuro. A descrição livre de sentidos permanece disponível; seu texto não ativa regras. `sensoryAbilities` e `sensoryContext` são extensões aditivas do schema 1, com habilidades desativadas e contexto inativo nas fichas antigas. Não exigem migração SQL.
+
+Na ficha em uso, abra **Percepção e contexto do oponente**, informe distância, grau/origem de camuflagem e se o oponente não pode ser visto. **Aplicar contexto de percepção** grava o conjunto de maneira atômica e com verificação de versão. Um campo vazio significa distância desconhecida; zero significa contato e é um valor válido. Benefícios limitados por alcance só entram quando a distância é conhecida. Se os sentidos estiverem impedidos pela situação, marque **Sentidos especiais indisponíveis**; o motor não infere o funcionamento de radar, sonar ou olfato pelo nome da criatura.
+
+| Habilidade | Resolução neste contexto |
+| --- | --- |
+| Faro | Até 9m, evita desprevenido por não perceber esse oponente e reduz a chance de falha de camuflagem total para 20%. Não concede visão ou remove outras condições. |
+| Percepção às Cegas | No alcance cadastrado, ignora camuflagem atribuída a escuridão comum/paranormal, invisibilidade ou falta de visão. Zero desativa; o padrão do livro é alcance curto (9m), e outra distância exige uma habilidade que a defina. Obstruções arbitrárias não são automaticamente ignoradas. |
+| Visão na Penumbra | Até 9m, ignora camuflagem leve causada por escuridão comum. Não é convertida em Visão no Escuro nem ignora camuflagem total. |
+| Visão no Escuro | Até 18m, ignora camuflagem por escuridão comum. Não revela invisibilidade, não atravessa escuridão paranormal e não cura cegueira física. |
+
+Os ataques fazem a rolagem d10 de falha somente quando ainda há chance aplicável, e mostram percentual e resultado junto à composição. Ignorar camuflagem por um efeito confirmado não concede automaticamente percepção do oponente. Testes explicitamente visuais não aceitam Faro ou Percepção às Cegas como leitura de cores/escrita; testes explicitamente auditivos não ignoram surdez. Percepção geral pode usar o sentido alternativo disponível. Condições físicas e suas demais penalidades continuam presentes: o contexto não concede imunidade geral à condição cego.
+
+Defesa, Reflexos e a listagem de condições na ficha consideram o oponente declarado. As exceções são específicas por fonte: Faro pode impedir o desprevenido derivado de cegueira, sem remover desprevenido causado por agarrado ou por outra condição explícita. `ContextConditions` e `ConditionRelationExemptions` são projeções transitórias no `RuleState`; não viram marcadores gerais persistidos. A linha do encontro conserva as condições gerais. A distância não é obtida de um mapa e o contexto não identifica todos os observadores da cena.
+
+**Confirmar nova cena** limpa o contexto. **Criar cópia nova** e **Salvar como modelo** conservam as habilidades, mas limpam distância, camuflagem e oponente da instância anterior. A exportação da ficha completa conserva seu contexto para restauração explícita. Importações passam pelas validações estruturais/de regras existentes. No editor de NPC/modelo, os mesmos controles participam do autosave; durante o uso da ficha, uma edição pendente deve ser aplicada ou descartada antes de rolar. Erros mantêm o rascunho e conflitos não sobrescrevem o estado salvo.
+
+`ParanormalThreatPerception` resolve o comportamento no servidor; `paranormal-threat-perception.ts` é a prévia de leitura no cliente; `ParanormalThreatContextComponent` compartilha os controles entre editor e ficha em uso. A nova suíte `web/threat-perception-integration.mjs` compara a prévia com as respostas reais do servidor, testa recarga/privacidade/conflitos e captura quatro resoluções. Fontes locais: PDF 1.3, páginas PDF 65 (alcances), 99 (camuflagem), 189–190 (habilidades comuns) e 320–321 (condições de sentidos/desprevenido).
+
 ## Permissões, histórico e encontros
 
 Somente dono, mestre e co-mestre criam, editam ou operam ameaças. NPCs privados continuam invisíveis a jogadores. Em um NPC apresentado à campanha, jogadores recebem os dados narrativos e recursos que já eram públicos, mas não recebem `sheet`, segredos ou histórico. Modelos de ameaça dentro do sistema também são filtrados para jogadores; seus Enigmas não ficam expostos pelo endpoint de sistemas. Modelos narrativos mantêm sua visibilidade anterior.
@@ -86,7 +107,7 @@ Este bloco **não representa todas as regras de Ordem implementadas**. Permanece
 
 - Catálogo e efeitos individuais das criaturas, poderes e rituais; não são copiados nem inferidos de descrições.
 - Aplicação automática do ataque a uma ficha-alvo, defesas em fontes com vários tipos simultâneos e controle completo de ações/movimento/alcance/manobras. O recebimento atual calcula um tipo por comando; fontes mistas exigem adjudicação da RD da fonte pelo mestre.
-- Sentidos especiais e exceções de habilidades com efeitos próprios; esses textos são consultáveis, sem automatização presumida. Interações espaciais de incorporeidade continuam sob adjudicação do mestre.
+- Sentidos e exceções específicos de outras habilidades, camuflagem de múltiplas fontes simultâneas e identificação automática de obstáculos/observadores; não são deduzidos de descrições. Interações espaciais de incorporeidade continuam sob adjudicação do mestre.
 - Interações particulares de habilidades que substituam as categorias e imunidades configuradas; o motor não deduz exceções de textos narrativos.
 - Gestão global de cenas/exposições, venenos/doenças individuais, inventário próprio de NPCs e apresentação específica de inimigos no OBS. O OBS existente de personagens é preservado.
 - Regras específicas de morte/retorno e exceções individuais: zero PV é mostrado como fora de combate; o mestre decide o estado narrativo e os efeitos pertinentes.
@@ -96,6 +117,7 @@ Este bloco **não representa todas as regras de Ordem implementadas**. Permanece
 - `dotnet run --project tests/Chronicles.Rules.Tests`: regras puras, entradas inválidas e correspondência entre modelo EF e snapshot da migração.
 - `npm run lint`, `npm run build` e `node scripts/check-sheet-templates.mjs`.
 - API e PostgreSQL locais, Angular na porta 4200: `node threats-integration.mjs` em `web`. Criação real, autosave com resposta atrasada/conflito, ataques, privacidade, encontros, SAN, imunidade, histórico, modelos e importação/exportação.
+- `node threat-perception-integration.mjs`: criação pela interface, habilidades sensoriais, contexto do oponente, comparação prévia/API, rolagens, alcances, recarga, rascunhos inválidos, concorrência, sigilo, encontro, exportação/modelos e compatibilidade com JSON antigo.
 - `node rules-integration.mjs` e smoke geral preservam a regressão dos quatro sistemas.
 
 Capturas reais ficam em `docs/visual-validation/rules/ordem_paranormal-threat-*.png`, em 1440×900, 1920×1080, 768×1024 e 390×844; o editor também possui capturas desktop/mobile. Nenhuma captura usa dados fixos embutidos no componente.

@@ -2,10 +2,10 @@ namespace Chronicles.Api;
 
 public sealed record ThreatCommand(string Action, string? Option = null, int Amount = 0, string Visibility = "gm",
     bool Half = false, bool IgnoreResistance = false, string Source = "normal", bool Critical = false, int? NormalAmount = null,
-    Guid? TargetId = null, int? TargetVersion = null, int AdditionalCreatures = 0, int SneakDamage = 0);
-public sealed record ThreatAttackOutcome(int Index, int Total, int Natural, bool? Hit, bool Critical, int Damage, string DamageType, int ExtraDamage, string ExtraType);
+    Guid? TargetId = null, int? TargetVersion = null, int AdditionalCreatures = 0, int SneakDamage = 0, ThreatSensoryContext? PerceptionContext = null);
+public sealed record ThreatAttackOutcome(int Index, int Total, int Natural, bool? Hit, bool Critical, int Damage, string DamageType, int ExtraDamage, string ExtraType, int MissChance = 0, int? ConcealmentRoll = null);
 public sealed record ThreatDamageResult(int Raw, int AfterSave, int Multiplier, int Reduction, int Applied, bool Immune, string[] Sources, bool CriticalPrevented = false, int? FortificationRoll = null, bool SneakPrevented = false);
-public sealed record ThreatResult(ParanormalThreatSheet Sheet,int Health,string Message,RuleRoll[] Rolls,ThreatAttackOutcome[]? Attacks=null,ThreatDamageResult? Damage=null);
+public sealed record ThreatResult(ParanormalThreatSheet Sheet,int Health,string Message,RuleRoll[] Rolls,ThreatAttackOutcome[]? Attacks=null,ThreatDamageResult? Damage=null,ThreatPerceptionView? Perception=null);
 
 public static class ParanormalThreatRules
 {
@@ -14,10 +14,11 @@ public static class ParanormalThreatRules
         if(ParanormalThreatSchema.Validate(sheet) is {} error) throw new ArgumentException(error);
         RuleState.Require(command.Amount is >=0 and <=9999 && command.Visibility is "gm" or "private" or "campaign", "Valor ou privacidade inválidos.");
         var s=ParanormalThreatSchema.ToState(sheet,health,maximum,draw);
+        var perception=command.Action is "attack" or "check"?ParanormalThreatPerception.Prepare(sheet,s):ParanormalThreatPerception.Resolve(sheet,s);
         var attacks=sheet.Attacks.ToArray();var abilities=sheet.Abilities.ToArray();
         string message;
         void Spend(int cost) { if(cost>0) s.SpendMana(cost+D20Conditions.CostIncrease(s)); }
-        ThreatResult Result(string text,ThreatAttackOutcome[]? outcomes=null,ThreatDamageResult? damage=null) => new(sheet with{Attacks=attacks,Abilities=abilities,Effort=s.Mana,State=new(s.State)},s.Health,text,s.Rolls.ToArray(),outcomes,damage);
+        ThreatResult Result(string text,ThreatAttackOutcome[]? outcomes=null,ThreatDamageResult? damage=null) => new(sheet with{Attacks=attacks,Abilities=abilities,Effort=s.Mana,State=new(s.State)},s.Health,text,s.Rolls.ToArray(),outcomes,damage,perception);
         switch(command.Action)
         {
             case "attack":
@@ -34,12 +35,12 @@ public static class ParanormalThreatRules
                     var expression=D20Checks.ParanormalExpression(s,attackAttribute,attack.Bonus,severity);
                     var total=s.Roll(expression);var roll=s.Rolls[^1];var natural=roll.Rolls[roll.KeptIndexes[0]];
                     var hit=natural==20 || command.Amount==0 || total>=command.Amount;
-                    var camouflage=s.Get("ignora_camuflagem")!=0?0:D20Conditions.Has(s,"cego")||s.Get("camuflagem_alvo")==2?5:s.Get("camuflagem_alvo")==1?2:0;
-                    if(hit && camouflage>0 && s.Die(10)<=camouflage) hit=false;
+                    int? camouflageRoll=null;
+                    if(hit && perception.MissChance>0){camouflageRoll=s.Die(10);if(camouflageRoll<=perception.MissChance/10)hit=false;}
                     var critical=hit && natural>=attack.Margin;
                     var damage=hit?Math.Max(0,DamageFormula.Evaluate(attack.Damage,s,critical?attack.Multiplier:1)):0;
                     var extra=hit?Math.Max(0,DamageFormula.Evaluate(attack.ExtraDamage,s)):0;
-                    outcomes.Add(new(i+1,total,natural,command.Amount==0&&hit?null:hit,critical,damage,attack.DamageType,extra,attack.ExtraType));
+                    outcomes.Add(new(i+1,total,natural,command.Amount==0&&hit?null:hit,critical,damage,attack.DamageType,extra,attack.ExtraType,perception.MissChance,camouflageRoll));
                 }
                 if(attack.Ammunition>=0) attacks[index]=attack with{Ammunition=attack.Ammunition-attack.Count};
                 return Result($"{attack.Name}: {attack.Count} ataque(s) resolvido(s), custo e munição registrados. {(command.Amount==0?"Confirme os acertos; Defesa não informada.":"Aplique cada acerto ao alvo separadamente, após as defesas dele.")}",outcomes.ToArray());
@@ -50,7 +51,7 @@ public static class ParanormalThreatRules
                 RuleState.Require(!sheet.Incorporeal || (attribute??skill!.Attribute)!="forca","Ameaças incorpóreas não têm Força e não fazem testes desse atributo.");
                 var key=attribute??"per_"+skill!.Id;
                 if(skill?.Id=="reflexos" && D20Conditions.Has(s,"indefeso")) return Result("Reflexos: falha automática por indefeso.");
-                if(skill?.Id=="percepcao" && (s.Get("sentido_percepcao")==1 && D20Conditions.Has(s,"cego") || s.Get("sentido_percepcao")==2 && D20Conditions.Has(s,"surdo"))) return Result("Percepção: sentido indisponível.");
+                if(skill?.Id=="percepcao" && (s.Get("sentido_percepcao")==1 && (D20Conditions.Has(s,"cego")||sheet.SensoryContext.Active&&!perception.VisualCheckAvailable) || s.Get("sentido_percepcao")==2 && D20Conditions.Has(s,"surdo"))) return Result("Percepção: sentido exigido indisponível neste contexto. Sentidos alternativos não identificam cores, escrita ou sons automaticamente.");
                 var check=D20Checks.ParanormalExpression(s,attribute??skill!.Attribute,skill?.Bonus??0,key:key);
                 var checkedTotal=s.Roll(check);message=$"{skill?.Name??attribute}: {check} = {checkedTotal}";
                 if(command.Amount>0) message+=$" / DT {command.Amount}: {(D20Checks.Passed(s,checkedTotal,command.Amount,true)?"sucesso":"falha")}";
@@ -82,7 +83,7 @@ public static class ParanormalThreatRules
                 return Result(message);
             case "round": message=D20Conditions.Apply(s,new("condition-round"));return Result(message);
             case "scene":
-                D20Conditions.EndScene(s);sheet=sheet with{PresenceTargets=[]};abilities=abilities.Select(a=>a.Recharge=="scene"?a with{RemainingUses=a.MaximumUses}:a).ToArray();return Result("Nova cena confirmada; durações de cena e registro de presença encerrados; habilidades configuradas recuperadas.");
+                D20Conditions.EndScene(s);if(sheet.SensoryContext.Active){s.Set("camuflagem_alvo",0);s.Set("ignora_camuflagem",0);}sheet=sheet with{PresenceTargets=[],SensoryContext=new()};perception=ParanormalThreatPerception.Resolve(sheet,s);abilities=abilities.Select(a=>a.Recharge=="scene"?a with{RemainingUses=a.MaximumUses}:a).ToArray();return Result("Nova cena confirmada; durações de cena, contexto do oponente e registro de presença encerrados; habilidades configuradas recuperadas.");
             case "turn":
                 message=D20Conditions.StartTurn(s);abilities=abilities.Select(a=>a.Recharge=="turn"?a with{RemainingUses=a.MaximumUses}:a).ToArray();
                 var recover=s.Health>0?Math.Max(0,Math.Min(sheet.FastHealing.Amount,maximum-s.Health-s.Get("cura_impedida"))):0;s.Health+=recover;
@@ -114,6 +115,10 @@ public static class ParanormalThreatRules
             case "context":
                 var context=command.Option!;var max=context=="dados_zero_penalidade"?40:context is "camuflagem_alvo" or "sentido_percepcao"?2:1;
                 RuleState.Require((context is "dados_zero_penalidade" or "arma_leve" or "camuflagem_alvo" or "ignora_camuflagem" or "sentido_percepcao") && command.Amount<=max,"Contexto inválido.");s.Set(context,command.Amount);return Result("Contexto do próximo teste atualizado.");
+            case "perception-context":
+                RuleState.Require(ParanormalThreatPerception.ValidateContext(command.PerceptionContext) is null,"Informe um contexto sensorial válido.");
+                sheet=sheet with{SensoryContext=command.PerceptionContext!};s.Set("camuflagem_alvo",0);
+                perception=ParanormalThreatPerception.Resolve(sheet,s);return Result("Contexto do oponente salvo; sentidos aplicados somente conforme a distância e a origem informadas.");
             case "enigma": return Result("Enigma atualizado pelo mestre.") with{Sheet=sheet with{EnigmaSolved=command.Amount==1}};
             default:throw new ArgumentException("Ação de ameaça não suportada.");
         }

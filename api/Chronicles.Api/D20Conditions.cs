@@ -18,14 +18,14 @@ public static class D20Conditions
     public static bool Has(RuleState s, string condition) => Effective(s).Contains(condition);
     public static HashSet<string> Effective(RuleState s)
     {
-        var active = Common.Select(c => c.Value).Concat(["asfixiado", "enfeiticado"]).Where(c => s.Get(Key(c)) != 0 && !s.ConditionImmunities.Contains(c)).ToHashSet(StringComparer.Ordinal);
+        var active = Common.Select(c => c.Value).Concat(["asfixiado", "enfeiticado"]).Where(c => (s.Get(Key(c)) != 0 || s.ContextConditions.Contains(c)) && !s.ConditionImmunities.Contains(c)).ToHashSet(StringComparer.Ordinal);
         var relationships = new Dictionary<string, string[]> {
             ["agarrado"] = ["desprevenido", "imovel"], ["atordoado"] = ["desprevenido"], ["cego"] = ["desprevenido", "lento"],
             ["enredado"] = ["lento", "vulneravel"], ["exausto"] = ["debilitado", "lento", "vulneravel"], ["fatigado"] = ["fraco", "vulneravel"],
             ["inconsciente"] = ["indefeso"], ["indefeso"] = ["desprevenido"], ["paralisado"] = ["imovel", "indefeso"],
             ["petrificado"] = ["inconsciente"], ["surpreendido"] = ["desprevenido"] };
         bool changed;
-        do { changed = false; foreach (var pair in relationships) if (active.Contains(pair.Key)) foreach (var implied in pair.Value) if(!s.ConditionImmunities.Contains(implied)) changed |= active.Add(implied); } while (changed);
+        do { changed = false; foreach (var pair in relationships) if (active.Contains(pair.Key)) foreach (var implied in pair.Value) if(!s.ConditionImmunities.Contains(implied) && !s.ConditionRelationExemptions.Contains(pair.Key+":"+implied)) changed |= active.Add(implied); } while (changed);
         // Immunity to a condition effect does not confer permission to act at zero HP or after death/asphyxia.
         if ((s.Health == 0 && s.Get("age_pv_zero") == 0) || s.Get("morto") > 0 || s.Get("asfixia_inconsciente") > 0) active.UnionWith(["inconsciente","indefeso","desprevenido"]);
         return active;

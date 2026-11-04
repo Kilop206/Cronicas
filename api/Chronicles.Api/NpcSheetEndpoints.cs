@@ -101,7 +101,7 @@ public static partial class NpcEndpoints
             else db.Entry(npc).Property(n=>n.Version).IsModified=true;
             SaveRolls(db,npc.CampaignId,userId,input.Command.Visibility,result.Rolls);
             try{await db.SaveChangesAsync();}catch(DbUpdateConcurrencyException){return Results.Conflict(new{message="A ameaça mudou; ação não aplicada."});}
-            return Results.Ok(new{npc=View(npc,true),result.Message,result.Rolls,result.Attacks,result.Damage});
+            return Results.Ok(new{npc=View(npc,true),result.Message,result.Rolls,result.Attacks,result.Damage,result.Perception});
         }).RequireRateLimiting("rolls");
     }
     private static void SaveRolls(AppDbContext db,Guid campaignId,Guid userId,string visibility,IEnumerable<RuleRoll> rolls)

@@ -16,6 +16,8 @@ public sealed record ThreatDefense(string Id, string Type = "all", string Effect
     string SourceKind = "base", string SourceId = "base", string Source = "", string[]? Except = null, bool DisabledByEnigma = false);
 public sealed record ThreatPresence(bool Enabled = false, int Difficulty = 10, string Damage = "1d6", int? ImmuneNex = null);
 public sealed record ThreatFastHealing(int Amount = 0, string[]? Except = null);
+public sealed record ThreatSensoryAbilities(bool Scent = false, decimal BlindsightRange = 0, bool LowLightVision = false, bool Darkvision = false);
+public sealed record ThreatSensoryContext(bool Active = false, decimal? Distance = null, int Concealment = 0, string Cause = "other", bool OpponentUnseen = false, bool Unavailable = false);
 
 public sealed record ParanormalThreatSheet
 {
@@ -29,6 +31,8 @@ public sealed record ParanormalThreatSheet
     public string Size { get; init; } = "medium";
     public string Descriptors { get; init; } = "";
     public string Senses { get; init; } = "";
+    public ThreatSensoryAbilities SensoryAbilities { get; init; } = new();
+    public ThreatSensoryContext SensoryContext { get; init; } = new();
     public string Movement { get; init; } = "";
     public decimal Speed { get; init; }
     public int Defense { get; init; } = 10;
@@ -79,6 +83,8 @@ public static class ParanormalThreatSchema
             Require(sheet.Element == "none" || Elements.Contains(sheet.Element), "Elemento inválido.");
             Require(sheet.Challenge is >= 0 and <= 9999 && sheet.Defense is >= 0 and <= 9999 && sheet.Speed is >= 0 and <= 999, "VD, Defesa ou deslocamento fora dos limites.");
             Require(sheet.Fortification is >=0 and <=100,"Fortificação deve ficar entre 0 e 100% (100% já impede todos os críticos).");
+            Require(sheet.SensoryAbilities is not null && sheet.SensoryAbilities.BlindsightRange is >=0 and <=999,"Alcance de Percepção às Cegas deve ficar entre 0 e 999m; zero desativa essa habilidade.");
+            Require(ParanormalThreatPerception.ValidateContext(sheet.SensoryContext) is null,ParanormalThreatPerception.ValidateContext(sheet.SensoryContext)??"Contexto sensorial inválido.");
             Require(Text(sheet.Descriptors,500) && Text(sheet.Senses,2000) && Text(sheet.Movement,500) && Text(sheet.Enigma,5000), "Descrição de ameaça muito longa.");
             Require(sheet.Attributes is not null && new[]{sheet.Attributes.Agilidade,sheet.Attributes.Forca,sheet.Attributes.Intelecto,sheet.Attributes.Presenca,sheet.Attributes.Vigor}.All(n=>n is >= 0 and <= 20), "Atributos devem ficar entre 0 e 20.");
             Require(sheet.Effort >= 0 && sheet.Effort <= sheet.MaxEffort && sheet.MaxEffort is >= 0 and <= 9999, "PE fora dos limites.");

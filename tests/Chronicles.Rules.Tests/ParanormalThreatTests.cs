@@ -6,6 +6,7 @@ public static class ParanormalThreatTests
 {
     public static void Run()
     {
+        ParanormalThreatPerceptionTests.Run();
         void Check(bool value,string label){if(!value)throw new InvalidOperationException("OP threats: "+label);}
         void Reject(Action action){try{action();}catch(ArgumentException){return;}throw new InvalidOperationException("Expected OP threat rejection.");}
         var basic=new ParanormalThreatSheet{Attributes=new(3,4,2,2,3),Skills=[new("fortitude","Fortitude","vigor",10),new("reflexos","Reflexos","agilidade",5),new("vontade","Vontade","presenca",10)]};
