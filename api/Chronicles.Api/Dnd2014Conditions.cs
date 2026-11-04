@@ -9,10 +9,10 @@ public static class Dnd2014Conditions
     public static bool Has(RuleState s, string key) => s.Get("cond_" + key) > 0;
     public static bool Incapacitated(RuleState s) => s.Health == 0 || s.Get("morto") > 0 || new[] { "incapacitado", "paralisado", "petrificado", "atordoado", "inconsciente" }.Any(key => Has(s, key));
     public static void CanAttack(RuleState s) { RuleState.Require(!Incapacitated(s), "Incapacitado não pode realizar ataques."); RuleState.Require(!Has(s, "enfeiticado") || s.Get("alvo_encantador") == 0, "Enfeitiçado não pode atacar a fonte do encanto."); }
-    public static int Mode(RuleState s, string kind, int manual = 0, bool strength = false)
+    public static int Mode(RuleState s, string kind, int manual = 0, bool strength = false, bool advantageSource = false)
     {
         var fear = Has(s, "amedrontado") && s.Get("fonte_medo_oculta") == 0;
-        var advantage = manual > 0 || strength && kind is "ability" or "save" && Dnd2014Rage.Benefits(s) || kind == "attack" && Has(s, "invisivel") && s.Get("alvo_ve_invisivel") == 0;
+        var advantage = advantageSource || manual > 0 || strength && kind is "ability" or "save" && Dnd2014Rage.Benefits(s) || kind == "attack" && Has(s, "invisivel") && s.Get("alvo_ve_invisivel") == 0;
         var disadvantage = manual < 0 || kind == "attack" && (Has(s, "cego") || Has(s, "caido") || Has(s, "impedido") || Has(s, "envenenado") || fear || s.Get("exaustao") >= 3)
             || kind == "ability" && (Has(s, "envenenado") || fear || s.Get("exaustao") >= 1)
             || kind == "save" && s.Get("exaustao") >= 3;

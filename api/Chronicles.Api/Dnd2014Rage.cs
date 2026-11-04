@@ -20,7 +20,7 @@ public static class Dnd2014Rage
         return result.ToArray();
     }
     public static bool Handles(string action) => action is "rage-start" or "rage-end" or "rage-hostile-attack" or "rage-armor" or "combat-turn-start" or "combat-turn-end" or "combat-extra-turn-end";
-    public static DndCombatView View(RuleState s) => new(Dnd2014Damage.Types,Active(s),s.Get("furia_rodadas"),Bonus(s),s.Get("furia_armadura_pesada")>0,10+5*s.Get("furia_implacavel_usos"));
+    public static DndCombatView View(RuleState s) => new(Dnd2014Damage.Types,Active(s),s.Get("furia_rodadas"),Bonus(s),s.Get("furia_armadura_pesada")>0,10+5*s.Get("furia_implacavel_usos"),Dnd2014BarbarianAttacks.Reckless(s),s.Get("descuidado_exposto")>0,Dnd2014BarbarianAttacks.BrutalDice(s));
     public static void End(RuleState s) { foreach(var key in new[]{"furia_rodadas","furia_atividade","furia_implacavel_auto","furia_armadura_pesada"}) s.Set(key,0); }
     public static string Apply(RuleState s,RuleCommand command)
     {
@@ -31,12 +31,12 @@ public static class Dnd2014Rage
                 Dnd2014ClassResources.Spend(s,"furia",1);s.Set("furia_rodadas",10);s.Set("furia_armadura_pesada",command.Option!.StartsWith("heavy",StringComparison.Ordinal)?1:0);s.Set("furia_implacavel_auto",command.Option.EndsWith("relentless",StringComparison.Ordinal)?1:0);s.Set("furia_atividade",s.Get("turno_atividade"));s.Set("concentrando",0);
                 return "Fúria iniciada por um uso e uma ação bônus confirmada. Concentração encerrada; conclua cada turno para controlar a duração de até 1 minuto. Ataques contra criaturas hostis devem ser confirmados.";
             case "rage-end": End(s);return "Fúria encerrada voluntariamente; a ação bônus deve estar disponível.";
-            case "rage-hostile-attack": MarkHostile(s);return "Ataque contra criatura hostil confirmado, mesmo se não causou dano ou ocorreu antes de entrar em Fúria.";
+            case "rage-hostile-attack": MarkHostile(s);Dnd2014BarbarianAttacks.ConfirmPreviousAttack(s);return "Ataque contra criatura hostil confirmado, mesmo se não causou dano ou ocorreu antes de entrar em Fúria.";
             case "rage-armor": RuleState.Require(Active(s),"Nenhuma Fúria ativa.");s.Set("furia_armadura_pesada",command.Option=="heavy"?1:0);return "Armadura atualizada; a Fúria só concede benefícios sem armadura pesada.";
-            case "combat-turn-start":s.Set("surto_turno",0);return "Novo turno confirmado; Surto liberado. A duração da Fúria avança ao concluir o turno.";
+            case "combat-turn-start":s.Set("surto_turno",0);Dnd2014BarbarianAttacks.StartTurn(s);return "Novo turno confirmado; Surto liberado e Ataque Descuidado encerrado. A duração da Fúria avança ao concluir o turno.";
             case "combat-turn-end":
             case "combat-extra-turn-end":
-                var activity=s.Get("furia_atividade")>0||s.Get("turno_atividade")>0;s.Set("turno_atividade",0);
+                var activity=s.Get("furia_atividade")>0||s.Get("turno_atividade")>0;s.Set("turno_atividade",0);Dnd2014BarbarianAttacks.EndTurn(s);
                 if(!Active(s)) return "Turno concluído.";
                 if(Unconscious(s)||command.Action=="combat-turn-end"&&s.Get("furia_rodadas")==1||s.Get("nivel_barbaro")<15&&!activity){End(s);return "Turno concluído; Fúria encerrada por duração, inconsciência ou ausência de ataque hostil/dano recebido.";}
                 if(command.Action=="combat-turn-end")s.Set("furia_rodadas",s.Get("furia_rodadas")-1);

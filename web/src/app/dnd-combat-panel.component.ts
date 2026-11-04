@@ -5,12 +5,13 @@ import {Subscription,finalize} from 'rxjs';
 import {ApiService,Character,CharacterInput,DamagePart,DamageResolution,RpgSystem,apiError} from './api';
 import {SheetCollectionFieldComponent} from './sheet-collection-field.component';
 
-interface CombatView { damageTypes: {value:string;label:string}[]; raging:boolean; rageTurns:number; rageBonus:number; heavyArmor:boolean; relentlessDc:number; }
+interface CombatView { damageTypes: {value:string;label:string}[]; raging:boolean; rageTurns:number; rageBonus:number; heavyArmor:boolean; relentlessDc:number; reckless:boolean; exposed:boolean; brutalDice:number; }
 interface CombatRules { combat?:CombatView; actions:{id:string;options?:{value:string;label:string}[]}[]; }
 @Component({selector:'app-dnd-combat-panel',standalone:true,imports:[CommonModule,FormsModule,SheetCollectionFieldComponent],template:`
   <section *ngIf="view()?.combat as combat" class="combat-panel" aria-label="Dano e defesas D&D 2014">
     <h2>DANO E DEFESAS <small>2014</small></h2>
     <div class="rage-status" *ngIf="combat.raging"><b>FÚRIA ATIVA</b><span>Até {{ combat.rageTurns }} turnos · {{ combat.heavyArmor ? 'armadura pesada: benefícios suspensos' : '+' + combat.rageBonus + ' dano corpo a corpo com FOR; resistência física' }}</span></div>
+    <div class="rage-status" *ngIf="combat.exposed"><b>ATAQUE DESCUIDADO</b><span>Ataques contra você têm vantagem até o início do próximo turno. {{ combat.reckless ? 'Vantagem em seus ataques com arma corpo a corpo e FOR durante este turno.' : 'Benefício ofensivo encerrado.' }}</span></div>
     <div *ngIf="character.canEdit && mode !== 'print'" class="utilities">
       <button type="button" [disabled]="blocked()" (click)="execute('combat-turn-start')">Iniciar turno</button><button type="button" [disabled]="blocked()" (click)="execute(extraTurn ? 'combat-extra-turn-end' : 'combat-turn-end')">Concluir turno</button>
       <label><input type="checkbox" aria-label="Turno extra sem avanço de duração" [(ngModel)]="extraTurn" [ngModelOptions]="{standalone:true}"> Turno extra</label><button *ngIf="combat.raging" type="button" [disabled]="blocked()" (click)="execute('rage-hostile-attack')">Confirmar ataque hostil</button><button *ngIf="combat.raging" type="button" [disabled]="blocked()" (click)="execute('rage-end')">Encerrar Fúria</button>

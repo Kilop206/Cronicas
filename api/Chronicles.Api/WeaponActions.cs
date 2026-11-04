@@ -36,6 +36,9 @@ public static partial class WeaponActions
             if (dnd) Dnd2014Conditions.CanAttack(s);
             var baseKey = Text(row, "base", dnd ? "mod_forca" : "per_luta");
             RuleState.Require(system.Fields.Any(f => f.Key == baseKey && f.Type == "number"), "Escolha a chave de um atributo, modificador ou perícia numérica do sistema.");
+            var barbarian = dnd && Dnd2014Damage.Supports(system);
+            var brutalDie = barbarian ? Dnd2014BarbarianAttacks.WeaponDie(s, Text(row,"tipo"), damageFormula, command.Weapon) : 0;
+            if (barbarian) Dnd2014BarbarianAttacks.Prepare(s,command.Weapon);
             string expression;
             if (!dnd)
             {
@@ -47,7 +50,7 @@ public static partial class WeaponActions
             {
                 var bonus = s.N(baseKey) + Number(row, "bonus");
                 if (dnd && Flag(row, "treinado")) bonus += s.N("proficiencia");
-                var mode = dnd ? Dnd2014Conditions.Mode(s, "attack", s.Get("modo_ataque")) : 0;
+                var mode = Dnd2014Conditions.Mode(s, "attack", s.Get("modo_ataque"), advantageSource: barbarian && Dnd2014BarbarianAttacks.Advantage(s,Text(row,"tipo"),baseKey,command.Weapon));
                 RuleState.Require(mode is >= -1 and <= 1, "Modo de ataque inválido.");
                 expression = (mode == 0 ? "1d20" : mode > 0 ? "2d20kh1" : "2d20kl1") + (bonus < 0 ? bonus.ToString() : "+" + bonus);
             }
@@ -63,9 +66,13 @@ public static partial class WeaponActions
             else
             {
                 var rageBonus=dnd && Dnd2014Damage.Supports(system) && baseKey=="mod_forca" && Text(row,"tipo")=="corpo" ? Dnd2014Rage.Bonus(s) : 0;
-                var damage = Math.Max(0, DamageFormula.Evaluate(damageFormula, s, critical ? multiplier : 1) + DamageFormula.Evaluate(extra, s, critical && dnd ? 2 : 1) + rageBonus);
-                message = $"{name}: {expression} = {total}{(critical ? " · crítico" : "")}; dano {damage}{(rageBonus>0?$" (inclui +{rageBonus} de Fúria)":"")}. " + (command.Amount == 0 ? "Defesa não informada; confirme o acerto antes de aplicar." : "Aplique ao alvo após resistências e imunidades.");
+                var damage = DamageFormula.Evaluate(damageFormula, s, critical ? multiplier : 1) + DamageFormula.Evaluate(extra, s, critical && dnd ? 2 : 1) + rageBonus;
+                var brutalCount = critical && brutalDie > 0 ? Dnd2014BarbarianAttacks.BrutalDice(s) : 0;
+                if (brutalCount > 0) damage += s.Pool(brutalCount,brutalDie);
+                damage = Math.Max(0,damage);
+                message = $"{name}: {expression} = {total}{(critical ? " · crítico" : "")}; dano {damage}{(rageBonus>0?$" (inclui +{rageBonus} de Fúria)":"")}{(brutalCount>0?$" · Crítico Brutal +{brutalCount}d{brutalDie}":"")}. " + (command.Amount == 0 ? "Defesa não informada; confirme o acerto antes de aplicar." : "Aplique ao alvo após resistências e imunidades.");
             }
+            if (barbarian && s.Get("descuidado_exposto")>0) message += " Ataques contra você têm vantagem até o início do seu próximo turno.";
         }
         if (ammo > 0)
         {

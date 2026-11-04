@@ -2,6 +2,15 @@
 
 ## Validação integrada de regras — 30/10/2026
 
+Atualização de 04/11/2026: D&D 2014 v5 foi validado com dano por tipo, defesas, Fúria e seus controles de turno, Ataque Descuidado e Crítico Brutal. As capturas abaixo usam personagens gravados na API e no PostgreSQL local, com Chrome/Playwright. A regressão dos quatro sistemas, testes .NET, smoke, templates, lint e build passaram. A inspeção verificou reorganização do combate no tablet/celular, legibilidade e ausência de overflow do documento. A correspondência estrutural com as referências mantém as limitações descritas adiante.
+
+| D&D 2014 integrado | 1440×900 | 1920×1080 | 768×1024 | 390×844 |
+| --- | --- | --- | --- | --- |
+| Dano, defesas e Fúria | [desktop](rules/dnd_5e-damage-rage-desktop.png) | [amplo](rules/dnd_5e-damage-rage-wide.png) | [tablet](rules/dnd_5e-damage-rage-tablet.png) | [mobile](rules/dnd_5e-damage-rage-mobile.png) |
+| Ataques do bárbaro | [desktop](rules/dnd_5e-barbarian-attacks-desktop.png) | [amplo](rules/dnd_5e-barbarian-attacks-wide.png) | [tablet](rules/dnd_5e-barbarian-attacks-tablet.png) | [mobile](rules/dnd_5e-barbarian-attacks-mobile.png) |
+
+Os testes de navegador verificam também privacidade de Fúria Implacável, permanência do primeiro ataque após refresh, reação sem vantagem ofensiva, fim/início de turno, controles compartilhados para layouts personalizados e migração explícita v4→v5 preservando armas, PV e moedas. Testes determinísticos cobrem os críticos e suas quantidades de dados sem depender de sorte no navegador. A cobertura mecânica e as pendências estão em [rules-engine.md](../rules-engine.md).
+
 Atualização de 03/11/2026: [recursos de classe de D&D](rules/dnd_5e-class-resources-desktop.png) incluem configuração de níveis na ficha, reservas calculadas no servidor, cura por Retomar o Fôlego, rolagem exclusiva do mestre, consumo de Ki, meditação e criação/expiração de espaços por feitiçaria. O teste integrado executa essas ações e recarrega a página para verificar os dados persistidos.
 
 As capturas atuais em [rules](rules/) foram feitas com `web/rules-integration.mjs`, Chrome, a API .NET local e PostgreSQL de teste. Esse conjunto usa autenticação e persistência reais e cobre os quatro sistemas nas resoluções 1440×900, 1920×1080, 768×1024 e 390×844. O script verifica permissões, conflito de versões, histórico, ataques privados, consumo de munição, aplicação de condições pelo formulário, rolagens nativas e leitura após recarregar. Em Ordem, a coluna de dados usa a prévia do servidor; em Tormenta20, o modificador da perícia considera as condições. As capturas não utilizam contas de produção.

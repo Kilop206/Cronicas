@@ -6,7 +6,7 @@ public sealed record DamagePart(string Type, int Amount, bool Magical = false, b
 public sealed record DamageEvent(DamagePart[] Parts, bool Critical = false, bool Attack = false);
 public sealed record DamageGroup(string Type, int Raw, int Applied, bool Immune, bool Resistant, bool Vulnerable, string[] Sources);
 public sealed record DamageResolution(int Raw, int Total, DamageGroup[] Groups);
-public sealed record DndCombatView(RuleChoice[] DamageTypes, bool Raging, int RageTurns, int RageBonus, bool HeavyArmor, int RelentlessDc);
+public sealed record DndCombatView(RuleChoice[] DamageTypes, bool Raging, int RageTurns, int RageBonus, bool HeavyArmor, int RelentlessDc, bool Reckless, bool Exposed, int BrutalDice);
 
 public static class Dnd2014Damage
 {
@@ -34,7 +34,7 @@ public static class Dnd2014Damage
             if (Defenses(s).Any(row => (row.Type.Length>0 || complete) && row.Type != "all" && !Types.Any(t=>t.Value==row.Type)
                 || (row.Effect.Length>0 || complete) && row.Effect is not ("resistance" or "immunity" or "vulnerability")
                 || row.Condition is not ("" or "always" or "nonmagical" or "nonmagical_attacks" or "nonmagical_nonsilvered_attacks" or "nonmagical_nonadamantine_attacks"))) return "Escolha tipo, efeito e condição válidos para cada defesa de dano.";
-            return Dnd2014Rage.Validate(s);
+            return Dnd2014Rage.Validate(s) ?? Dnd2014BarbarianAttacks.Validate(s);
         }
         catch (ArgumentException e) { return e.Message; }
     }

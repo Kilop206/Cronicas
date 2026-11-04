@@ -13,6 +13,8 @@ O PDF `chamado-de-cthulhu-livro do guardião-7-edicao.pdf` foi localizado, mas n
 
 ## Versionamento e compatibilidade
 
+Atualização de 04/11/2026: o combate de D&D 2014 v5 também executa Ataque Descuidado e Crítico Brutal. As seções foram verificadas no PDF local, páginas PDF 47–48. A escolha de turno é explícita e o dado adicional usa a arma estruturada, sem inferir propriedades pelo nome. Limites da associação entre atacante/alvo estão registrados em [rules-engine.md](rules-engine.md).
+
 Atualização de 03/11/2026: D&D 2014 v5 incorpora processamento de dano por tipo e efeitos de Fúria, Fúria Implacável e Fúria Persistente. As seções correspondentes do Livro do Jogador local foram conferidas nas páginas PDF 47–48 e 197, com conferência pública da edição 2014 no D&D Beyond. A interface exige confirmação de contexto; não infere armadura, hostilidade ou resistências pelo nome dos itens. Veja a cobertura executável e os limites em [rules-engine.md](rules-engine.md).
 
 Atualização de 03/11/2026: o template CoC v6 acrescenta criação por ocupação, interesses pessoais, bases de perícias e faixa de Crédito, conferidos no livro básico local, páginas PDF 37–43 e 57–58. A definição das ocupações é editável e versionada junto ao sistema. A conferência não usa o método simplificado de pontos do quick-start. A cobertura e as configurações de mesa estão detalhadas em [rules-engine.md](rules-engine.md); isso não implementa todas as ocupações e regras da edição.

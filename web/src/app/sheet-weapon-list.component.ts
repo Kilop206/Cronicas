@@ -10,9 +10,16 @@ type SheetRow = Record<string, SheetCellValue>;
   <section *ngIf="field()" class="weapon-list" aria-label="Ataques do personagem">
     <div *ngIf="mode !== 'print' && rows().length" class="weapon-config"><label *ngIf="system.templateId !== 'call_of_cthulhu_7e'">Defesa do alvo<input type="number" aria-label="Defesa do alvo dos ataques" [(ngModel)]="target" [ngModelOptions]="{standalone:true}" min="0" max="9999"></label>
       <label class="hostile-confirm" *ngIf="system.templateId==='dnd_5e' && system.templateVersion===5"><input type="checkbox" aria-label="Alvo dos ataques é criatura hostil" [(ngModel)]="hostile" [ngModelOptions]="{standalone:true}"> Alvo é criatura hostil</label>
+      <ng-container *ngIf="barbarianAttacks()">
+        <label class="hostile-confirm"><input type="checkbox" aria-label="Ataque fora do meu turno" [(ngModel)]="outsideTurn" (ngModelChange)="reckless=false" [ngModelOptions]="{standalone:true}"> Fora do meu turno (reação)</label>
+        <label class="hostile-confirm"><input type="checkbox" aria-label="Usar Ataque Descuidado no primeiro ataque" [(ngModel)]="reckless" [ngModelOptions]="{standalone:true}" [disabled]="outsideTurn || ruleState('ataques_turno')>0"> Ataque Descuidado no primeiro ataque</label>
+        <label *ngIf="ruleState('nivel_barbaro')>=9">Dado da arma para Crítico Brutal<select aria-label="Dado da arma para Crítico Brutal" [(ngModel)]="brutalDie" [ngModelOptions]="{standalone:true}"><option [ngValue]="0">Automático</option><option *ngFor="let die of weaponDice" [ngValue]="die">d{{ die }}</option></select></label>
+      </ng-container>
       <label *ngIf="system.templateId === 'call_of_cthulhu_7e'">Dificuldade<select [(ngModel)]="difficulty" [ngModelOptions]="{standalone:true}"><option [ngValue]="1">Regular</option><option [ngValue]="2">Difícil</option><option [ngValue]="5">Extrema</option></select></label>
       <label>Visibilidade<select [(ngModel)]="visibility" [ngModelOptions]="{standalone:true}"><option value="campaign">Mesa</option><option value="private">Privada</option></select></label>
     </div>
+    <p *ngIf="barbarianAttacks() && ruleState('descuidado_exposto')" role="status">Ataque Descuidado: ataques contra você têm vantagem até o início do seu próximo turno. {{ ruleState('descuidado_turno') && !outsideTurn ? 'Seus ataques com arma corpo a corpo e FOR recebem vantagem neste turno.' : '' }}</p>
+    <p *ngIf="barbarianAttacks() && ruleState('nivel_barbaro')>=9">Crítico Brutal acrescenta dados da arma em críticos corpo a corpo. Informe somente o dano da arma em Dano base; efeitos adicionais pertencem a Dano extra.</p>
     <div *ngFor="let row of rows(); let index=index" class="weapon-row"><div><strong>{{ text(row,'nome') || 'Ataque sem nome' }}</strong><small>{{ baseLabel(row) }}<span *ngIf="ammo(row) >= 0"> · munição {{ ammo(row) }}</span></small></div><div class="damage"><b>{{ text(row,'dano') || '1' }}</b><small *ngIf="text(row,'dano_extra')">+ {{ text(row,'dano_extra') }} extra</small></div>
       <button *ngIf="mode !== 'print' && character.canEdit" type="button" [disabled]="!ready || busy() || ammo(row) === 0 || !text(row,'nome')" [attr.aria-label]="'Atacar com ' + text(row,'nome')" (click)="attack(index)">{{ busy() ? '…' : 'Rolar' }}</button>
     </div>
@@ -42,6 +49,9 @@ export class SheetWeaponListComponent {
   field() { return this.system.fields.find(field => field.key === 'ataques_regras'); }
   baseOptions() { return {...numericColumnOptions(this.system.fields),...(this.system.templateId==='dnd_5e'?{tipo:[{value:'corpo',label:'Arma corpo a corpo'},{value:'distancia',label:'Arma a distância ou arremessada'}]}:{})}; }
   hostile=false;
+  reckless=false; outsideTurn=false; brutalDie=0; weaponDice=[3,4,6,8,10,12,20,100];
+  ruleState(key:string){const rows=this.draft.fields['estado_regras'];if(!Array.isArray(rows))return 0;const row=rows.find(row=>row && typeof row==='object' && row['chave']===key);return row && typeof row==='object' && typeof row['valor']==='number'?row['valor']:0;}
+  barbarianAttacks(){return this.system.templateId==='dnd_5e' && this.system.templateVersion===5 && this.system.rulesetVersion==='2014' && this.ruleState('nivel_barbaro')>=2;}
   rows(): SheetRow[] { const value = this.draft.fields['ataques_regras']; return Array.isArray(value) && value.every(row => row && typeof row === 'object' && !Array.isArray(row)) ? value as SheetRow[] : []; }
   text(row: SheetRow, key: string) { return typeof row[key] === 'string' ? row[key] as string : ''; }
   baseLabel(row: SheetRow) { return this.system.fields.find(field => field.key === this.text(row, 'base'))?.label || 'Teste de ataque'; }
@@ -49,7 +59,7 @@ export class SheetWeaponListComponent {
   attack(index: number) {
     if (!this.character.canEdit || !this.ready || this.busy()) return;
     this.busy.set(true); this.working.emit(true); this.error.set(''); this.message.set(''); this.rolls.set([]);
-    this.api.applyCharacterRule(this.character.id, this.character.version, { action: 'attack', amount: this.system.templateId === 'call_of_cthulhu_7e' ? this.difficulty : this.target, option: String(index), visibility: this.visibility, ...(this.system.templateId==='dnd_5e' && this.hostile?{expression:'hostile'}:{}) })
-      .pipe(finalize(() => { this.busy.set(false); this.working.emit(false); })).subscribe({ next: result => { this.message.set(result.message); this.rolls.set(result.rolls); this.applied.emit(result.character); }, error: error => this.error.set(apiError(error)) });
+    this.api.applyCharacterRule(this.character.id, this.character.version, { action: 'attack', amount: this.system.templateId === 'call_of_cthulhu_7e' ? this.difficulty : this.target, option: String(index), visibility: this.visibility, ...(this.system.templateId==='dnd_5e' && this.hostile?{expression:'hostile'}:{}),...(this.barbarianAttacks()?{weapon:{reckless:this.reckless,outsideTurn:this.outsideTurn,brutalDie:this.brutalDie}}:{}) })
+      .pipe(finalize(() => { this.busy.set(false); this.working.emit(false); })).subscribe({ next: result => { this.reckless=false;this.message.set(result.message); this.rolls.set(result.rolls); this.applied.emit(result.character); }, error: error => this.error.set(apiError(error)) });
   }
 }

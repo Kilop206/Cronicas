@@ -76,7 +76,7 @@ public static class Dnd2014ClassResources
     }
     public static void Rest(RuleState s, bool longRest, bool meditation)
     {
-        Dnd2014Rage.End(s);s.Set("furia_implacavel_usos",0);s.Set("turno_atividade",0);
+        Dnd2014Rage.End(s);s.Set("furia_implacavel_usos",0);s.Set("turno_atividade",0);Dnd2014BarbarianAttacks.StartTurn(s);
         foreach (var resource in Resources(s))
         {
             var shortRecharge = resource.Id is "canalizar" or "forma_selvagem" or "folego" or "surto" || resource.Id == "inspiracao" && L(s, "bardo") >= 5;
@@ -99,7 +99,7 @@ public static class Dnd2014ClassResources
         switch (c.Action)
         {
             case "class-spend": Spend(s, c.Option!, c.Amount); return "Recurso de classe gasto. Aplique o efeito da habilidade escolhida; o alvo não foi alterado.";
-            case "class-turn": s.Set("surto_turno", 0); return "Novo turno confirmado; Surto de Ação liberado para este turno, respeitando os usos restantes.";
+            case "class-turn": s.Set("surto_turno", 0); Dnd2014BarbarianAttacks.StartTurn(s); return "Novo turno confirmado; Ataque Descuidado encerrado e Surto de Ação liberado para este turno, respeitando os usos restantes.";
             case "second-wind":
                 Spend(s, "folego", 1); var heal = s.Roll("1d10+" + L(s, "guerreiro"));
                 Dnd2014Rules.Apply(s, new("heal", heal)); return $"Retomar o Fôlego: {s.Rolls[^1].Expression} [{string.Join(", ", s.Rolls[^1].Rolls)}] = {heal}; até {heal} PV recuperados; uso gasto.";

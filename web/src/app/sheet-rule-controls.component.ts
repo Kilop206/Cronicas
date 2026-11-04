@@ -17,6 +17,11 @@ interface RuleView { edition: string; actions: RuleAction[]; stats: { label: str
         <label>Ação<select name="ruleAction" [ngModel]="actionId" (ngModelChange)="choose($event)" [disabled]="busy()"><option *ngFor="let item of rules.actions" [value]="item.id">{{ item.label }}</option></select></label>
         <label *ngIf="action()?.amountLabel">{{ action()?.amountLabel }}<input type="number" name="amount" [(ngModel)]="amount" [min]="minimum()" [max]="maximum()" required [disabled]="busy()"></label>
         <label *ngIf="action()?.options?.length">Opção<select name="option" [(ngModel)]="option" [disabled]="busy()"><option *ngFor="let item of action()?.options" [value]="item.value">{{ item.label }}</option></select></label>
+        <ng-container *ngIf="barbarianAttackOptions()">
+          <label class="inline-check"><input type="checkbox" name="outsideTurn" [(ngModel)]="outsideTurn" (ngModelChange)="reckless=false" [disabled]="busy()"> Fora do meu turno (reação)</label>
+          <label class="inline-check"><input type="checkbox" name="reckless" [(ngModel)]="reckless" [disabled]="busy() || outsideTurn || (view()?.state?.['ataques_turno'] || 0)>0"> Ataque Descuidado no primeiro ataque</label>
+          <label *ngIf="(view()?.state?.['nivel_barbaro'] || 0)>=9">Dado de Crítico Brutal<select name="brutalDie" [(ngModel)]="brutalDie" [disabled]="busy()"><option [ngValue]="0">Automático</option><option *ngFor="let die of weaponDice" [ngValue]="die">d{{ die }}</option></select></label>
+        </ng-container>
         <label>Rolagens<select name="visibility" [(ngModel)]="visibility" [disabled]="busy()"><option value="campaign">Mesa</option><option value="private">Privadas</option><option *ngIf="isMaster" value="gm">Mestres</option></select></label>
         <button type="submit" class="button button-small" [disabled]="busy() || !ready || !action()">{{ busy() ? 'Aplicando…' : 'Aplicar ação' }}</button>
       </form>
@@ -32,6 +37,7 @@ interface RuleView { edition: string; actions: RuleAction[]; stats: { label: str
   </section><p *ngIf="!view() && error()" role="alert" class="form-error">{{ error() }}</p>
 `, styles: [`
  :host{display:block;min-width:0}.rule-controls{padding:9px 12px;border:1px solid var(--border);margin-block:9px;background:var(--surface);color:var(--text);font:12px var(--font-body,Arial,sans-serif)}summary{cursor:pointer;font-weight:700}dl{display:flex;gap:8px 20px;flex-wrap:wrap;margin:10px 0}dl>div{min-width:100px}dt{font-size:10px;color:var(--muted)}dd{margin:3px 0;font-weight:700}form{display:flex;align-items:end;flex-wrap:wrap;gap:8px}label{display:grid;gap:4px;min-width:0;font-size:11px}select,input{max-width:100%;min-height:32px;padding:4px 7px;background:var(--surface-raised);color:var(--text);border:1px solid var(--border)}input{width:110px}p{margin:8px 0 0;line-height:1.4}select:focus-visible,input:focus-visible{outline:2px solid var(--text);outline-offset:2px}@media(max-width:520px){form{display:grid;grid-template-columns:minmax(0,1fr)}label,input,select{width:100%}}@media print{form,p.muted{display:none}}
+ .inline-check{display:flex;align-items:center;gap:5px}.inline-check input[type=checkbox]{width:16px;height:16px;min-height:16px}
 `] })
 export class SheetRuleControlsComponent implements OnChanges, OnDestroy {
   @Input({ required: true }) character!: Character;
@@ -47,6 +53,8 @@ export class SheetRuleControlsComponent implements OnChanges, OnDestroy {
   view = signal<RuleView | null>(null); busy = signal(false); error = signal(''); message = signal('');
   rolls = signal<{ expression: string; rolls: number[]; keptIndexes: number[]; modifier: number; total: number }[]>([]);
   actionId = ''; option = ''; amount = 1; visibility: 'campaign' | 'private' | 'gm' = 'campaign';
+  reckless=false; outsideTurn=false; brutalDie=0; weaponDice=[3,4,6,8,10,12,20,100];
+  barbarianAttackOptions(){return this.actionId==='attack' && this.system.templateId==='dnd_5e' && this.system.templateVersion===5 && this.system.rulesetVersion==='2014' && (this.view()?.state?.['nivel_barbaro'] || 0)>=2;}
   private version = '';
   attackField() { return this.system.fields.find(field => field.key === 'ataques_regras'); }
   baseOptions() { return numericColumnOptions(this.system.fields); }
@@ -67,9 +75,9 @@ export class SheetRuleControlsComponent implements OnChanges, OnDestroy {
   apply() {
     if (!this.ready || this.busy() || !this.character.canEdit || !this.action()) return;
     this.busy.set(true); this.working.emit(true); this.error.set(''); this.message.set(''); this.rolls.set([]);
-    this.api.applyCharacterRule(this.character.id, this.character.version, { action: this.actionId, amount: this.amount, option: this.option || null, visibility: this.visibility })
+    this.api.applyCharacterRule(this.character.id, this.character.version, { action: this.actionId, amount: this.amount, option: this.option || null, visibility: this.visibility,...(this.barbarianAttackOptions()?{weapon:{reckless:this.reckless,outsideTurn:this.outsideTurn,brutalDie:this.brutalDie}}:{}) })
       .pipe(finalize(() => { this.busy.set(false); this.working.emit(false); })).subscribe({
-        next: result => { this.message.set(result.message); this.rolls.set(result.rolls); this.applied.emit(result.character); }, error: error => this.error.set(apiError(error))
+        next: result => { this.reckless=false;this.message.set(result.message); this.rolls.set(result.rolls); this.applied.emit(result.character); }, error: error => this.error.set(apiError(error))
       });
   }
   ngOnDestroy() { this.request?.unsubscribe(); }

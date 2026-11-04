@@ -3,7 +3,7 @@ using static Chronicles.Api.CharacterEndpoints;
 
 namespace Chronicles.Api;
 
-public sealed record RuleCommand(string Action, int Amount = 0, string? Option = null, string Visibility = "campaign", string? Expression = null, DamageEvent? Damage = null);
+public sealed record RuleCommand(string Action, int Amount = 0, string? Option = null, string Visibility = "campaign", string? Expression = null, DamageEvent? Damage = null, WeaponContext? Weapon = null);
 public sealed record RuleChoice(string Value, string Label);
 public sealed record RuleAction(string Id, string Label, string? AmountLabel = null, RuleChoice[]? Options = null, bool Hidden = false);
 public sealed record RuleStat(string Label, string Value);
@@ -56,6 +56,7 @@ public static class SheetRuleActions
         if (system.TemplateId == "dnd_5e") view = view with { Actions = [.. view.Actions, .. Dnd2014Conditions.Actions(system), .. Dnd2014ClassResources.Actions(system, s)], Stats = [.. view.Stats, .. Dnd2014Conditions.Stats(s), .. Dnd2014ClassResources.Stats(s)], Resources = Dnd2014ClassResources.Resources(s),
             Settings = [.. view.Settings, new("modo_testes", "Testes: −1 desvantagem, 0 normal, 1 vantagem", -1, 1), new("fonte_medo_oculta", "Fonte do medo fora de vista (0 ou 1)", 0, 1), new("alvo_ve_invisivel", "Alvo consegue ver invisibilidade (0 ou 1)", 0, 1), new("alvo_encantador", "Alvo é a fonte do encanto (0 ou 1)", 0, 1), new("sentido_percepcao", "Percepção: 0 geral, 1 visão, 2 audição", 0, 2), new("vantagem_concentracao", "Concentração: −1 desvantagem, 0 normal, 1 vantagem", -1, 1)] };
         if(Dnd2014Damage.Supports(system)) view=view with {Actions=[..view.Actions,..Dnd2014Rage.Actions(system,s),..(system.Fields.Any(f=>f.Key==Dnd2014Damage.FieldKey)?new RuleAction[]{new("damage-typed","Receber dano por tipo",Hidden:true)}:[])],Stats=[..view.Stats,new("Fúria",Dnd2014Rage.Active(s)?$"Ativa · até {s.Get("furia_rodadas")} turnos":"Inativa"),new("Bônus de dano da Fúria",Dnd2014Rage.Bonus(s).ToString())],Combat=Dnd2014Rage.View(s)};
+        if(Dnd2014Damage.Supports(system) && s.Get("nivel_barbaro")>=2) view=view with {Stats=[..view.Stats,new("Ataque Descuidado",s.Get("descuidado_exposto")>0?"Ataques contra você têm vantagem até seu próximo turno":"Inativo"),new("Crítico Brutal",$"+{Dnd2014BarbarianAttacks.BrutalDice(s)} dados em críticos corpo a corpo")]};
         return view with { Actions = [.. view.Actions, .. weaponActions, new RuleAction("configure", "Salvar configuração", "Valor", view.Settings.Select(x => new RuleChoice(x.Key, x.Label)).ToArray())] };
     }
 
