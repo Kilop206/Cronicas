@@ -30,7 +30,7 @@ public static class Dnd2014ClassResources
     public static RuleAction[] Actions(SystemDefinition system, RuleState s)
     {
         var resources = Resources(s);
-        var generic = resources.Where(r => r.Id is not ("folego" or "indomavel" or "mestre_mistico")).Select(r => new RuleChoice(r.Id, r.Label)).ToArray();
+        var generic = resources.Where(r => r.Id is not ("folego" or "indomavel" or "mestre_mistico")).Select(r => new RuleChoice(r.Id, r.Id=="furia"&&Dnd2014Damage.Supports(system)?r.Label+" (somente registrar gasto)":r.Label)).ToArray();
         var actions = new List<RuleAction>();
         if (generic.Length > 0) actions.Add(new("class-spend", "Gastar recurso de classe", "Quantidade", generic));
         if (L(s, "guerreiro") > 0) actions.Add(new("second-wind", "Retomar o Fôlego e curar a si mesmo"));
@@ -61,7 +61,7 @@ public static class Dnd2014ClassResources
         s.Set("arcana_descanso", 0); s.Set("arcana_saldo", 0); s.Set("arcana_ativa", 0);
     }
     private static RuleResource Resource(RuleState s, string key) => Resources(s).SingleOrDefault(r => r.Id == key) ?? throw new ArgumentException("Recurso indisponível nos níveis configurados.");
-    private static void Spend(RuleState s, string key, int amount)
+    public static void Spend(RuleState s, string key, int amount)
     {
         var resource = Resource(s, key);
         RuleState.Require(amount > 0 && (resource.Maximum is null || amount <= resource.Current), "Recurso insuficiente ou quantidade inválida.");
@@ -76,6 +76,7 @@ public static class Dnd2014ClassResources
     }
     public static void Rest(RuleState s, bool longRest, bool meditation)
     {
+        Dnd2014Rage.End(s);s.Set("furia_implacavel_usos",0);s.Set("turno_atividade",0);
         foreach (var resource in Resources(s))
         {
             var shortRecharge = resource.Id is "canalizar" or "forma_selvagem" or "folego" or "surto" || resource.Id == "inspiracao" && L(s, "bardo") >= 5;

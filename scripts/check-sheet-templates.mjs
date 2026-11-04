@@ -54,7 +54,9 @@ for (const template of templates) {
 }
 
 const dnd = templates.find(template => template.id === 'dnd_5e');
-assert.equal(dnd.version, 4);
+assert.equal(dnd.version, 5);
+assert.equal(dnd.fields.find(f=>f.key==='ataques_regras').columns.length,8);
+assert.ok(dnd.fields.some(f=>f.key==='defesas_dano'));
 assert.equal(dnd.rulesetVersion, '2014', 'The supplied Player Handbook covers the 2014 rules');
 assert.equal(dnd2014NextLevelXp(4), 6500);
 assert.equal(dnd2014NextLevelXp(19), 355000);

@@ -5,7 +5,7 @@ import { Subscription, finalize } from 'rxjs';
 import { ApiService, Character, RpgSystem, apiError } from './api';
 
 interface ClassResource { id: string; label: string; current: number; maximum: number | null; recharge: string; detail: string | null; }
-interface ClassView { resources?: ClassResource[]; actions: {id: string; options?: {value: string; label: string}[]}[]; state: Record<string, number>; }
+interface ClassView { resources?: ClassResource[]; actions: {id: string; options?: {value: string; label: string}[]}[]; state: Record<string, number>; combat?:{raging:boolean;rageTurns:number}; }
 
 @Component({selector: 'app-dnd-class-resources', standalone: true, imports: [CommonModule, FormsModule], template: `
   <section *ngIf="view()" class="class-resources" aria-label="Recursos de classe">
@@ -19,9 +19,11 @@ interface ClassView { resources?: ClassResource[]; actions: {id: string; options
       <div class="resource-title"><strong>{{ resource.label }}</strong><b>{{ resource.maximum === null ? '∞' : resource.current + ' / ' + resource.maximum }}</b></div>
       <small>{{ resource.recharge }}</small><p *ngIf="resource.detail">{{ resource.detail }}</p>
       <div *ngIf="mode !== 'print' && character.canEdit" class="resource-controls">
+        <label *ngIf="resource.id === 'furia' && hasAction('rage-start')">Ativação de Fúria<select aria-label="Condições da ativação de Fúria" [(ngModel)]="rageOption" [ngModelOptions]="{standalone:true}" [disabled]="busy()"><option value="">Confirme a armadura</option><option *ngFor="let choice of rageOptions()" [value]="choice.value">{{ choice.label }}</option></select></label>
         <label *ngIf="variable(resource.id)">Quantidade<input type="number" [attr.aria-label]="'Quantidade de ' + resource.label" [(ngModel)]="amounts[resource.id]" [ngModelOptions]="{standalone:true}" min="1" [max]="resource.current" [disabled]="busy()"></label>
         <label *ngIf="resource.id === 'indomavel'">Resistência falha<select aria-label="Resistência para Indomável" [(ngModel)]="saveKey" [ngModelOptions]="{standalone:true}" [disabled]="busy()"><option *ngFor="let field of saves()" [value]="field.key">{{ field.label }}</option></select></label>
-        <button type="button" [attr.aria-label]="'Usar ' + resource.label" [disabled]="busy() || !ready || resource.maximum !== null && resource.current === 0 || resource.id === 'indomavel' && !saveKey || resource.id === 'surto' && !!view()?.state?.['surto_turno']" (click)="use(resource)">Usar</button>
+        <button type="button" [attr.aria-label]="'Usar ' + resource.label" [disabled]="busy() || !ready || resource.maximum !== null && resource.current === 0 || resource.id === 'indomavel' && !saveKey || resource.id === 'surto' && !!view()?.state?.['surto_turno'] || resource.id === 'furia' && hasAction('rage-start') && (!rageOption || !!view()?.combat?.raging)" (click)="use(resource)">Usar</button>
+        <span *ngIf="resource.id === 'furia' && view()?.combat?.raging">Ativa · até {{ view()?.combat?.rageTurns }} turnos</span>
         <button *ngIf="resource.id === 'cura_maos'" type="button" [disabled]="busy() || !ready || resource.current === 0" (click)="execute('lay-hands-self', amounts[resource.id])">Curar a si</button>
       </div>
     </article></div>
@@ -72,6 +74,7 @@ export class DndClassResourcesComponent implements OnChanges, OnDestroy {
   resources = signal<ClassResource[]>([]); view = signal<ClassView | null>(null); busy = signal(false); message = signal(''); error = signal('');
   amounts: Record<string, number> = {}; saveKey = ''; createLevel = 1; convertLevel = 1; convertSource = 'spell'; arcaneLevel = 1; longRestOption = 'confirmed'; classKey = ''; levelDraft = 0;
   visibility: 'campaign' | 'private' | 'gm' = 'campaign';
+  rageOption='';
   ngOnChanges() {
     const version = `${this.character.id}:${this.character.version}:${this.system.id}`; if (version === this.version) return;
     this.version = version; this.request?.unsubscribe();
@@ -88,7 +91,9 @@ export class DndClassResourcesComponent implements OnChanges, OnDestroy {
   selectClass(key: string) { this.classKey = key; this.levelDraft = this.view()?.state[key] || 0; }
   variable(id: string) { return ['ki','feiticaria','cura_maos'].includes(id); }
   hasAction(id: string) { return this.view()?.actions.some(action => action.id === id) || false; }
+  rageOptions(){return this.view()?.actions.find(action=>action.id==='rage-start')?.options||[];}
   use(resource: ClassResource) {
+    if(resource.id==='furia' && this.hasAction('rage-start')){this.execute('rage-start',0,this.rageOption);return;}
     const special: Record<string, string> = {folego:'second-wind', indomavel:'indomitable', mestre_mistico:'eldritch-master'};
     this.execute(special[resource.id] || 'class-spend', special[resource.id] ? 0 : this.variable(resource.id) ? this.amounts[resource.id] : 1, resource.id === 'indomavel' ? this.saveKey : resource.id);
   }

@@ -26,7 +26,7 @@ const tableField = (key: string, label: string, section: string, columns: [strin
 const ruleStateField = (): SystemField => ({ ...tableField('estado_regras', 'Estado das regras', 'Regras', [['chave', 'Indicador', 'text'], ['valor', 'Valor', 'number']]), defaultValue: [] });
 const weaponField = (system: 'dnd' | 'coc' | 'other'): SystemField => ({ ...tableField('ataques_regras', 'Ataques, dano e munição', 'Regras', [
   ['nome', 'Ataque', 'text'], ['base', system === 'dnd' ? 'Modificador (ex.: mod_forca)' : system === 'coc' ? 'Perícia (ex.: per_lutar)' : 'Perícia (ex.: per_luta)', 'text'], ['dano', 'Dano base', 'text'], ['dano_extra', system === 'coc' ? 'Extra (vazio: bônus de dano corpo a corpo)' : 'Dano extra', 'text'],
-  ...(system === 'coc' ? [['empala', 'Empala', 'boolean'], ['tipo', 'corpo / distancia', 'text'], ['falha', 'Mau funcionamento', 'number']] as [string, string, 'text' | 'number' | 'boolean'][] : system === 'dnd' ? [['treinado', 'Proficiente', 'boolean'], ['bonus', 'Bônus de ataque', 'number']] as [string, string, 'number' | 'boolean'][] : [['margem', 'Margem (2–20)', 'number'], ['multiplicador', 'Crítico (2–5)', 'number']] as [string, string, 'number'][]),
+  ...(system === 'coc' ? [['empala', 'Empala', 'boolean'], ['tipo', 'corpo / distancia', 'text'], ['falha', 'Mau funcionamento', 'number']] as [string, string, 'text' | 'number' | 'boolean'][] : system === 'dnd' ? [['treinado', 'Proficiente', 'boolean'], ['bonus', 'Bônus de ataque', 'number'], ['tipo', 'Tipo de ataque', 'text']] as [string, string, 'text' | 'number' | 'boolean'][] : [['margem', 'Margem (2–20)', 'number'], ['multiplicador', 'Crítico (2–5)', 'number']] as [string, string, 'number'][]),
   ['municao', 'Munição (−1: livre)', 'number']
 ]), defaultValue: [] });
 
@@ -109,6 +109,7 @@ const dndSkills: [string, string, string][] = [
 const dndFields: SystemField[] = [
   weaponField('dnd'),
   ruleStateField(),
+  { ...tableField('defesas_dano', 'Resistências, imunidades e vulnerabilidades', 'Defesas', [['tipo','Tipo de dano','text'],['efeito','Efeito','text'],['condicao','Condição de aplicação','text'],['fonte','Fonte','text']]), defaultValue:[] },
   textField('alinhamento', 'Alinhamento', 'Identidade'),
   listField('condicoes', 'Conditions', 'Combate'),
   listField('magias_preparadas', 'Magias preparadas ou conhecidas', 'Magias'),
@@ -223,12 +224,12 @@ export const SHEET_TEMPLATES: SheetTemplate[] = [
       { id: 'arsenal', title: 'Arsenal e rituais', items: ['protecao', 'resistencias', 'proficiencias', 'ataques', 'condicoes', 'rituais', 'carga_atual', 'carga_limite', inventory(), abilities()] },
       { id: 'registros', title: 'Registros', items: [history()] }
     ], 'investigation', '#9b8bc0', 'CRÔNICAS / DOSSIÊ DO AGENTE', { Atributos: { style: 'score', span: 3 }, Perícias: { style: 'compact', span: 6 } }) },
-  { id: 'dnd_5e', version: 4, rulesetVersion: '2014', name: 'D&D 5e (2014)', summary: 'Atributos, modificadores, resistências, perícias, progressão e combate da edição 2014.', sourceUrl: '', fields: dndFields,
+  { id: 'dnd_5e', version: 5, rulesetVersion: '2014', name: 'D&D 5e (2014)', summary: 'Atributos, perícias, recursos de classe, Fúria e processamento de dano por tipo da edição 2014.', sourceUrl: '', fields: dndFields,
     layout: makeLayout(dndFields, [
       { id: 'aventura', title: 'Personagem e combate', items: [identity(), portrait(), ...sectionKeys(dndFields, 'Identidade'), 'nivel', 'experiencia', highlight('proficiencia', 4), resource('health', 'Pontos de vida', 8), highlight('classe_armadura', 4), 'iniciativa', 'deslocamento', 'pontos_temporarios', 'dados_vida', 'salvaguardas_sucesso', 'salvaguardas_falha', 'condicoes'] },
       { id: 'aptidoes', title: 'Atributos e resistências', items: [...dndAbilities.flatMap(([key]) => [key, `mod_${key}`]), ...dndAbilities.flatMap(([key]) => [`treino_res_${key}`, `res_${key}`])] },
       { id: 'pericias', title: 'Perícias e treino', items: [note('nota_treino', 'Treino', 'Use 0 para nenhum, 1 para proficiência e 2 para especialização. Os bônus são recalculados.'), ...dndSkills.flatMap(([key]) => [`treino_per_${key}`, `per_${key}`])] },
-      { id: 'equipamento', title: 'Equipamento', items: ['moedas', inventory()] },
+      { id: 'equipamento', title: 'Equipamento e defesas', items: ['moedas', 'defesas_dano', inventory()] },
       { id: 'recursos', title: 'Características e magias', items: [...sectionKeys(dndFields, 'Magias'), abilities()] },
       { id: 'jornada', title: 'Jornada', items: [history()] }
     ], 'fantasy', '#b56d63', 'CRÔNICAS / AVENTURA', { Atributos: { style: 'score', span: 3 }, Modificadores: { style: 'score', span: 3 }, Resistências: { style: 'compact', span: 6 }, Perícias: { style: 'compact', span: 6 } }) },

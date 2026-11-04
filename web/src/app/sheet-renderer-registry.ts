@@ -23,6 +23,7 @@ const renderers: SheetRendererDefinition[] = [
   { id: 'dnd_5e', version: 2, required: ['nivel', 'forca', 'destreza', 'constituicao', 'inteligencia', 'sabedoria', 'carisma', 'classe_armadura'], resources: [{ key: 'health', label: 'HP' }] },
   { id: 'dnd_5e', version: 3, required: ['nivel', 'forca', 'destreza', 'constituicao', 'inteligencia', 'sabedoria', 'carisma', 'classe_armadura'], resources: [{ key: 'health', label: 'HP' }] },
   { id: 'dnd_5e', version: 4, required: ['nivel', 'forca', 'destreza', 'constituicao', 'inteligencia', 'sabedoria', 'carisma', 'classe_armadura'], resources: [{ key: 'health', label: 'HP' }] },
+  { id: 'dnd_5e', version: 5, required: ['nivel', 'forca', 'destreza', 'constituicao', 'inteligencia', 'sabedoria', 'carisma', 'classe_armadura'], resources: [{ key: 'health', label: 'HP' }] },
   { id: 'tormenta20', version: 1, required: ['nivel', 'forca', 'destreza', 'defesa'], resources: [{ key: 'health', label: 'PV' }, { key: 'mana', label: 'PM' }] },
   { id: 'tormenta20', version: 2, required: ['nivel', 'forca', 'destreza', 'defesa', 'bonus_treinamento'], resources: [{ key: 'health', label: 'PV' }, { key: 'mana', label: 'PM' }] },
   { id: 'tormenta20', version: 3, required: ['nivel', 'forca', 'destreza', 'defesa', 'bonus_treinamento'], resources: [{ key: 'health', label: 'PV' }, { key: 'mana', label: 'PM' }] },

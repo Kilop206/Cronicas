@@ -10,6 +10,7 @@ public static class SheetRuleActionTests
         CthulhuCreationTests.Run();
         CthulhuOccupationTests.Run();
         DndClassResourceTests.Run();
+        DndDamageRageTests.Run();
         var stateField = new SystemField("estado_regras", "Estado", "table", "Regras", null, null, null, Columns: [new("chave", "Chave", "text"), new("valor", "Valor", "number")]);
         SystemDefinition System(string id, int version, string edition) => new([stateField], null, id, version, edition);
         var op = System("ordem_paranormal", 6, "1.3"); var dnd = System("dnd_5e", 3, "2014");

@@ -61,20 +61,22 @@ public static class Dnd2014Rules
     }
     private static int PactCount(int level) => level >= 17 ? 4 : level >= 11 ? 3 : level >= 2 ? 2 : 1;
     private static void Alive(RuleState s) => RuleState.Require(s.Get("morto") == 0, "Morte exige um efeito específico; cura e descanso comuns não revivem.");
-    public static string Apply(RuleState s, RuleCommand c)
+    public static string Apply(RuleState s, RuleCommand c, bool combat = false)
     {
         Alive(s);
         switch (c.Action)
         {
             case "damage":
+                var previousHealth = s.Health;
                 var absorbed = Math.Min(s.N("pontos_temporarios"), c.Amount);
                 s.Field("pontos_temporarios", s.N("pontos_temporarios") - absorbed);
                 var damage = c.Amount - absorbed;
                 if (s.Health == 0 && c.Amount > 0) { s.Field("salvaguardas_falha", Math.Min(3, s.N("salvaguardas_falha") + (c.Option == "critical" ? 2 : 1))); s.Set("estavel", 0); }
-                if (damage - s.Health >= s.MaxHealth) s.Set("morto", 1);
+                if (damage > 0 && damage - s.Health >= s.MaxHealth) s.Set("morto", 1);
                 s.Health -= damage;
                 if (s.N("salvaguardas_falha") >= 3) s.Set("morto", 1);
-                return "Dano aplicado; PV temporários absorvidos primeiro." + Dnd2014Conditions.CheckConcentration(s, c.Amount);
+                var rage = combat ? Dnd2014Rage.Damage(s,c.Amount,previousHealth) : "";
+                return "Dano aplicado; PV temporários absorvidos primeiro." + rage + Dnd2014Conditions.CheckConcentration(s, c.Amount);
             case "heal": s.Health += c.Amount; if (s.Health > 0) { s.Field("salvaguardas_sucesso", 0); s.Field("salvaguardas_falha", 0); s.Set("estavel", 0); } return "Cura aplicada.";
             case "temporary": s.Field("pontos_temporarios", Math.Max(s.N("pontos_temporarios"), c.Amount)); return "PV temporários não acumulam; o maior valor foi mantido.";
             case "death-save":

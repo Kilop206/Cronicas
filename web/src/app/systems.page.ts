@@ -21,7 +21,11 @@ const newSheetLayout = (): SheetLayout => ({ accentColor: '#aa9acd', skin: 'inve
 
 function layoutFromFields(fields: SystemField[]): SheetLayout {
   const layout = newSheetLayout();
-  for (const field of fields) layout.pages[0].blocks.push({ id: `campo_${field.key}`, kind: 'field', span: field.span || 6, title: field.label, key: field.key, text: null, style: 'panel' });
+  let page=layout.pages[0];
+  for (const field of fields) {
+    if(page.blocks.length>=40){page={id:`campos_${layout.pages.length+1}`,title:`Campos ${layout.pages.length-2}`,blocks:[]};layout.pages.splice(layout.pages.length-3,0,page);}
+    page.blocks.push({ id: `campo_${field.key}`, kind: 'field', span: field.span || 6, title: field.label, key: field.key, text: null, style: 'panel' });
+  }
   return layout;
 }
 
@@ -148,6 +152,10 @@ export class SystemEditorPage implements OnInit {
     if (!template) return;
     const conflict = template.fields.find(next => this.fields.some(current => current.key === next.key && current.type !== next.type));
     if (conflict) { this.error.set(`O campo ${conflict.label} tem outro tipo. Ajuste o campo antes de atualizar.`); return; }
+    const newAttackColumns=template.id==='dnd_5e' ? template.fields.find(f=>f.key==='ataques_regras')?.columns || [] : [];
+    const oldAttack=this.fields.find(f=>f.key==='ataques_regras');
+    const missingColumns=newAttackColumns.filter(column=>!oldAttack?.columns?.some(current=>current.key===column.key));
+    if(oldAttack && (oldAttack.columns?.length || 0)+missingColumns.length>8){this.error.set('O campo de ataques já usa oito colunas. Libere uma coluna antes de atualizar o tipo de ataque.');return;}
     const missing = template.fields.filter(next => !this.fields.some(current => current.key === next.key));
     if (this.fields.length + missing.length > 100) { this.error.set('Remova campos antes de atualizar: o limite é de 100.'); return; }
     const byKey = new Map(template.fields.map(field => [field.key, field]));
@@ -157,6 +165,7 @@ export class SystemEditorPage implements OnInit {
       return next ? { ...current, formula: next.formula, rollExpression: next.rollExpression } : current;
     }), ...structuredClone(missing)];
     this.templateVersion = template.version;
+    if(oldAttack && missingColumns.length) oldAttack.columns=[...(oldAttack.columns || []),...structuredClone(missingColumns)];
     this.cthulhuOccupations ||= structuredClone(template.cthulhuOccupations || null);
     this.rulesetVersion = template.rulesetVersion;
     this.rulesUpgradeNotice = `Atualização para o modelo ${template.version} preparada. Revise os campos e clique em Salvar sistema para aplicar às fichas da campanha.`;

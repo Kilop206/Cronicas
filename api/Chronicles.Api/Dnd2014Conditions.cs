@@ -9,19 +9,19 @@ public static class Dnd2014Conditions
     public static bool Has(RuleState s, string key) => s.Get("cond_" + key) > 0;
     public static bool Incapacitated(RuleState s) => s.Health == 0 || s.Get("morto") > 0 || new[] { "incapacitado", "paralisado", "petrificado", "atordoado", "inconsciente" }.Any(key => Has(s, key));
     public static void CanAttack(RuleState s) { RuleState.Require(!Incapacitated(s), "Incapacitado não pode realizar ataques."); RuleState.Require(!Has(s, "enfeiticado") || s.Get("alvo_encantador") == 0, "Enfeitiçado não pode atacar a fonte do encanto."); }
-    public static int Mode(RuleState s, string kind, int manual = 0)
+    public static int Mode(RuleState s, string kind, int manual = 0, bool strength = false)
     {
         var fear = Has(s, "amedrontado") && s.Get("fonte_medo_oculta") == 0;
-        var advantage = manual > 0 || kind == "attack" && Has(s, "invisivel") && s.Get("alvo_ve_invisivel") == 0;
+        var advantage = manual > 0 || strength && kind is "ability" or "save" && Dnd2014Rage.Benefits(s) || kind == "attack" && Has(s, "invisivel") && s.Get("alvo_ve_invisivel") == 0;
         var disadvantage = manual < 0 || kind == "attack" && (Has(s, "cego") || Has(s, "caido") || Has(s, "impedido") || Has(s, "envenenado") || fear || s.Get("exaustao") >= 3)
             || kind == "ability" && (Has(s, "envenenado") || fear || s.Get("exaustao") >= 1)
             || kind == "save" && s.Get("exaustao") >= 3;
         return advantage == disadvantage ? 0 : advantage ? 1 : -1;
     }
-    public static string Expression(RuleState s, string expression, string kind, int manual = 0)
+    public static string Expression(RuleState s, string expression, string kind, int manual = 0, bool strength = false)
     {
         RuleState.Require(DiceExpression.TryParse(expression, out var dice) && dice is { Sides: 20, Count: 1 }, "Este teste exige um d20 e modificador numérico.");
-        var mode = Mode(s, kind, manual);
+        var mode = Mode(s, kind, manual, strength);
         return (mode == 0 ? "1d20" : mode > 0 ? "2d20kh1" : "2d20kl1") + (dice!.Modifier < 0 ? dice.Modifier.ToString() : dice.Modifier > 0 ? "+" + dice.Modifier : "");
     }
     public static RuleStat[] Stats(RuleState s)
@@ -61,7 +61,8 @@ public static class Dnd2014Conditions
                 var save = field.Key.StartsWith("res_", StringComparison.Ordinal);
                 if (save && (field.Key is "res_forca" or "res_destreza") && (s.Health == 0 || new[] { "paralisado", "petrificado", "atordoado", "inconsciente" }.Any(key => Has(s, key)))) return $"{field.Label}: falha automática pela condição.";
                 if (field.Key == "per_percepcao" && (s.Get("sentido_percepcao") == 1 && Has(s, "cego") || s.Get("sentido_percepcao") == 2 && Has(s, "surdo"))) return $"{field.Label}: falha automática no sentido necessário.";
-                var expression = Expression(s, WeaponActions.Resolve(field.RollExpression!, s, false), save ? "save" : "ability", s.Get("modo_testes"));
+                var strength=Dnd2014Damage.Supports(system) && (field.Key is "mod_forca" or "forca" or "res_forca" || field.Formula?.Split(new[]{' ','+','-','*','/','(',')'},StringSplitOptions.RemoveEmptyEntries).Contains("mod_forca")==true);
+                var expression = Expression(s, WeaponActions.Resolve(field.RollExpression!, s, false), save ? "save" : "ability", s.Get("modo_testes"),strength);
                 var result = s.Roll(expression);
                 if (field.Key == "iniciativa") Dnd2014ClassResources.Initiative(s);
                 return $"{field.Label}: {expression} = {result}" + (command.Amount > 0 ? $" / CD {command.Amount}: {(result >= command.Amount ? "sucesso" : "falha")}." : ".");

@@ -52,6 +52,9 @@ export type NarrativeKind = 'sessions' | 'documents' | 'wiki';
 export interface NarrativeEntry { id: string; campaignId: string; authorId: string; kind: NarrativeKind; title: string; body: string; category: string; visibility: 'campaign' | 'private' | 'gm'; eventAt: string | null; revealedAt: string | null; createdAt: string; updatedAt: string; revision: number; }
 export type NarrativeInput = Pick<NarrativeEntry, 'title' | 'body' | 'category' | 'visibility' | 'eventAt' | 'revision'>;
 export interface DiceRoll { id: string; campaignId: string; userId: string; userName: string; expression: string; rolls: number[]; keptIndexes: number[]; modifier: number; total: number; visibility: 'campaign' | 'private' | 'gm'; createdAt: string; }
+export interface DamagePart { type: string; amount: number; magical: boolean; silvered: boolean; adamantine: boolean; }
+export interface DamageEvent { parts: DamagePart[]; critical: boolean; attack: boolean; }
+export interface DamageResolution { raw: number; total: number; groups: {type: string; raw: number; applied: number; immune: boolean; resistant: boolean; vulnerable: boolean; sources: string[]}[]; }
 export interface SearchResults {
   campaigns: { id: string; name: string; status: string; updatedAt: string }[];
   characters: { id: string; name: string; campaignId: string; campaignName: string; updatedAt: string }[];
@@ -145,7 +148,7 @@ export class ApiService {
   deleteAbility(id: string, abilityId: string, version: number) { return this.http.delete<void>(`/api/characters/${id}/abilities/${abilityId}`, { params: { version }, withCredentials: true }); }
   createCharacter(campaignId: string, data: CharacterInput) { return this.http.post<Character>(`/api/campaigns/${campaignId}/characters`, data, { withCredentials: true }); }
   characterRules(id: string) { return this.http.get<{ supported: boolean; rules?: unknown }>(`/api/characters/${id}/rules`, { withCredentials: true }); }
-  applyCharacterRule(id: string, expectedVersion: number, command: { action: string; amount: number; option: string | null; visibility: DiceRoll['visibility']; expression?: string }) { return this.http.post<{ character: Character; message: string; rolls: { expression: string; rolls: number[]; keptIndexes: number[]; modifier: number; total: number }[] }>(`/api/characters/${id}/rules`, { expectedVersion, command }, { withCredentials: true }); }
+  applyCharacterRule(id: string, expectedVersion: number, command: { action: string; amount: number; option: string | null; visibility: DiceRoll['visibility']; expression?: string; damage?: DamageEvent }) { return this.http.post<{ character: Character; message: string; rolls: { expression: string; rolls: number[]; keptIndexes: number[]; modifier: number; total: number }[]; damage?: DamageResolution | null }>(`/api/characters/${id}/rules`, { expectedVersion, command }, { withCredentials: true }); }
   updateCharacter(id: string, data: CharacterInput) { return this.http.put<Character>(`/api/characters/${id}`, data, { withCredentials: true }); }
   duplicateCharacter(id: string) { return this.http.post<Character>(`/api/characters/${id}/duplicate`, {}, { withCredentials: true }); }
   characterRevisions(id: string) { return this.http.get<CharacterRevision[]>(`/api/characters/${id}/revisions`, { withCredentials: true }); }

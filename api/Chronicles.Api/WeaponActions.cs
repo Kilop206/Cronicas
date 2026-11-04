@@ -52,6 +52,7 @@ public static partial class WeaponActions
                 expression = (mode == 0 ? "1d20" : mode > 0 ? "2d20kh1" : "2d20kl1") + (bonus < 0 ? bonus.ToString() : "+" + bonus);
             }
             var total = s.Roll(expression); var test = s.Rolls[^1]; var natural = test.Rolls[test.KeptIndexes[0]];
+            if(dnd && Dnd2014Damage.Supports(system) && command.Expression=="hostile") Dnd2014Rage.MarkHostile(s);
             var hit = natural == 20 || (natural != 1 || system.TemplateId == "ordem_paranormal") && (command.Amount == 0 || total >= command.Amount);
             var margin = dnd ? 20 : Number(row, "margem", 20); var multiplier = dnd ? 2 : Number(row, "multiplicador", 2);
             RuleState.Require(margin is >= 2 and <= 20 && multiplier is >= 2 and <= 5, "Margem ou multiplicador de crítico inválidos.");
@@ -61,8 +62,9 @@ public static partial class WeaponActions
             if (!hit || camouflageMiss) message = $"{name}: {expression} = {total}; {(camouflageMiss ? "falha pela camuflagem" : "errou")}. Munição consumida quando aplicável.";
             else
             {
-                var damage = Math.Max(0, DamageFormula.Evaluate(damageFormula, s, critical ? multiplier : 1) + DamageFormula.Evaluate(extra, s, critical && dnd ? 2 : 1));
-                message = $"{name}: {expression} = {total}{(critical ? " · crítico" : "")}; dano {damage}. " + (command.Amount == 0 ? "Defesa não informada; confirme o acerto antes de aplicar." : "Aplique ao alvo após resistências e imunidades.");
+                var rageBonus=dnd && Dnd2014Damage.Supports(system) && baseKey=="mod_forca" && Text(row,"tipo")=="corpo" ? Dnd2014Rage.Bonus(s) : 0;
+                var damage = Math.Max(0, DamageFormula.Evaluate(damageFormula, s, critical ? multiplier : 1) + DamageFormula.Evaluate(extra, s, critical && dnd ? 2 : 1) + rageBonus);
+                message = $"{name}: {expression} = {total}{(critical ? " · crítico" : "")}; dano {damage}{(rageBonus>0?$" (inclui +{rageBonus} de Fúria)":"")}. " + (command.Amount == 0 ? "Defesa não informada; confirme o acerto antes de aplicar." : "Aplique ao alvo após resistências e imunidades.");
             }
         }
         if (ammo > 0)

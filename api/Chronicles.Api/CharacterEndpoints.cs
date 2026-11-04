@@ -287,7 +287,8 @@ public static partial class CharacterEndpoints
         return definition.TemplateId switch
         {
             "ordem_paranormal" => definition.TemplateVersion is >= 1 and <= 7,
-            "dnd_5e" or "tormenta20" => definition.TemplateVersion is >= 1 and <= 4,
+            "dnd_5e" => definition.TemplateVersion is >= 1 and <= 5,
+            "tormenta20" => definition.TemplateVersion is >= 1 and <= 4,
             "call_of_cthulhu_7e" => definition.TemplateVersion is >= 1 and <= 6,
             _ => false
         };

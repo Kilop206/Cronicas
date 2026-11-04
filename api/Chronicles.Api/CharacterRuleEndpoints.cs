@@ -56,7 +56,7 @@ public static partial class CharacterEndpoints
                 Modifier = roll.Modifier, Total = roll.Total, Visibility = input.Command.Visibility });
             try { await db.SaveChangesAsync(); }
             catch (DbUpdateConcurrencyException) { return Results.Conflict(new { message = "A ficha mudou. A ação não foi aplicada; atualize a página." }); }
-            return Results.Ok(new { character = View(character, true), message = result.Message, rolls = result.Rolls });
+            return Results.Ok(new { character = View(character, true), message = result.Message, rolls = result.Rolls, damage = result.Damage });
         }).RequireRateLimiting("rolls");
     }
     private static async Task<SystemDefinition?> RulesDefinition(AppDbContext db, Guid campaignId)

@@ -34,11 +34,13 @@ export function numericColumnOptions(fields: SystemField[]): ColumnOptions {
     .sheet-custom-list li { display:flex; gap:7px; align-items:center; }
     .sheet-custom-list input { flex:1; min-width:0; margin:0; }
     .sheet-custom-list button,.sheet-custom-table button { min-width:32px; min-height:32px; background:transparent; color:var(--text); border:1px solid var(--border); cursor:pointer; }
-    .sheet-custom-table { max-width:100%; overflow-x:auto; }
+    .sheet-custom-table { position:relative;min-width:0;width:100%;max-width:100%;overflow-x:auto; }
     table { width:100%; border-collapse:collapse; font:13px var(--font-ui); }
     th,td { padding:7px; border:1px solid var(--border); text-align:left; min-width:90px; }
     th { color:var(--muted); font-size:11px; text-transform:uppercase; }
     td input { width:100%; min-width:70px; margin:0; }
+    .sheet-collection-field input:not([type=checkbox]),.sheet-collection-field select { min-width:70px;max-width:100%;margin:0;padding:5px 6px;min-height:31px;border:1px solid var(--border);border-radius:2px;background:var(--surface-raised,#151a1f);color:var(--text);font:12px var(--font-ui,Arial,sans-serif); }
+    .sheet-collection-field input:not([type=checkbox]):focus,.sheet-collection-field select:focus { background:var(--surface-raised,#151a1f);color:var(--text);outline:2px solid var(--text);outline-offset:1px; }
     .sr-only { position:absolute; width:1px; height:1px; padding:0; margin:-1px; overflow:hidden; clip:rect(0,0,0,0); white-space:nowrap; border:0; }
   `] })
 export class SheetCollectionFieldComponent {
