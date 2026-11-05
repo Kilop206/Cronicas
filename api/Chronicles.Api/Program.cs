@@ -7,11 +7,29 @@ using Chronicles.Api.Services;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
+using Chronicles.Application.CharacterSheets;
+using Chronicles.Infrastructure.Characters;
+using Chronicles.Application.Events;
+using Chronicles.Infrastructure.Messaging;
+using Chronicles.Infrastructure.Persistence;
 
 var builder = WebApplication.CreateBuilder(args);
+builder.Logging.ClearProviders();
+builder.Logging.AddJsonConsole(options => { options.IncludeScopes = false; options.UseUtcTimestamp = true; options.TimestampFormat = "yyyy-MM-ddTHH:mm:ss.fffZ"; });
+builder.Logging.AddFilter("Microsoft.AspNetCore.Hosting.Diagnostics", LogLevel.Warning);
+builder.Logging.AddFilter("Microsoft.EntityFrameworkCore.Database.Command", LogLevel.Warning);
 var connectionString = builder.Configuration.GetConnectionString("Default")
     ?? throw new InvalidOperationException("Configure ConnectionStrings:Default.");
 builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
+builder.Services.AddSingleton(RpgPluginRegistry.BuiltIn());
+builder.Services.AddSingleton<IGameRandom, CryptographicGameRandom>();
+builder.Services.AddScoped<ICharacterRuleStore, EfCharacterRuleStore>();
+builder.Services.AddScoped<ExecuteCharacterRule>();
+builder.Services.AddScoped<ReadCharacterRules>();
+builder.Services.AddScoped<OutboxDispatcher>();
+builder.Services.AddScoped<IGameEventHandler, SheetInvalidationHandler>();
+builder.Services.AddSingleton<SheetWatchers>();
+builder.Services.AddHostedService<OutboxWorker>();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
 builder.Services.AddScoped<SessionService>();
 builder.Services.AddScoped<PasswordRecoveryService>();
@@ -26,16 +44,19 @@ var allowedOrigins = builder.Configuration["ALLOWED_ORIGINS"]?.Split(',', String
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
 
 var app = builder.Build();
+app.UseRequestObservability();
 if (app.Environment.IsDevelopment()) app.MapOpenApi();
 app.UseExceptionHandler(handler => handler.Run(async context =>
 {
     context.Response.StatusCode = 500;
-    await Results.Problem("Ocorreu um erro inesperado.").ExecuteAsync(context);
+    var error = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>()?.Error;
+    app.Logger.LogError(error, "Request failed with correlation {CorrelationId}", context.TraceIdentifier);
+    await Results.Problem("Ocorreu um erro inesperado.", extensions: new Dictionary<string, object?> { ["correlationId"] = context.TraceIdentifier }).ExecuteAsync(context);
 }));
 app.UseCors();
 app.Use(async (context, next) =>
 {
-    if (context.Request.Path.StartsWithSegments("/api/hubs/campaign") &&
+    if (context.Request.Path.StartsWithSegments("/api/hubs") &&
         context.Request.Headers.Origin is { Count: > 0 } hubOrigins &&
         !allowedOrigins.Contains(hubOrigins.ToString(), StringComparer.OrdinalIgnoreCase))
     {
@@ -64,7 +85,10 @@ app.Use(async (context, next) =>
 app.UseRateLimiter();
 
 app.MapHealthChecks("/health");
+app.MapGet("/health/live", () => Results.Ok(new { status = "live" }));
+app.MapHealthChecks("/health/ready");
 app.MapHub<CampaignRoomHub>("/api/hubs/campaign");
+app.MapHub<SheetUpdatesHub>("/api/hubs/sheets");
 var api = app.MapGroup("/api");
 api.MapCharacterEndpoints();
 api.MapCharacterInventoryEndpoints();
@@ -73,6 +97,7 @@ api.MapInviteEndpoints();
 api.MapNarrativeEndpoints();
 api.MapDiceEndpoints();
 api.MapSystemEndpoints();
+api.MapRpgPluginEndpoints();
 api.MapCampaignMembersEndpoints();
 api.MapWorldEndpoints();
 api.MapChatEndpoints();
@@ -288,7 +313,8 @@ api.MapPatch("/campaigns/{id:guid}/status", async Task<IResult> (Guid id, Status
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-    await db.Database.MigrateAsync();
+    // Production migrations are an explicit release step; startup never changes production data.
+    await DatabaseStartup.EnsureReady(db, app.Environment.IsDevelopment() || app.Environment.IsEnvironment("Testing"));
 }
 app.Run();
 
