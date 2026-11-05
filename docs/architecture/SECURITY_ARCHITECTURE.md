@@ -1,0 +1,35 @@
+# Segurança e confiança
+
+## Identidade e autorização preservadas
+
+Sessões usam cookie HttpOnly, Secure fora de Development, SameSite=Lax e tokens aleatórios de 256 bits; banco guarda hash SHA-256, expiração e revogação. PasswordHasher existente permanece. Autenticação acontece antes da partição de rate limit por conta. O proxy assina a identidade do visitante; headers não assinados não podem trocar a partição para contornar limites. O teste dessa regressão continua na suíte de regras.
+
+Conhecer um UUID não concede acesso: o novo store consulta personagem condicionado à participação da campanha. Um membro sem edição pode ler a mesma visão já permitida pelo contrato anterior; proprietário e owner/gm/co-gm editam, spectator não edita nem o próprio personagem. Novas ações revalidam revisão, papel e sistema antes de commit. A ativação de sorte opcional e rolagens GM exigem mestre no backend.
+
+Campos `editRole: gm` restringem escrita, não prometem sigilo de leitura. Segredos usam recurso separado protegido. Não tratar esses campos como um mecanismo novo de ocultação nem publicar estados completos via eventos.
+
+## Realtime
+
+Novo hub `/api/hubs/sheets` exige cookie/sessão ativos na inscrição e participação na campanha. Cada conexão acompanha no máximo uma ficha. Em cada entrega, o handler consulta novamente expiração/revogação/participação; remover membro bloqueia notificações mesmo se o socket continuar aberto. A mensagem só leva `eventId`, `type`, `characterId`, `revision`. A API continua autorizando o refetch.
+
+Origins de todos os hubs são comparados à allowlist; REST mantém a proteção existente de origens/métodos e rejeição de formulários. Configure os endereços reais de desenvolvimento/produção em `ALLOWED_ORIGINS`. Não liberar `*` com credenciais.
+
+## Concorrência e rascunhos
+
+409 não é convertido em sobrescrita automática. O editor pausa salvamento ao receber revisão remota durante edição, preserva rascunho e permite exportação antes de recarga. Navegação/fechamento com alterações pendentes têm confirmação de perda de dados. Reconexão busca versão atual quando não há edição local.
+
+## Código e dados não confiáveis
+
+Fórmulas e dados usam parsers existentes com operadores/limites explícitos, sem eval. Schema/template é JSON declarativo; não instala assembly, script, componente remoto ou código no backend. Plugins executáveis desta entrega são compilados e revisados junto ao servidor e bundle Angular. Estratégia para terceiros está no PLUGIN_CONTRACT.
+
+Não foi criado serviço de upload: imagens/fundos continuam URLs HTTPS limitadas. Limites de upload, antivírus, URLs assinadas e ACL de objetos deverão acompanhar uma implementação real de Media, sem declarar proteção inexistente.
+
+## Auditoria e observabilidade
+
+Histórico existente e eventos metadados acompanham transações. Middleware próprio registra rota parametrizada, status, duração e correlação; não registra corpo, query, cookies ou tokens de convite/OBS. Scopes automáticos de console ficam desabilitados para não incluir RequestPath cru. EF não usa sensitive-data logging. Nunca adicionar segredos de Render/Cloudflare/banco aos documentos/fixtures.
+
+## Pendências explícitas
+
+Revisar todos os endpoints legados com matriz IDOR/papel, incluir testes adicionais por recurso e separar autorização de EF. Não há pentest externo nem isolamento de processo para plugins comunitários. Não há uploads/marketplace público para certificar. Medidas contra negação de serviço devem ser acompanhadas por métricas reais; não reduzir limites apenas por pressuposto, preservando a correção do problema de “muitas tentativas”.
+
+Na instalação limpa do Docker foram reportados 22 advisories moderados na árvore de desenvolvimento. A auditoria de dependências de runtime (`npm audit --omit=dev`) retornou zero vulnerabilidades em 05/11/2026. Não foi executado upgrade forçado de toolchain; a dívida de desenvolvimento permanece explícita.

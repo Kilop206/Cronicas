@@ -1,0 +1,381 @@
+{
+  "openapi": "3.1.1",
+  "info": {
+    "title": "Cronicas RPG APIs",
+    "version": "v1"
+  },
+  "servers": [
+    {
+      "url": "/"
+    }
+  ],
+  "paths": {
+    "/api/v1/rpg-plugins": {
+      "get": {
+        "tags": [
+          "RPG plugins v1"
+        ],
+        "operationId": "ListRpgPluginsV1",
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/components/schemas/RPGSystemPlugin"
+                  }
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/characters/{id}/sheet": {
+      "get": {
+        "tags": [
+          "RPG plugins v1"
+        ],
+        "operationId": "ReadCharacterSheetV1",
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CharacterSheetEnvelope"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ]
+      }
+    }
+  },
+  "components": {
+    "schemas": {
+      "CharacterSheetEnvelope": {
+        "required": [
+          "contractVersion",
+          "characterId",
+          "ownerId",
+          "campaignId",
+          "registrySystemId",
+          "systemId",
+          "systemVersion",
+          "schemaVersion",
+          "templateRevision",
+          "revision",
+          "updatedAt",
+          "state",
+          "rendererId",
+          "canEdit",
+          "rulesAvailable"
+        ],
+        "type": "object",
+        "properties": {
+          "contractVersion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "characterId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "ownerId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "campaignId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "registrySystemId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "systemId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "systemVersion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "schemaVersion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "templateRevision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "revision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "updatedAt": {
+            "type": "string",
+            "format": "date-time"
+          },
+          "state": {
+            "$ref": "#/components/schemas/CharacterSheetState"
+          },
+          "rendererId": {
+            "type": "string"
+          },
+          "canEdit": {
+            "type": "boolean"
+          },
+          "rulesAvailable": {
+            "type": "boolean"
+          }
+        }
+      },
+      "CharacterSheetState": {
+        "required": [
+          "name",
+          "portraitUrl",
+          "backgroundUrl",
+          "health",
+          "maxHealth",
+          "sanity",
+          "maxSanity",
+          "mana",
+          "maxMana"
+        ],
+        "type": "object",
+        "properties": {
+          "name": {
+            "type": "string"
+          },
+          "portraitUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "backgroundUrl": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "health": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "maxHealth": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "sanity": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "maxSanity": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "mana": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "maxMana": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "fields": {
+            "type": [
+              "null",
+              "object"
+            ]
+          },
+          "version": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          }
+        }
+      },
+      "RPGSystemManifest": {
+        "required": [
+          "id",
+          "name",
+          "version",
+          "schemaVersion"
+        ],
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string"
+          },
+          "name": {
+            "type": "string"
+          },
+          "version": {
+            "type": "string"
+          },
+          "schemaVersion": {
+            "type": "string"
+          }
+        }
+      },
+      "RPGSystemPlugin": {
+        "required": [
+          "manifest",
+          "rulesetId",
+          "rendererId",
+          "schemaVersions",
+          "executableSchemaVersions",
+          "requiredFields",
+          "ruleRequiredFields"
+        ],
+        "type": "object",
+        "properties": {
+          "manifest": {
+            "$ref": "#/components/schemas/RPGSystemManifest"
+          },
+          "rulesetId": {
+            "type": "string"
+          },
+          "rendererId": {
+            "type": "string"
+          },
+          "schemaVersions": {
+            "type": "array",
+            "items": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          "executableSchemaVersions": {
+            "type": "array",
+            "items": {
+              "pattern": "^-?(?:0|[1-9]\\d*)$",
+              "type": [
+                "integer",
+                "string"
+              ],
+              "format": "int32"
+            }
+          },
+          "requiredFields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "ruleRequiredFields": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          }
+        }
+      }
+    },
+    "securitySchemes": {
+      "sessionCookie": {
+        "type": "apiKey",
+        "in": "cookie",
+        "name": "chronicles_session"
+      }
+    }
+  },
+  "tags": [
+    {
+      "name": "Chronicles.Api"
+    },
+    {
+      "name": "RPG plugins v1"
+    }
+  ]
+}

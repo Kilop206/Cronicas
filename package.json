@@ -2,6 +2,8 @@
   "name": "cronicas-deploy",
   "private": true,
   "scripts": {
+    "test:architecture": "node --test scripts/architecture.test.mjs",
+    "test:plugins": "node scripts/sync-rpg-plugins.mjs --check && node scripts/check-sheet-templates.mjs",
     "build:web": "npm --prefix web run build",
     "test:pages-proxy": "node --test scripts/pages-proxy.test.mjs",
     "test:spa-routes": "node --test scripts/spa-routes.test.mjs",

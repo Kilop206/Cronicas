@@ -6,6 +6,11 @@
     <TreatWarningsAsErrors>true</TreatWarningsAsErrors>
   </PropertyGroup>
   <ItemGroup>
+    <Compile Remove="modules/**/*.cs" />
+    <Content Remove="modules/**" />
+    <None Remove="modules/**" />
+    <ProjectReference Include="modules/Chronicles.Application/Chronicles.Application.csproj" />
+    <ProjectReference Include="modules/Chronicles.Infrastructure/Chronicles.Infrastructure.csproj" />
     <PackageReference Include="Microsoft.EntityFrameworkCore.Design" Version="10.0.13" PrivateAssets="all" />
     <PackageReference Include="Npgsql.EntityFrameworkCore.PostgreSQL" Version="10.0.3" />
     <PackageReference Include="Microsoft.AspNetCore.OpenApi" Version="10.0.13" />

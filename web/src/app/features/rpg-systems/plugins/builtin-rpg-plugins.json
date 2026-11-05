@@ -1,0 +1,157 @@
+[
+  {
+    "manifest": {
+      "id": "ordem_paranormal",
+      "name": "Ordem Paranormal",
+      "version": "1.3",
+      "schemaVersion": "7"
+    },
+    "rulesetId": "ordem_paranormal:1.3",
+    "rendererId": "ordem_paranormal",
+    "schemaVersions": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7
+    ],
+    "executableSchemaVersions": [
+      6,
+      7
+    ],
+    "requiredFields": [
+      "nex",
+      "agilidade",
+      "forca",
+      "intelecto",
+      "presenca",
+      "vigor",
+      "defesa"
+    ],
+    "ruleRequiredFields": [
+      "estado_regras"
+    ]
+  },
+  {
+    "manifest": {
+      "id": "dnd_5e",
+      "name": "Dungeons & Dragons",
+      "version": "2014",
+      "schemaVersion": "5"
+    },
+    "rulesetId": "dnd_5e:2014",
+    "rendererId": "dnd_5e",
+    "schemaVersions": [
+      2,
+      3,
+      4,
+      5
+    ],
+    "executableSchemaVersions": [
+      3,
+      4,
+      5
+    ],
+    "requiredFields": [
+      "nivel",
+      "forca",
+      "destreza",
+      "constituicao",
+      "inteligencia",
+      "sabedoria",
+      "carisma",
+      "classe_armadura"
+    ],
+    "ruleRequiredFields": [
+      "estado_regras"
+    ]
+  },
+  {
+    "manifest": {
+      "id": "tormenta20",
+      "name": "Tormenta20",
+      "version": "jogo-do-ano-2024-v1.3",
+      "schemaVersion": "4"
+    },
+    "rulesetId": "tormenta20:jogo-do-ano-2024-v1.3",
+    "rendererId": "tormenta20",
+    "schemaVersions": [
+      1,
+      2,
+      3,
+      4
+    ],
+    "executableSchemaVersions": [
+      3,
+      4
+    ],
+    "requiredFields": [
+      "nivel",
+      "forca",
+      "destreza",
+      "defesa"
+    ],
+    "ruleRequiredFields": [
+      "estado_regras"
+    ]
+  },
+  {
+    "manifest": {
+      "id": "call_of_cthulhu_7e",
+      "name": "Call of Cthulhu",
+      "version": "7e",
+      "schemaVersion": "6"
+    },
+    "rulesetId": "call_of_cthulhu_7e:7e",
+    "rendererId": "call_of_cthulhu_7e",
+    "schemaVersions": [
+      1,
+      2,
+      3,
+      4,
+      5,
+      6
+    ],
+    "executableSchemaVersions": [
+      4,
+      5,
+      6
+    ],
+    "requiredFields": [
+      "ocupacao",
+      "forca",
+      "poder",
+      "per_escutar"
+    ],
+    "ruleRequiredFields": [
+      "estado_regras"
+    ]
+  },
+  {
+    "manifest": {
+      "id": "dnd_5e",
+      "name": "Dungeons & Dragons (legacy presentation)",
+      "version": "2024",
+      "schemaVersion": "1"
+    },
+    "rulesetId": "dnd_5e:2024",
+    "rendererId": "dnd_5e",
+    "schemaVersions": [
+      1
+    ],
+    "executableSchemaVersions": [],
+    "requiredFields": [
+      "nivel",
+      "forca",
+      "destreza",
+      "constituicao",
+      "inteligencia",
+      "sabedoria",
+      "carisma",
+      "classe_armadura"
+    ],
+    "ruleRequiredFields": []
+  }
+]

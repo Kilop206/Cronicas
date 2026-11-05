@@ -1,6 +1,5 @@
 using System.Text.Json;
 using Chronicles.Api;
-using static Chronicles.Api.CharacterEndpoints;
 
 public static class D20ConditionTestCases
 {

@@ -1,5 +1,7 @@
 # Arquitetura e entregas
 
+> Registro histórico de funcionalidades. Para a refatoração de 04–05/11/2026, consulte [arquitetura implementada](architecture/TARGET_ARCHITECTURE.md), [situação da migração](architecture/MIGRATION_PLAN.md) e [testes](development/TESTING.md). A existência deste registro não significa que todos os contextos legados já foram isolados.
+
 ## Núcleo atual
 
 - Angular standalone, TypeScript estrito e SCSS com tokens. O frontend chama `/api` na mesma origem da aplicação.
