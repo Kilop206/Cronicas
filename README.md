@@ -40,11 +40,18 @@ O Angular é publicado em **Cloudflare Pages**. Uma Pages Function encaminha `/a
 - `node scripts/room-smoke.mjs` testa entrada, sinalização, espectador e revogação da sala SignalR com o stack em execução.
 - `docker run --rm -v "${PWD}:/workspace" -w /workspace cronicas-api-build sh -c 'dotnet restore tests/Chronicles.Rules.Tests/Chronicles.Rules.Tests.csproj --ignore-failed-sources && dotnet run --project tests/Chronicles.Rules.Tests/Chronicles.Rules.Tests.csproj --no-restore'` executa os testes determinísticos do parser de dados após criar a imagem com `docker build --target build -t cronicas-api-build ./api/Chronicles.Api`.
 
+## Arquitetura modular e extensões
+
+A refatoração incremental mantém a stack e as fichas especializadas. Consulte [arquitetura implementada](docs/architecture/TARGET_ARCHITECTURE.md), [fronteiras e pendências](docs/architecture/MODULE_BOUNDARIES.md), [plano de migração](docs/architecture/MIGRATION_PLAN.md) e [guia de plugins](docs/plugins/RPG_SYSTEM_GUIDE.md). Há [instruções locais](docs/development/LOCAL_SETUP.md), [testes e evidências](docs/development/TESTING.md) e [capturas reais](docs/visual-validation/architecture/README.md).
+
+O novo release exige revisar/aplicar a migration aditiva de outbox antes de iniciar a API em produção. Startup de produção não altera o banco automaticamente. O SQL está em `docs/architecture/releases/`.
+
 ## Estrutura
 
-- `api/Chronicles.Api`: API, EF Core e migrações.
+- `api/Chronicles.Api`: composition root e adaptadores HTTP/SignalR em `Features/`.
+- `api/Chronicles.Api/modules`: Domain, Application e Infrastructure; EF/migrations ficam na infraestrutura.
 - `web`: Angular e design system.
 - `render.yaml`: configuração da API no Render Free; `web/wrangler.jsonc` e `web/functions`: Pages e encaminhamento da API.
-- `docs/architecture.md`: decisões e próximos módulos.
+- `docs/architecture/`: diagnóstico, arquitetura resultante, fronteiras, dados, eventos, segurança, decisões e roadmap.
 
 Não inclua `.env` ou credenciais no repositório. Consulte `docs/architecture.md` para limites atuais e próximos passos.

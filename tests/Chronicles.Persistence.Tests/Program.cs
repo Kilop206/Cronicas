@@ -52,8 +52,8 @@ try
     var root = new DirectoryInfo(Directory.GetCurrentDirectory());
     while (root is not null && !File.Exists(Path.Combine(root.FullName, "compose.yaml"))) root = root.Parent;
     var output = Path.Combine(root!.FullName, "docs/architecture/releases"); Directory.CreateDirectory(output);
-    await File.WriteAllTextAsync(Path.Combine(output, "integration-outbox-up.sql"), sql);
-    await File.WriteAllTextAsync(Path.Combine(output, "integration-outbox-down.sql"), migrator.GenerateScript(latest, previousMigration));
+    await File.WriteAllTextAsync(Path.Combine(output, "integration-outbox-up.sql"), sql.TrimEnd() + "\n");
+    await File.WriteAllTextAsync(Path.Combine(output, "integration-outbox-down.sql"), migrator.GenerateScript(latest, previousMigration).TrimEnd() + "\n");
 
     var user = new User { Email = "owner@example.test", PasswordHash = "fixture", DisplayName = "Owner" };
     var system = new RpgSystem { OwnerId = user.Id, Name = "Renamed campaign system", SchemaJson = JsonSerializer.Serialize(new SystemDefinition([
