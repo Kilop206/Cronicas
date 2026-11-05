@@ -18,6 +18,8 @@ jobs:
       - run: npm run lint
         working-directory: web
       - run: node scripts/check-sheet-templates.mjs
+      - run: npm run test:plugins
+      - run: npm run test:architecture
       - run: npx tsc --noEmit -p tsconfig.app.json
         working-directory: web
       - run: npm run build
@@ -26,12 +28,23 @@ jobs:
       - run: npm run test:spa-routes
       - run: dotnet build api/Chronicles.Api/Chronicles.Api.csproj -c Release
       - run: dotnet run --project tests/Chronicles.Rules.Tests/Chronicles.Rules.Tests.csproj -c Release
+      - run: dotnet run --project tests/Chronicles.Architecture.Tests -c Release
+      - name: PostgreSQL migration and outbox tests
+        env:
+          ARCHITECTURE_TEST_DB: Host=127.0.0.1;Port=5544;Database=postgres;Username=architecture;Password=local-ci-only
+        run: |
+          docker run -d --name cronicas-architecture-test -e POSTGRES_USER=architecture -e POSTGRES_PASSWORD=local-ci-only -p 127.0.0.1:5544:5432 postgres:17-alpine
+          for i in $(seq 1 30); do docker exec cronicas-architecture-test pg_isready -U architecture && break || sleep 1; done
+          dotnet run --project tests/Chronicles.Persistence.Tests -c Release
+      - if: always()
+        run: docker rm -f cronicas-architecture-test || true
       - name: Integration smoke test
         run: |
           cp .env.example .env
           docker compose up -d --build
           for i in $(seq 1 30); do curl -fsS http://localhost:8081/health && break || sleep 3; done
           SMOKE_MAILPIT_URL=http://localhost:8025 node scripts/smoke.mjs
+          SMOKE_BASE_URL=http://localhost:8081 node scripts/sheet-events-smoke.mjs
           docker compose restart api
           node scripts/room-smoke.mjs
       - if: always()

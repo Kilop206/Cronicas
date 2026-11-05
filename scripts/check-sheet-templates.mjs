@@ -9,17 +9,23 @@ const ts = require('../web/node_modules/typescript');
 const root = path.resolve(import.meta.dirname, '../web/src/app');
 
 function load(file) {
+  if (file.endsWith('.json')) return { default: JSON.parse(fs.readFileSync(path.join(root, file), 'utf8')) };
   const source = fs.readFileSync(path.join(root, file), 'utf8');
   const code = ts.transpileModule(source, { compilerOptions: { module: ts.ModuleKind.CommonJS, target: ts.ScriptTarget.ES2022 } }).outputText;
   const exports = {};
-  vm.runInNewContext(code, { exports, structuredClone, require: name => { assert.ok(name.startsWith('./')); return load(name.slice(2) + '.ts'); } }, { filename: file });
+  vm.runInNewContext(code, { exports, structuredClone, require: name => {
+    assert.ok(name.startsWith('.'));
+    const target = path.normalize(path.join(path.dirname(file), name));
+    assert.ok(path.resolve(root, target).startsWith(root + path.sep));
+    return load(target.endsWith('.json') ? target : target + '.ts');
+  } }, { filename: file });
   return exports;
 }
 
 const { SHEET_TEMPLATES: templates } = load('system-templates.ts');
-const { calculateSheet, fieldRoll, paranormalFieldRoll, paranormalV13BaseResources, dnd2014NextLevelXp, coc7eDamageProfile, coc7eSuccessDegree, coc7eTestOutcome, resourceMaximum } = load('sheet-rules.ts');
-const { resolveSheetRenderer, sheetResources, sheetIndicators } = load('sheet-renderer-registry.ts');
-const { d20Defense, d20Speed } = load('d20-condition-display.ts');
+const { calculateSheet, fieldRoll, paranormalFieldRoll, paranormalV13BaseResources, dnd2014NextLevelXp, coc7eDamageProfile, coc7eSuccessDegree, coc7eTestOutcome, resourceMaximum } = load('features/sheets/rules/sheet-rules.ts');
+const { resolveSheetRenderer, sheetResources, sheetIndicators } = load('features/sheets/rendering/sheet-renderer-registry.ts');
+const { d20Defense, d20Speed } = load('features/sheets/rules/d20-condition-display.ts');
 const conditionValues = { defesa: 15, deslocamento: 9, estado_regras: [{chave: 'cond_desprevenido', valor: -1}, {chave: 'cond_caido', valor: 1}] };
 assert.equal(d20Defense(conditionValues, false), 5, 'T20 stacks prone defense with flat-footed');
 assert.equal(d20Defense(conditionValues, true), 10, 'OP uses the worst defense penalty');

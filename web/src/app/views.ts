@@ -4,14 +4,14 @@ import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink, RouterLinkActive, RouterOutlet } from '@angular/router';
 import { finalize } from 'rxjs';
 import { ApiService, apiError, Campaign, Dashboard, Page } from './api';
-import { InvitePanelComponent } from './invite.page';
-import { CampaignSystemPanelComponent } from './campaign-system-panel.component';
-import { MemberPanelComponent } from './member-panel.component';
-import { CampaignWorldPanelComponent } from './campaign-world-panel.component';
-import { FavoriteCharactersComponent } from './favorite-characters.component';
-import { UpcomingSessionsComponent } from './upcoming-sessions.component';
-import { WorkspaceNavComponent } from './workspace-nav.component';
-import { CampaignModulesComponent } from './campaign-modules.component';
+import { InvitePanelComponent } from './features/campaigns/invite.page';
+import { CampaignSystemPanelComponent } from './features/campaigns/campaign-system-panel.component';
+import { MemberPanelComponent } from './features/campaigns/member-panel.component';
+import { CampaignWorldPanelComponent } from './features/campaigns/campaign-world-panel.component';
+import { FavoriteCharactersComponent } from './features/characters/favorite-characters.component';
+import { UpcomingSessionsComponent } from './features/campaigns/upcoming-sessions.component';
+import { WorkspaceNavComponent } from './layouts/workspace-nav.component';
+import { CampaignModulesComponent } from './features/campaigns/campaign-modules.component';
 
 @Component({ standalone: true, imports: [RouterLink], template: `
   <main class="landing">
