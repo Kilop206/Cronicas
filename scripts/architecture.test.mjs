@@ -93,6 +93,16 @@ test('Favorites, private notes and OBS use cases own their logic outside HTTP', 
   assert.ok(!/AppDbContext|EntityFrameworkCore|api\.Map/.test(composition));
 });
 
+test('Character version selection stays in application and the editor reads its effective system', () => {
+  const api = path.resolve(import.meta.dirname, '../api/Chronicles.Api');
+  const endpoint = readFileSync(path.join(api, 'Features/CharacterSheets/CharacterSystemEndpoints.cs'), 'utf8');
+  assert.ok(endpoint.includes('PinCharacterSystem command') && endpoint.includes('ReadCharacterSystem query'));
+  assert.ok(!/AppDbContext|EntityFrameworkCore|SaveChanges|Capture\(|IsMaster\(|Fingerprint/.test(endpoint));
+  const editor = readFileSync(path.join(root, 'features/characters/studio-pages.ts'), 'utf8');
+  assert.ok(editor.includes('this.api.characterSystem(id)'));
+  assert.ok(!editor.includes('this.api.system(campaign.systemId)'));
+});
+
 test('Domain and application source cannot import HTTP/EF adapters', () => {
   const modules = path.resolve(import.meta.dirname, '../api/Chronicles.Api/modules');
   function inspect(dir) {

@@ -11,6 +11,7 @@ public static partial class CharacterEndpoints
         MapCharacterReads(api);
         MapCharacterLifecycle(api);
         MapCharacterCompanions(api);
+        MapCharacterSystems(api);
     }
 
     private static Guid? UserId(HttpContext http) => Guid.TryParse(http.User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : null;

@@ -52,7 +52,7 @@ public sealed class EfCharacterCompanionStore(AppDbContext db) : ICharacterFavor
     public async Task<CharacterOverlaySource?> ReadOverlay(string keyHash, CancellationToken ct)
     {
         var row = await db.Characters.AsNoTracking().Where(c => c.OverlayKeyHash == keyHash)
-            .Select(c => new { Character = c, Schema = c.Campaign.System == null ? null : c.Campaign.System.SchemaJson }).SingleOrDefaultAsync(ct);
+            .Select(c => new { Character = c, Schema = c.SystemVersion == null ? c.Campaign.System == null ? null : c.Campaign.System.SchemaJson : c.SystemVersion.DefinitionJson }).SingleOrDefaultAsync(ct);
         return row is null ? null : new(CharacterSheetPersistence.State(row.Character), row.Schema is null ? null : SystemDefinition.Read(row.Schema), row.Character.UpdatedAt);
     }
 

@@ -47,7 +47,7 @@ public sealed class EfCharacterWriteStore(AppDbContext db) : ICharacterWriteStor
             if (fresh is null) return new(Failure: CharacterWriteFailure.NotFound);
             if (!CharacterAccessPolicy.CanEdit(fresh.OwnerId, actor, fresh.Role))
                 return new(Failure: CharacterWriteFailure.Forbidden, Message: "Você não pode editar este personagem.");
-            if (fresh.State.Version != before.State.Version || fresh.Role != before.Role ||
+            if (fresh.CampaignId != before.CampaignId || fresh.State.Version != before.State.Version || fresh.Role != before.Role ||
                 !CharacterSheetPersistence.SameSystem(before.SystemId, before.System, fresh.SystemId, fresh.System)) return Conflict();
             var character = await db.Characters.SingleAsync(c => c.Id == before.Id, ct);
             // Preserve the legacy PUT contract: every accepted save creates a history revision.

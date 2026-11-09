@@ -9,7 +9,7 @@ public static class CharacterHistory
     public static void Capture(AppDbContext db, Character character, Guid editedById)
     {
         var snapshot = new CharacterSnapshot(character.Name, character.PortraitUrl, character.BackgroundUrl,
-            character.Health, character.MaxHealth, character.Sanity, character.MaxSanity, character.Mana, character.MaxMana, character.FieldsJson);
+            character.Health, character.MaxHealth, character.Sanity, character.MaxSanity, character.Mana, character.MaxMana, character.FieldsJson, character.SystemVersionId);
         db.CharacterRevisions.Add(new CharacterRevision { CharacterId = character.Id, EditedById = editedById,
             Version = character.Version, SnapshotJson = JsonSerializer.Serialize(snapshot) });
         character.Version++;
@@ -27,4 +27,4 @@ public static class CharacterHistory
 }
 
 public sealed record CharacterSnapshot(string Name, string? PortraitUrl, string? BackgroundUrl,
-    int Health, int MaxHealth, int Sanity, int MaxSanity, int Mana, int MaxMana, string FieldsJson);
+    int Health, int MaxHealth, int Sanity, int MaxSanity, int Mana, int MaxMana, string FieldsJson, Guid? SystemVersionId = null);

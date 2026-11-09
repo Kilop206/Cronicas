@@ -3,7 +3,7 @@ using Chronicles.Domain;
 namespace Chronicles.Application.CharacterSheets;
 
 public sealed record CharacterSheetSnapshot(Guid Id, Guid CampaignId, Guid OwnerId, string Role,
-    CharacterSheetState State, SystemDefinition? System, DateTime UpdatedAt, Guid? SystemId);
+    CharacterSheetState State, SystemDefinition? System, DateTime UpdatedAt, Guid? SystemId, Guid? SystemVersionId = null);
 public sealed record CharacterRuleChange(CharacterSheetSnapshot Before, RuleResult Result, Guid ActorId, string Visibility);
 public enum RuleFailure { NotFound, Forbidden, Conflict, Invalid }
 public sealed record RuleCommandResponse(CharacterSheetSnapshot? Character = null, RuleResult? Result = null,

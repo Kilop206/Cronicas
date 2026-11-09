@@ -8,7 +8,7 @@ export interface FavoriteCharacter { characterId: string; name: string; portrait
 export interface Page<T> { items: T[]; total: number; page: number; }
 export type SheetCellValue = string | number | boolean;
 export type SheetFieldValue = SheetCellValue | string[] | Record<string, SheetCellValue>[];
-export interface Character { id: string; campaignId: string; ownerId: string; canEdit: boolean; name: string; portraitUrl: string | null; backgroundUrl: string | null; health: number; maxHealth: number; sanity: number; maxSanity: number; mana: number; maxMana: number; fields: Record<string, SheetFieldValue>; version: number; updatedAt: string; }
+export interface Character { id: string; campaignId: string; ownerId: string; canEdit: boolean; name: string; portraitUrl: string | null; backgroundUrl: string | null; health: number; maxHealth: number; sanity: number; maxSanity: number; mana: number; maxMana: number; fields: Record<string, SheetFieldValue>; version: number; updatedAt: string; systemVersionId?: string | null; }
 export type CharacterInput = Pick<Character, 'name' | 'portraitUrl' | 'backgroundUrl' | 'health' | 'maxHealth' | 'sanity' | 'maxSanity' | 'mana' | 'maxMana' | 'fields' | 'version'>;
 export interface OverlayResource { label: string; current: number; max: number; }
 export interface OverlayIndicator { label: string; value: string; }

@@ -43,6 +43,8 @@ public static partial class NpcEndpoints
                 {
                     targetCharacter=await db.Characters.SingleOrDefaultAsync(c=>c.Id==input.TargetId && c.CampaignId==npc.CampaignId);if(targetCharacter is null)return Results.NotFound();
                     if(targetCharacter.Version!=input.TargetVersion)return Results.Conflict(new{message="A ficha do alvo mudou. Atualize antes de resolver a manobra."});
+                    definition=await CharacterEncounterConditions.Definition(db,npc.CampaignId,targetCharacter.Id);
+                    RuleState.Require(definition is not null && ParanormalThreatSchema.CampaignSupports(definition),"O alvo precisa usar Ordem Paranormal 1.3.");
                     RuleState.Require(SheetRuleActions.Supports(definition!) && new[]{"forca","agilidade","per_luta"}.All(key=>definition!.Fields.Any(f=>f.Key==key&&f.Type=="number")),"O modelo do personagem precisa declarar Força, Agilidade, Luta e o estado de regras desta edição.");
                     RuleState.Require(input.TargetSizeConfirmed && input.TargetAttribute is "forca" or "agilidade","Confirme o tamanho e selecione Força ou Agilidade para a defesa de Luta do personagem.");
                     RuleState.Require(input.TargetAttribute!="agilidade"||input.AgileWeaponConfirmed,"Agilidade exige confirmação de uma arma ágil aplicável à oposição.");

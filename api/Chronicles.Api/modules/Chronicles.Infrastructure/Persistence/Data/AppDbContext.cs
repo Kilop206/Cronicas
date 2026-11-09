@@ -10,12 +10,14 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
 
     public override int SaveChanges(bool acceptAllChangesOnSuccess)
     {
+        EnsureImmutableSystemVersions();
         LegacyDomainEvents.Stage(this);
         return base.SaveChanges(acceptAllChangesOnSuccess);
     }
 
     public override Task<int> SaveChangesAsync(bool acceptAllChangesOnSuccess, CancellationToken cancellationToken = default)
     {
+        EnsureImmutableSystemVersions();
         LegacyDomainEvents.Stage(this);
         return base.SaveChangesAsync(acceptAllChangesOnSuccess, cancellationToken);
     }
@@ -34,6 +36,13 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
     public DbSet<NarrativeEntry> NarrativeEntries => Set<NarrativeEntry>();
     public DbSet<DiceRoll> DiceRolls => Set<DiceRoll>();
     public DbSet<RpgSystem> RpgSystems => Set<RpgSystem>();
+    public DbSet<RpgSystemVersion> RpgSystemVersions => Set<RpgSystemVersion>();
+
+    private void EnsureImmutableSystemVersions()
+    {
+        if (ChangeTracker.Entries<RpgSystemVersion>().Any(e => e.State is EntityState.Modified or EntityState.Deleted))
+            throw new InvalidOperationException("Captured RPG system versions are immutable.");
+    }
     public DbSet<World> Worlds => Set<World>();
     public DbSet<WorldArticle> WorldArticles => Set<WorldArticle>();
     public DbSet<WorldArticleLink> WorldArticleLinks => Set<WorldArticleLink>();
@@ -111,6 +120,18 @@ public sealed class AppDbContext(DbContextOptions<AppDbContext> options) : DbCon
             entity.Property(x => x.Version).IsConcurrencyToken();
             entity.HasOne(x => x.Campaign).WithMany().HasForeignKey(x => x.CampaignId).OnDelete(DeleteBehavior.Cascade);
             entity.HasOne(x => x.Owner).WithMany().HasForeignKey(x => x.OwnerId).OnDelete(DeleteBehavior.Restrict);
+            entity.HasOne(x => x.SystemVersion).WithMany().HasForeignKey(x => x.SystemVersionId).OnDelete(DeleteBehavior.Restrict);
+        });
+        model.Entity<RpgSystemVersion>(entity =>
+        {
+            entity.ToTable("rpg_system_versions");
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Name).HasMaxLength(120);
+            entity.Property(x => x.Description).HasMaxLength(2000);
+            entity.Property(x => x.DefinitionJson).HasColumnType("jsonb");
+            entity.Property(x => x.ContentHash).HasMaxLength(64);
+            entity.HasIndex(x => new { x.RpgSystemId, x.ContentHash }).IsUnique();
+            entity.HasOne(x => x.System).WithMany().HasForeignKey(x => x.RpgSystemId).OnDelete(DeleteBehavior.Restrict);
         });
         model.Entity<CharacterSecret>(entity =>
         {

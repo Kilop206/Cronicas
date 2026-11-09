@@ -8,7 +8,7 @@ Auditoria inicial: 04/11/2026, base `f3f51ae`. Validação mais recente: 09/11/2
 | 2 Modularização | Assemblies Domain/Application/Infrastructure; fontes e modelos agrupados; Angular organizado por features/core/routing/layouts | Isolar fisicamente cada bounded context, eliminar navegações/repositórios compartilhados legados |
 | 3 Hexagonal | Fluxos de personagens, histórico, inventário/habilidades, favoritos, segredos, OBS e regras usam portas e casos de uso | Migrar CRUD de conta, campanha, convites, dados e NPCs; substituir joins entre contextos |
 | 4 Plugins | Catálogo versionado, regras compiladas, OP e outros motores existentes adaptados; host de apresentações exclusivas; teste de novo plugin sem alterar switch legado | Empacotamento/assinatura comunitária e sandbox de terceiros não implementados |
-| 5 Persistência | EF extraído sem renomear dados; outbox aditivo; transação/revisão/histórico; SQL e rollback testados | Vínculo imutável do schema por ficha, data de criação confiável e revisão completa de template por histórico |
+| 5 Persistência | EF extraído; outbox; transação/revisão/histórico; versões imutáveis e vínculo opcional por ficha; SQL/rollback testados | Migração assistida entre versões fixadas, data de criação histórica confiável e tratamento de todo histórico anterior à captura |
 | 6 Comunicação | API v1 de leitura/escrita/catálogo, revisão obrigatória na escrita v1, eventos duráveis, SignalR autorizado e resync com rascunho preservado | Fanout entre réplicas; migração gradual dos demais contratos legados e eventos explícitos em todos os casos de uso |
 | 7 Infraestrutura | Docker compatível com projetos extraídos, CI ampliada, logs JSON/correlação, health checks e instrumentos de métricas | Exporter/collector, alertas, retenção do outbox, validação em staging/produção |
 | 8 Validação | Testes de domínio, arquitetura, migrations/outbox, HTTP/SignalR e navegador executados; evidências em TESTING | Teste de carga, auditoria completa de segurança e migração de todas as funcionalidades |
@@ -16,20 +16,20 @@ Auditoria inicial: 04/11/2026, base `f3f51ae`. Validação mais recente: 09/11/2
 ## Ordem para as próximas fatias
 
 1. Concluído em 09/11/2026: fluxos existentes de personagens, histórico, inventário/habilidades, favoritos, segredos e OBS usam portas, validação e projeções de aplicação. Rotas e formatos legados foram preservados; PUT v1 exige revisão. Notas aceitam `expectedExists` opcional, enviado pelo editor atual para distinguir notas vazias da primeira revisão gravada. A auditoria confirmou que não existe endpoint de exclusão de personagem; a menção anterior a uma extração desse fluxo estava incorreta. Não foi introduzida uma operação destrutiva nova.
-2. Introduzir revisões imutáveis de sistemas e vínculo opcional por personagem. Primeiro permitir leitura com fallback; depois migração assistida e testes de restauração entre versões. Não inferir edições por nome.
+2. Implementados captura imutável, vínculo opcional e leitura efetiva com fallback. Próxima evolução: migração assistida entre versões fixadas, com prévia de renomes/cálculos/permissões e consentimento explícito por ficha. Não inferir edições por nome nem liberar/desfixar fichas automaticamente.
 3. Extrair Campaign/Identity, mantendo convites, revogação e verificações por recurso transacionais; depois NPCs/dados. Substituir joins internos de outros contextos por portas públicas.
 4. Dividir projetos por bounded context somente após remover acoplamento real. Acrescentar testes de fronteira para cada contrato migrado e reduzir a lista de exceções legadas.
 5. Criar staging com snapshot anonimizado; revisar migrations e rollback; só então preparar release de produção.
 
 ## Release seguro desta fatia
 
-O release inclui uma tabela nova e mudança na política de migrations de startup. **Não publicar apenas o frontend nem reiniciar a nova API contra banco sem migration.** Validar SQL em staging, ter backup restaurável, aplicar o SQL revisado, publicar API e verificar `/health/ready` e contratos; então publicar frontend e verificar assets/rotas.
+O release inclui outbox e versões imutáveis, além da política de migrations de startup. **Não publicar apenas o frontend nem reiniciar a nova API contra banco sem migrations.** Validar os dois SQL em staging, ter backup restaurável, aplicar o SQL revisado, publicar API e verificar `/health/ready` e contratos; então publicar frontend e verificar assets/rotas. O roteiro concreto está em `releases/README.md`.
 
-Produção não foi alterada automaticamente nesta implementação. O SQL de release está concreto e verificável em `releases/`. Rollback para o binário anterior pode manter o outbox aditivo; não executar Down com eventos pendentes. A autorização histórica para deploy não substitui a restrição deste pedido contra mudanças automáticas nos dados de produção.
+Produção não foi alterada automaticamente nesta implementação. O SQL está revisável em `releases/`. Antes de qualquer fixação, o binário anterior pode continuar usando os dados legados; depois de fixar fichas, rollback deve manter um binário que entenda os vínculos. Não executar Down com versões capturadas ou eventos pendentes. A autorização histórica para deploy não substitui a restrição deste pedido contra mudanças automáticas nos dados de produção.
 
 ## Critérios que ainda impedem declarar migração completa
 
-Isolamento total de domínios, controllers sem regra de negócio em toda a API, histórico/vínculo de schema por ficha e operação realtime em múltiplas réplicas permanecem pendentes. Os testes asseguram as fronteiras novas e a compatibilidade verificada; não certificam funcionalidades que não foram migradas.
+Isolamento total de domínios, controllers sem regra de negócio em toda a API, migração entre vínculos fixados/históricos e operação realtime em múltiplas réplicas permanecem pendentes. O vínculo opcional está funcional; não é um backfill do passado. Os testes asseguram as fronteiras novas e a compatibilidade verificada.
 
 ## Segunda fatia — 09/11/2026
 
@@ -56,3 +56,11 @@ Testes passaram com PostgreSQL real, HTTP e Chrome: permissões, IDs vinculados 
 Os sete handlers restantes de personagem foram extraídos para casos de uso/portas. Favoritos são pessoais e continuam disponíveis a espectadores; inclusões/remoções simultâneas são idempotentes sob lock. Segredos exigem mestre, incluindo revalidação no commit; erros inesperados de banco deixaram de ser classificados indiscriminadamente como conflitos. A revisão inicial legada foi preservada, com um campo opcional de existência utilizado pelo Angular para bloquear a sobrescrita do primeiro rascunho.
 
 OBS usa RNG criptográfico, hash no banco, rotação exclusiva do dono e projeção pública limitada. Seus perfis agora são resolvidos pelo registry de ID/edição/schema, com layout configurado como fallback para edição desconhecida. Segredos e chaves têm no-store. Testes de aplicação/PostgreSQL/HTTP/Chrome e builds passaram; nenhuma migration nova foi necessária. Histórico/realtime de segredos e coleções, versão imutável de schema e extração dos outros contextos continuam pendentes. Produção não foi alterada.
+
+## Sexta fatia — versões imutáveis de ficha, 09/11/2026
+
+Migration `20261109121911_CharacterSystemVersions` adiciona `rpg_system_versions` e `characters.SystemVersionId` nullable, com FKs/índice de deduplicação. Nenhuma ficha é preenchida automaticamente. Mestre fixa explicitamente o modelo atual com revisão da ficha, UUID do sistema e revisão do template; a captura/vínculo/histórico/outbox confirmam juntos. O editor usa o sistema efetivo da ficha e preserva o vínculo em cópias, regras, OBS e exportações.
+
+Edição/restauração do template da campanha migra apenas fichas não fixadas. A captura é independente de alterações posteriores, exclui histórico mutável e catálogo privado de NPCs, e é imutável por EF e trigger SQL. O Down recusa apagar qualquer versão capturada. Estado histórico pode ser restaurado validando contra o vínculo atual; esta fatia não altera o vínculo por restauração nem oferece troca/desfixação. Migração assistida entre vínculos permanece pendente.
+
+Passaram testes de unidade/aplicação/PostgreSQL, HTTP, Chrome com duas contas e quatro resoluções, regressões OP/D&D/inimigos/encontros, builds e lint. SQL e capturas estão concretos; aplicação em produção e CI remoto não foram certificados.

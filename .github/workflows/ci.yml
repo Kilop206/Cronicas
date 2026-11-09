@@ -47,6 +47,7 @@ jobs:
           SMOKE_BASE_URL=http://localhost:8081 node scripts/character-writes-smoke.mjs
           SMOKE_BASE_URL=http://localhost:8081 node scripts/character-assets-smoke.mjs
           SMOKE_BASE_URL=http://localhost:8081 node scripts/character-companions-smoke.mjs
+          SMOKE_BASE_URL=http://localhost:8081 node scripts/character-systems-smoke.mjs
           SMOKE_BASE_URL=http://localhost:8081 node scripts/character-lifecycle-smoke.mjs
           SMOKE_BASE_URL=http://localhost:8081 node scripts/sheet-events-smoke.mjs
           docker compose restart api

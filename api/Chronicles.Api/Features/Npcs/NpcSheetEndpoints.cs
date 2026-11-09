@@ -118,9 +118,8 @@ public static partial class NpcEndpoints
         db.Entry(target).Property(c=>c.Version).IsModified=true;
         if(sheet.PresenceTargets.Contains(target.Id))return Results.Conflict(new{message="Presença já resolvida para este alvo nesta cena. Inicie uma nova cena para resolver novamente."});
         if(sheet.PresenceTargets.Length>=100)return SheetError("Limite de cem alvos por cena atingido.");
-        var schema=await db.Campaigns.Where(c=>c.Id==npc.CampaignId).Join(db.RpgSystems,c=>c.SystemId,s=>s.Id,(_,s)=>s.SchemaJson).SingleOrDefaultAsync();
-        if(schema is null || !ParanormalThreatSchema.CampaignSupports(SystemDefinition.Read(schema)))return SheetError("O alvo precisa usar Ordem Paranormal 1.3.");
-        var definition=SystemDefinition.Read(schema);
+        var definition=await CharacterEncounterConditions.Definition(db,npc.CampaignId,target.Id);
+        if(definition is null || !ParanormalThreatSchema.CampaignSupports(definition) || !SheetRuleActions.Supports(definition))return SheetError("O alvo precisa usar uma versão suportada de Ordem Paranormal 1.3.");
         if(new[]{"nex","presenca","per_vontade"}.Any(key=>!definition.Fields.Any(f=>f.Key==key&&f.Type=="number")) || !definition.Fields.Any(f=>f.Key==SheetRuleActions.StateKey&&f.Type=="table"))return SheetError("O sistema do alvo precisa declarar NEX, Presença, Vontade e estado de regras para resolver a presença.");
         var fields=JsonSerializer.Deserialize<Dictionary<string,JsonElement>>(target.FieldsJson)??[];
         var s=new RuleState(new CharacterSheetState(target.Name,target.PortraitUrl,target.BackgroundUrl,target.Health,target.MaxHealth,target.Sanity,target.MaxSanity,target.Mana,target.MaxMana,fields),sides=>System.Security.Cryptography.RandomNumberGenerator.GetInt32(1,sides+1));

@@ -75,7 +75,7 @@ public static class EncounterEndpoints
             var participant = new EncounterParticipant { EncounterId = id, CharacterId = character?.Id, NpcId = npc?.Id,
                 Initiative = input.Initiative, Health = character?.Health ?? npc!.Health, MaxHealth = character?.MaxHealth ?? npc!.MaxHealth };
             if(npc is not null && NpcEndpoints.ConditionText(npc) is {} conditions) participant.Conditions=conditions;
-            if(character is not null && await CharacterEncounterConditions.Definition(db,encounter.CampaignId) is {} definition)
+            if(character is not null && await CharacterEncounterConditions.Definition(db,encounter.CampaignId,character.Id) is {} definition)
             {try{participant.Conditions=CharacterEncounterConditions.Project(character,definition,participant.Conditions);}catch(ArgumentException error){return Results.ValidationProblem(new Dictionary<string,string[]>{["conditions"]=[error.Message]});}}
             db.EncounterParticipants.Add(participant); encounter.UpdatedAt = DateTime.UtcNow;
             try { await db.SaveChangesAsync(); }
@@ -101,7 +101,7 @@ public static class EncounterEndpoints
             {
                 if (character.Health != input.Health || character.MaxHealth != input.MaxHealth) CharacterHistory.Capture(db, character, userId);
                 character.Health = input.Health; character.MaxHealth = input.MaxHealth; character.UpdatedAt = DateTime.UtcNow;
-                if(await CharacterEncounterConditions.Definition(db,participant.Encounter.CampaignId) is {} definition)
+                if(await CharacterEncounterConditions.Definition(db,participant.Encounter.CampaignId,character.Id) is {} definition)
                 {try{participant.Conditions=CharacterEncounterConditions.Project(character,definition,participant.Conditions);}catch(ArgumentException error){return Results.ValidationProblem(new Dictionary<string,string[]>{["conditions"]=[error.Message]});}}
             }
             else if (participant.Npc is { } npc && (npc.Health != input.Health || npc.MaxHealth != input.MaxHealth))

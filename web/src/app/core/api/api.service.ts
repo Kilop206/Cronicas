@@ -100,6 +100,8 @@ export class ApiService {
   characterRevisions(id: string) { return this.http.get<CharacterRevision[]>(`/api/characters/${id}/revisions`, { withCredentials: true }); }
   restoreCharacterRevision(id: string, revisionId: string, expectedVersion: number) { return this.http.post<Character>(`/api/characters/${id}/revisions/${revisionId}/restore`, { expectedVersion }, { withCredentials: true }); }
   characterSecret(id: string) { return this.http.get<CharacterSecret>(`/api/characters/${id}/secret`, { withCredentials: true }); }
+  characterSystem(id: string) { return this.http.get<RpgSystem | null>(`/api/characters/${id}/system`, { withCredentials: true }); }
+  pinCharacterSystem(id: string, expectedVersion: number, registrySystemId: string, templateRevision: number) { return this.http.post<Character>(`/api/v1/characters/${id}/system-version`, { expectedVersion, registrySystemId, templateRevision }, { withCredentials: true }); }
   updateCharacterSecret(id: string, notes: string, revision: number, expectedExists?: boolean) { return this.http.put<CharacterSecret>(`/api/characters/${id}/secret`, { notes, revision, expectedExists }, { withCredentials: true }); }
   characterFavorite(id: string) { return this.http.get<{ favorite: boolean }>(`/api/characters/${id}/favorite`, { withCredentials: true }); }
   addCharacterFavorite(id: string) { return this.http.put<void>(`/api/characters/${id}/favorite`, {}, { withCredentials: true }); }

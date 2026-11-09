@@ -14,3 +14,13 @@ O mesmo teste abriu duas janelas autenticadas, confirmou assinatura SignalR com 
 Depois de recarregar explicitamente, o teste editou o nome, aguardou PUT/autosave real, verificou a persistência e a atualização da outra janela. A aba Combate foi mantida durante a troca de inputs do renderer; não houve recriação do componente. Os testes verificaram ausência de overflow horizontal e de erros JavaScript nas duas fichas.
 
 Também passaram separadamente as suites reais de regras para OP/D&D/T20/CoC e o smoke de autorizações/revogação/reconexão do hub. Essas evidências são locais; não demonstram um deploy em produção nem fanout entre múltiplas réplicas.
+
+## Modelo fixado — 09/11/2026
+
+`web/character-systems-integration.mjs` capturou uma ficha personalizada real após o mestre fixar o modelo, editar o template de origem e remover o sistema da campanha. O jogador manteve o atributo original e a fórmula ×2, salvou 4/8, recarregou e exportou a definição fixada. Não houve mock de API nem reconstrução dos layouts especializados nesta etapa.
+
+| Desktop | Amplo | Tablet | Mobile |
+| --- | --- | --- | --- |
+| [1440×900](system-binding-1440x900.png) | [1920×1080](system-binding-1920x1080.png) | [768×1024](system-binding-768x1024.png) | [390×844](system-binding-390x844.png) |
+
+Capturas full-page; dimensões acima são o viewport. Desktop e mobile foram abertos para inspeção: indicação de modelo fixado legível, campos preservados e reorganização sem overflow. O teste verifica as quatro larguras. A composição genérica existente foi preservada; essas imagens demonstram o fluxo de versionamento, não uma nova comparação com C.R.I.S./D&D Beyond. Regenerações das capturas anteriores durante regressões foram mantidas fora deste commit.

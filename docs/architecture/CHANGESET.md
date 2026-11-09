@@ -62,3 +62,12 @@ Não foram comitadas regenerações aleatórias das capturas antigas de `docs/vi
 - `Features/CharacterSheets/CharacterCompanionEndpoints` e `Features/Characters/CharacterEndpoints`: sete handlers substituídos por adapters finos; arquivo anterior agora só registra grupos/identificação. DI em Program.cs. Cache no-store para notas/chaves/fontes.
 - `web/src/app/core/api/api.service.ts` e `features/characters/studio-pages.ts`: indicador opcional de existência das notas, usado para proteger o primeiro rascunho sem alterar layout ou clientes antigos.
 - `CharacterCompanionTests`, `CharacterCompanionPersistenceTests`, fronteira Node, `scripts/character-companions-smoke.mjs`/CI e `web/character-companions-integration.mjs`. ADR 0003 e documentação atualizados. Sem migration adicional ou produção alterada.
+
+## Versões fixadas por personagem — 09/11/2026
+
+- `Domain/RpgSystems/FrozenSystemTemplate`: captura independente, sem catálogo de NPCs/histórico mutável, com fingerprint. `Application/CharacterSheets/CharacterSystemContracts`: portas, DTOs e casos de uso ReadCharacterSystem/PinCharacterSystem.
+- `Infrastructure/Characters/EfCharacterSystemStore` e resolução compartilhada: fixação autorizada/transacional e modelo efetivo. Modelos `Character`/`RpgSystemVersion`, DbContext, migration `20261109121911_CharacterSystemVersions`, Designer/snapshot EF e proteções de imutabilidade/Down.
+- `CharacterSystemEndpoints`, DI e projeções legadas/v1: leitura de modelo por personagem, POST v1 com identidade/revisões obrigatórias e metadados de vínculo. Estado neutro da ficha permanece sem aceitar vínculo arbitrário.
+- Cópias, histórico, regras, OBS, exportação de conta, encontros e alvos de NPCs usam a definição efetiva. `SystemEndpoints` bloqueia a origem e exclui fichas fixadas de renomes/cálculos/restauração do template; sistemas com capturas não são apagados.
+- Cliente HTTP/contratos/editor Angular: modelo efetivo, ação Fixar versão atual, proteção de rascunhos, resync de vínculo e exportação individual com a definição. A cena de câmera OBS também consulta o modelo efetivo para mostrar recursos próprios. Sem troca dos layouts especializados.
+- Testes de arquitetura/aplicação/PostgreSQL, `character-systems-smoke.mjs`, `character-systems-integration.mjs`, CI e OpenAPI atualizados. SQL, ADR 0004, roteiro de release e quatro capturas novas documentados. Produção permanece sem alteração; troca/desfixação de versão e migração assistida ainda não foram implementadas.

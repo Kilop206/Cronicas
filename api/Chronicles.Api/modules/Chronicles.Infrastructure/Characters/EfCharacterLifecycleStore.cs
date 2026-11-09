@@ -18,7 +18,7 @@ public sealed class EfCharacterLifecycleStore(AppDbContext db) : ICharacterLifec
         if (role is null) return null;
         var characters = await db.Characters.AsNoTracking().Where(c => c.CampaignId == campaignId && c.Campaign.Memberships.Any(m => m.UserId == actor))
             .OrderBy(c => c.Name).ToListAsync(ct);
-        return new(role, characters.Select(c => new CharacterListEntry(c.Id, c.CampaignId, c.OwnerId, CharacterSheetPersistence.State(c), c.UpdatedAt)).ToArray());
+        return new(role, characters.Select(c => new CharacterListEntry(c.Id, c.CampaignId, c.OwnerId, CharacterSheetPersistence.State(c), c.UpdatedAt, c.SystemVersionId)).ToArray());
     }
 
     public async Task<CharacterRevisionSummary[]?> ListRevisions(Guid id, Guid actor, int limit, CancellationToken ct)
@@ -58,7 +58,7 @@ public sealed class EfCharacterLifecycleStore(AppDbContext db) : ICharacterLifec
             // All source collections are read from this transaction's snapshot, never from the request body.
             var inventory = await db.CharacterInventoryItems.AsNoTracking().Where(i => i.CharacterId == before.Id).ToListAsync(ct);
             var abilities = await db.CharacterAbilities.AsNoTracking().Where(a => a.CharacterId == before.Id).ToListAsync(ct);
-            var copy = new Character { CampaignId = fresh.CampaignId, OwnerId = actor, Name = state.Name };
+            var copy = new Character { CampaignId = fresh.CampaignId, OwnerId = actor, Name = state.Name, SystemVersionId = fresh.SystemVersionId };
             CharacterSheetPersistence.Apply(copy, state);
             db.Characters.Add(copy);
             foreach (var item in inventory) db.CharacterInventoryItems.Add(new() { CharacterId = copy.Id, Name = item.Name,

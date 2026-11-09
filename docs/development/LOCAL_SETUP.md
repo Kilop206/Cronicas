@@ -32,6 +32,8 @@ Instale `dotnet-ef` 10.0.13 em tool path local ou em sua instalação de ferrame
 dotnet ef migrations add Nome --project api/Chronicles.Api/modules/Chronicles.Infrastructure --startup-project api/Chronicles.Api --output-dir Persistence/Migrations --namespace Chronicles.Api.Migrations
 ```
 
+Se usar `--no-build`, informe a mesma configuração do build (`--configuration Release` para binários Release); apontar para Debug antigo pode gerar uma migration vazia. Sempre verificar `HasPendingModelChanges` e o SQL no banco temporário antes de publicar. A migration `20261109121911_CharacterSystemVersions` é aditiva, sem backfill; não executar seu Down com capturas. Ver `docs/architecture/releases/README.md` para ordem e limites de rollback.
+
 Nunca suprimir `PendingModelChangesWarning` para fazer uma migration passar. Gere snapshot/migration corretos e execute a suíte de persistência.
 
 ## Produção

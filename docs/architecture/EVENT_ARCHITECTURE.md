@@ -19,6 +19,8 @@ Inventário/habilidades têm casos de uso extraídos, mas ainda não emitem even
 
 Favoritos e notas privadas também não possuem eventos próprios. Rotacionar OBS altera o hash na entidade Character, portanto a ponte existente ainda gera seus metadados de atualização sem incrementar a revisão da ficha; não é um evento de domínio específico de capacidade. O payload nunca inclui chave, hash ou notas. A fonte OBS usa polling, e revogação de chave é observada na próxima leitura. Eventos explícitos dessas responsabilidades continuam como evolução futura, com consumidores e política de sigilo próprios.
 
+Fixar uma versão altera o vínculo e incrementa a revisão do personagem. A mesma transação grava captura, histórico e os eventos CharacterUpdated/CharacterSheetUpdated existentes. O cliente refaz a leitura e, se o vínculo mudou sem rascunho local, recarrega também o modelo efetivo. Com rascunho, preserva o protocolo anterior de conflito. Não enviar definição inteira ou ID escolhido pelo cliente no evento; o refetch continua autorizado. A tabela de capturas ainda não possui evento público de registro próprio.
+
 ```mermaid
 sequenceDiagram
   participant API

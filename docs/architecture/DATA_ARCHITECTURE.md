@@ -22,9 +22,9 @@ NPCs, habilidades, inventário, segredos e schema mantêm os mecanismos anterior
 
 `GET /api/v1/characters/{id}/sheet` identifica proprietário/personagem/campanha, UUID do sistema registrado, ID estável do RPG, edição, schema, revisão do template, estado, revisão da ficha e atualização. ETag corresponde à revisão; resposta privada/no-store. Não inventa datas de criação ausentes.
 
-**Limitação importante:** edição/schema são atualmente resolvidos pelo sistema da campanha; não são um vínculo imutável por personagem. `Character` não possui `CreatedAt` histórico nem FK própria para uma revisão imutável do template. O histórico existente preserva estado, não toda a definição de regras daquela data. A API v1 explicita a versão efetiva, não promete restauração de regras antigas.
+Desde 09/11/2026, `SystemVersionId` identifica uma captura imutável opcional por personagem. Quando null, o comportamento legado continua: sistema corrente da campanha. Quando preenchido, definição, edição, schema, apresentação e fórmulas vêm de `rpg_system_versions`, inclusive se a campanha trocar/remover seu sistema. A API v1 expõe o vínculo e a revisão efetiva. O editor consulta `GET /api/characters/{id}/system`, não deduz o modelo pelo sistema atual da campanha.
 
-Para concluir esse critério: adicionar colunas opcionais e tabela imutável de revisões de sistema; preencher vínculos somente em migração explicitamente autorizada ou na edição assistida; atualizar leitura/renderização/validação/restauração para o vínculo; manter fallback legado até cobrir todas as fichas. Não fazer backfill presumindo que a última versão sempre foi a versão original.
+O passado não foi preenchido por inferência. `Character` ainda não possui CreatedAt histórico confiável, e históricos antigos não capturavam a definição de regras. As novas revisões registram o ID de versão existente na captura; restaurar estado mantém o vínculo atual e valida contra ele. Não há restauração automática de uma edição passada nem migração entre versões fixadas nesta fatia.
 
 ## Criação e salvamento extraídos — 09/11/2026
 
@@ -57,3 +57,13 @@ Por compatibilidade, notas ausentes retornam revisão 1/updatedAt null; a primei
 OBS continua com uma capacidade de 32 bytes aleatórios representada em 64 dígitos hexadecimais, normalizada e armazenada somente como SHA-256. A resposta com a chave em claro só ocorre depois do commit. Rotação substitui o hash anterior atomicamente; rollback mantém a URL antiga. Não há histórico da chave recuperável nem nova revisão de ficha por essa operação. A ponte de eventos existente ainda observa a alteração da entidade; não se promete uma nova revisão ou um canal de notas/OBS em tempo real.
 
 A leitura do overlay busca personagem e sistema efetivo em um SQL e devolve somente a projeção permitida. Perfis especializados usam ID/edição/schema do registry; layout explícito ou edição desconhecida usa os blocos configurados. Não executar regras de outra edição para compor indicadores. A fonte continua atualizada por polling do navegador. O ADR 0003 detalha os contratos e limites.
+
+## Captura e fixação — migration 20261109121911
+
+`rpg_system_versions` guarda UUID, sistema de origem, nome/descrição capturados, definição JSONB, fingerprint SHA-256, revisão de origem e data da captura. A definição é copiada profundamente, sem o histórico mutável nem catálogo de NPCs. O índice `(RpgSystemId, ContentHash)` deduplica a mesma captura. EF e trigger SQL rejeitam atualização/exclusão. FKs Restrict preservam versões referenciadas e sistemas de origem; sistemas com capturas não podem ser excluídos pela API.
+
+`POST /api/v1/characters/{id}/system-version` exige mestre, expectedVersion, registrySystemId e templateRevision. A transação ReadCommitted bloqueia participação/campanha e exclusivamente o sistema de origem antes de revalidar e deduplicar. Captura, vínculo, nova revisão e outbox são atômicos. Edição/restauração de sistema também bloqueia a origem antes de consultar fichas, excluindo as já fixadas das migrações de campos. Fichas criadas sem optar pela fixação continuam no fallback anterior.
+
+Leitura, validação, rolagens, cópias, OBS, condições de encontros e alvos de ações de NPCs resolvem a definição efetiva do personagem. Não se executam regras de outra edição por causa de mudança na campanha. Cópia conserva o vínculo; restauração de estado não o troca. Exportação de conta inclui capturas utilizadas pelos personagens próprios; exportação individual leva o ID e a definição efetiva. Importar estado não concede permissão para escolher um ID de vínculo arbitrário.
+
+SQL revisável: `releases/character-system-versions-up.sql` e Down correspondente. Up é aditivo e não faz UPDATE/backfill de personagens. Down só permite retornar quando a tabela de capturas está vazia e nenhum vínculo existe; caso contrário aborta antes de remover objetos. Depois de usar a fixação, um rollback de aplicação precisa preservar suporte aos vínculos, pois um binário antigo pode ignorá-los mesmo mantendo as colunas. Não automatizar esse retorno. As versões congelam definição de dados, não binários dos executores ou conteúdo remoto de imagens. Ver ADR 0004.

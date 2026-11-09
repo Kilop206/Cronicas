@@ -29,7 +29,7 @@ public sealed class EfCharacterRuleStore(AppDbContext db) : ICharacterRuleStore
             await CharacterSheetPersistence.LockContext(db, before.CampaignId, change.ActorId, before.SystemId, ct);
             var fresh = await Load(before.Id, change.ActorId, ct);
             if (fresh is null || !CharacterAccessPolicy.CanEdit(fresh.OwnerId, change.ActorId, fresh.Role) || fresh.Role != before.Role ||
-                fresh.State.Version != before.State.Version || fresh.SystemId != before.SystemId ||
+                fresh.CampaignId != before.CampaignId || fresh.State.Version != before.State.Version || fresh.SystemId != before.SystemId ||
                 JsonSerializer.Serialize(fresh.System) != JsonSerializer.Serialize(before.System)) return null;
             var character = await db.Characters.SingleAsync(c => c.Id == before.Id, ct);
             var state = change.Result.Character;
