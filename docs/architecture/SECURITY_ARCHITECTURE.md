@@ -18,6 +18,8 @@ Origins de todos os hubs são comparados à allowlist; REST mantém a proteção
 
 409 não é convertido em sobrescrita automática. O editor pausa salvamento ao receber revisão remota durante edição, preserva rascunho e permite exportação antes de recarga. Navegação/fechamento com alterações pendentes têm confirmação de perda de dados. Reconexão busca versão atual quando não há edição local.
 
+Desde 09/11/2026, criação/salvamento comuns usam casos de uso com autorização e validador do plugin, além das ações de regras. O store revalida acesso e schema no commit. A revisão é obrigatória no contrato v1 de escrita; a omissão continua permitida no PUT legado apenas por compatibilidade. A leitura individual não executa regras, permitindo consultar/corrigir estado antes de acionar o motor.
+
 ## Código e dados não confiáveis
 
 Fórmulas e dados usam parsers existentes com operadores/limites explícitos, sem eval. Schema/template é JSON declarativo; não instala assembly, script, componente remoto ou código no backend. Plugins executáveis desta entrega são compilados e revisados junto ao servidor e bundle Angular. Estratégia para terceiros está no PLUGIN_CONTRACT.
@@ -27,6 +29,8 @@ Não foi criado serviço de upload: imagens/fundos continuam URLs HTTPS limitada
 ## Auditoria e observabilidade
 
 Histórico existente e eventos metadados acompanham transações. Middleware próprio registra rota parametrizada, status, duração e correlação; não registra corpo, query, cookies ou tokens de convite/OBS. Scopes automáticos de console ficam desabilitados para não incluir RequestPath cru. EF não usa sensitive-data logging. Nunca adicionar segredos de Render/Cloudflare/banco aos documentos/fixtures.
+
+Erros de binding/JSON do cliente preservam seu status HTTP e, para 400, usam erro de validação estruturado; não viram 500 por causa do handler central. O cabeçalho de correlação é aplicado em OnStarting, inclusive quando o tratamento de exceções limpa a resposta. O teste HTTP cobre esse caso.
 
 ## Pendências explícitas
 

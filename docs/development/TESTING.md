@@ -53,3 +53,13 @@ Também passaram os dois Dockerfiles (API Release e Angular/Nginx), readiness e 
 O build Docker reportou 22 advisories moderados na árvore de desenvolvimento; `npm audit --omit=dev --json` retornou zero vulnerabilidades de runtime nesta verificação. Atualização de toolchain/dependências de desenvolvimento exige trabalho separado, sem `audit fix --force` ou troca de stack nesta migração.
 
 As três suites de inimigos também passaram nas imagens Docker: criação/importação/autosave/defesas, sentidos e manobras. A suite de importação precisou aguardar a resposta de validação e a atualização do input; a asserção anterior podia ler o zero do formulário em branco antes do resultado assíncrono. Foi ajustada a espera, mantendo a expectativa de fortificação 100 e os demais critérios.
+
+## Criação/leitura/salvamento — 09/11/2026
+
+`CharacterWriteTests` na suíte de arquitetura verifica ownership, GM/jogador/espectador, campos de mestre, fórmulas em cópia, campos históricos/omitidos, revisão obrigatória v1, compatibilidade legada e invariantes de um plugin injetado. Também prova que ler a ficha não chama descrição/execução de regras.
+
+`CharacterWritePersistenceTests` usa o mesmo banco descartável da suíte PostgreSQL: confirma criação/reabertura, histórico/eventos exatos, duas gravações concorrentes com um vencedor, papel/template alterados entre leitura e commit e rollback quando a projeção de condições do encontro excede o limite. O teste revelou uma colisão no índice único do histórico; ela é tratada especificamente como conflito, sem converter outros erros de integridade.
+
+`SMOKE_BASE_URL=http://127.0.0.1:8082 node scripts/character-writes-smoke.mjs` verifica os contratos reais. Inclui POST autorizado, PUT v1 com revisão, erros 400/401/403/404/409, JSON inválido com correlação, preservação de campos/fórmulas e concorrência com histórico exato. A mesma suite foi adicionada ao smoke de CI. Não precisa de nova migration.
+
+Em 09/11/2026 passaram as suites .NET de regras/arquitetura/persistência, os cinco testes de fronteira Node, o build Docker da API, os smokes HTTP/SignalR e a regressão de navegador dos quatro RPGs. O cenário de duas janelas OP/D&D também passou, verificando autosave, rascunho, navegação, resync e quatro viewports. As capturas regeneradas ficaram no disco, fora dos commits desta etapa; nenhuma alteração de layout foi introduzida.

@@ -29,3 +29,11 @@ Base auditada: `f3f51ae`. Implementação separada em commits de backend e front
 - `docs/architecture/*`, `docs/plugins/*`, `docs/development/*`, OpenAPI v1, SQL de release e `docs/visual-validation/architecture/` documentam código, operação, extensão, evidências e limites.
 
 Não foram comitadas regenerações aleatórias das capturas antigas de `docs/visual-validation/rules`; elas foram mantidas no disco. Não houve alteração de produção. Para critérios ainda pendentes e próximos passos, consultar MIGRATION_PLAN e MICROSERVICES_ROADMAP.
+
+## Continuação — 09/11/2026
+
+- `Application/CharacterSheets`: `CreateCharacter`, `ReadCharacter`, `SaveCharacter`, contratos de escrita/leitura e projeções de resposta. `CharacterSheetSnapshot` é compartilhado por consultas e comandos; cálculos ocorrem em uma cópia do rascunho.
+- `Infrastructure/Characters`: `EfCharacterWriteStore` e `CharacterSheetPersistence` compartilham leitura, locks, mapeamento e classificação de conflitos com o adapter de regras. Inclui colisão específica do índice de histórico em saves simultâneos.
+- `Features/CharacterSheets`: adapters finos de criação/leitura/salvamento e DTO `VersionedCharacterInput`; removidos os handlers correspondentes com EF do endpoint antigo. `PluginEndpoints` oferece PUT v1 com revisão obrigatória. Formato e revisão opcional do PUT legado foram mantidos.
+- `Program.cs`/`RequestObservability`: DI dos novos casos de uso; entrada inválida mantém status 400 e erro de validação estruturado; correlação também é garantida após o tratamento central de exceções.
+- `CharacterWriteTests`, `CharacterWritePersistenceTests`, `scripts/character-writes-smoke.mjs`, teste de fronteira e CI cobrem os novos fluxos. OpenAPI e documentos foram atualizados. Nenhuma migration adicional foi criada.

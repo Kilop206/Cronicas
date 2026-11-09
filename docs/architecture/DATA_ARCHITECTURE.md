@@ -25,3 +25,9 @@ NPCs, habilidades, inventário, segredos e schema mantêm os mecanismos anterior
 **Limitação importante:** edição/schema são atualmente resolvidos pelo sistema da campanha; não são um vínculo imutável por personagem. `Character` não possui `CreatedAt` histórico nem FK própria para uma revisão imutável do template. O histórico existente preserva estado, não toda a definição de regras daquela data. A API v1 explicita a versão efetiva, não promete restauração de regras antigas.
 
 Para concluir esse critério: adicionar colunas opcionais e tabela imutável de revisões de sistema; preencher vínculos somente em migração explicitamente autorizada ou na edição assistida; atualizar leitura/renderização/validação/restauração para o vínculo; manter fallback legado até cobrir todas as fichas. Não fazer backfill presumindo que a última versão sempre foi a versão original.
+
+## Criação e salvamento extraídos — 09/11/2026
+
+Não houve nova migration nesta fatia. `EfCharacterWriteStore` grava estado normalizado, histórico e eventos; compartilha leitura, locks de contexto e mapeamento com o adapter de regras. Papel ou schema alterado depois da validação invalida o commit. Saves simultâneos com a mesma revisão têm um vencedor; o índice único `IX_character_revisions_CharacterId_Version` também é reconhecido como conflito, pois seu INSERT pode anteceder o UPDATE otimista no lote EF. Outras violações de unicidade continuam sendo erros.
+
+Cada save aceito mantém a semântica anterior de criar uma revisão, mesmo quando o cliente repete valores. Campos omitidos são preservados; campos históricos desconhecidos só são aceitos inalterados. Uma falha na projeção de condições do encontro desfaz estado/histórico/eventos e limpa mudanças pendentes do DbContext. A escrita v1 exige `version`; o contrato legado preserva sua opção de versão omitida.

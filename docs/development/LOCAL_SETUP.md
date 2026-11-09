@@ -22,7 +22,7 @@ dotnet run --project api/Chronicles.Api
 
 Em outro terminal: `npm --prefix web ci`, depois `npm --prefix web start -- --port 4200`. O proxy Angular encaminha `/api`, WebSockets e `/health` para 5099. Se SignalR indicar indisponibilidade mas REST funcionar, confira primeiro a allowlist de Origin e o proxy `ws: true`; não desative autenticação.
 
-Health: `/health/live` processo, `/health/ready` e `/health` PostgreSQL. OpenAPI em Development: `/openapi/v1.json`. API v1 nova: `/api/v1/rpg-plugins` e `/api/v1/characters/{id}/sheet`, ambas autenticadas. Rotas `/api` anteriores continuam disponíveis.
+Health: `/health/live` processo, `/health/ready` e `/health` PostgreSQL. OpenAPI em Development: `/openapi/v1.json`. API v1: GET `/api/v1/rpg-plugins` e GET/PUT `/api/v1/characters/{id}/sheet`, autenticados. O PUT v1 exige `version` no JSON e devolve envelope/ETag atualizados. Rotas `/api` anteriores continuam disponíveis; o PUT legado mantém a versão opcional.
 
 ## Ferramentas EF
 

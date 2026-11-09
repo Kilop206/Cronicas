@@ -1,11 +1,11 @@
 # Arquitetura implementada e direção de evolução
 
-A base permanece um monólito modular Angular 21/.NET 10/PostgreSQL. A primeira fatia hexagonal em execução é a consulta/execução de regras de personagens; a modularização completa de todos os CRUDs ainda não terminou. Não há microsserviços, broker, gateway ou segunda stack introduzidos por esta mudança.
+A base permanece um monólito modular Angular 21/.NET 10/PostgreSQL. As fatias hexagonais em execução abrangem criação, leitura individual e salvamento de personagens, além da consulta/execução de regras. A modularização completa dos demais CRUDs ainda não terminou. Não há microsserviços, broker, gateway ou segunda stack introduzidos por esta mudança.
 
 ```mermaid
 flowchart LR
   UI[Angular: features + host de renderizadores] --> HTTP[API: adaptadores REST /api e /api/v1]
-  HTTP --> App[Application: ReadCharacterRules / ExecuteCharacterRule]
+  HTTP --> App[Application: personagens e regras]
   App --> Domain[Domain: schemas, invariantes, políticas, plugins, regras e dados]
   Infra[Infrastructure: EF CharacterRuleStore] --> App
   Infra --> Domain
@@ -23,7 +23,7 @@ Os projetos ficam em `api/Chronicles.Api/modules/` para preservar o contexto Doc
 
 - **Schema:** `SystemDefinition`, `SystemField`, coleções, fórmulas e migrações de campos são tipos puros em Domain.
 - **Rules:** motores existentes OP 1.3, D&D 2014, T20 JdA 2024 v1.3 e CoC 7e foram extraídos sem alterar suas fórmulas. Registry resolve ID estável + edição + versão de template; versões desconhecidas não executam regras.
-- **Application:** consulta e comando são separados, compartilham uma porta específica e retornam contratos neutros de transporte. O comando verifica acesso, revisão, privilégios de mestre e validação antes de persistir.
+- **Application:** `CreateCharacter`, `ReadCharacter`, `SaveCharacter`, `ReadCharacterRules` e `ExecuteCharacterRule` usam portas específicas, compartilhando o contrato de leitura `CharacterSheetSnapshot`. Comandos verificam acesso, revisão, privilégios de mestre e validação antes de persistir. Leitura de ficha não depende de executar/descrever regras.
 - **Persistence:** modelos relacionais EF e todas as migrations estão em Infrastructure. Seus namespaces/nomes de CLR anteriores são mantidos deliberadamente, evitando renomear entidades no modelo existente.
 - **Presentation:** host Angular cria componentes próprios OP/D&D/CoC/T20, reaproveita suas instâncias e conecta outputs de edição/restauração/ocupação. O editor de personagem não importa layouts concretos. Templates livres mantêm o editor visual.
 - **Events:** ponte de transição transforma alterações EF em envelopes versionados gravados na mesma transação. Consumidor autorizado invalida fichas por SignalR; cliente busca novamente o estado do servidor.
