@@ -43,7 +43,7 @@ catch (ArgumentException) { }
 var actor = Guid.NewGuid();
 var state = new CharacterSheetState("Agente de teste", null, null, 20, 30, 40, 50, 10, 20,
     new() { ["nex"] = JsonSerializer.SerializeToElement(35) }, 4);
-var initial = new CharacterRuleSnapshot(Guid.NewGuid(), Guid.NewGuid(), actor, "player", state, schema, DateTime.UtcNow, Guid.NewGuid());
+var initial = new CharacterSheetSnapshot(Guid.NewGuid(), Guid.NewGuid(), actor, "player", state, schema, DateTime.UtcNow, Guid.NewGuid());
 var store = new MemoryRuleStore(initial);
 var random = new FixedRandom();
 var command = new ExecuteCharacterRule(store, registry, random);
@@ -72,21 +72,22 @@ var beforeInvalid = store.Commits;
 var invalidPlugin = new RpgPluginRegistry([custom], [new CustomPlugin(8)]);
 Check((await new ExecuteCharacterRule(store, invalidPlugin, random).Execute(initial.Id, actor, 4, new("custom"))).Failure == RuleFailure.Invalid &&
     store.Commits == beforeInvalid, "Plugin-specific invariants run before commit.");
+await CharacterWriteTests.Run();
 Console.WriteLine("Architecture: independent inner assemblies, acyclic project references, versioned registry, OP use case, access, conflicts and a new plugin passed.");
 
 sealed class FixedRandom : IGameRandom { public int Draw(int sides) => sides; }
-sealed class MemoryRuleStore(CharacterRuleSnapshot initial) : ICharacterRuleStore
+sealed class MemoryRuleStore(CharacterSheetSnapshot initial) : ICharacterRuleStore
 {
-    public CharacterRuleSnapshot Current = initial;
+    public CharacterSheetSnapshot Current = initial;
     public int Commits;
     public bool Conflict;
-    public Task<CharacterRuleSnapshot?> Load(Guid id, Guid actor, CancellationToken ct) => Task.FromResult<CharacterRuleSnapshot?>(id == Current.Id && actor == Current.OwnerId ? Current : null);
-    public Task<CharacterRuleSnapshot?> Commit(CharacterRuleChange change, CancellationToken ct)
+    public Task<CharacterSheetSnapshot?> Load(Guid id, Guid actor, CancellationToken ct) => Task.FromResult<CharacterSheetSnapshot?>(id == Current.Id && actor == Current.OwnerId ? Current : null);
+    public Task<CharacterSheetSnapshot?> Commit(CharacterRuleChange change, CancellationToken ct)
     {
-        if (Conflict) return Task.FromResult<CharacterRuleSnapshot?>(null);
+        if (Conflict) return Task.FromResult<CharacterSheetSnapshot?>(null);
         Commits++;
         Current = Current with { State = change.Result.Character with { Version = Current.State.Version + 1 } };
-        return Task.FromResult<CharacterRuleSnapshot?>(Current);
+        return Task.FromResult<CharacterSheetSnapshot?>(Current);
     }
 }
 sealed class CustomPlugin(int counter = 7) : IRpgRulesPlugin

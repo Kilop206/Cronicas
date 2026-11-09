@@ -51,6 +51,19 @@ test('Character editor depends on the renderer host, not concrete RPG layouts', 
   for (const selector of ['app-paranormal-sheet', 'app-dnd-sheet', 'app-coc-sheet', 'app-t20-sheet']) assert.ok(!source.includes(selector));
 });
 
+test('Character creation/save HTTP adapters delegate without EF or business validation', () => {
+  const api = path.resolve(import.meta.dirname, '../api/Chronicles.Api');
+  const source = readFileSync(path.join(api, 'Features/CharacterSheets/CharacterWriteEndpoints.cs'), 'utf8');
+  assert.ok(source.includes('CreateCharacter command') && source.includes('SaveCharacter command'));
+  assert.ok(!/AppDbContext|EntityFrameworkCore|SaveChanges|CharacterHistory|ValidateFields|CanEdit\(/.test(source));
+  const legacy = readFileSync(path.join(api, 'Features/Characters/CharacterEndpoints.cs'), 'utf8');
+  const reader = readFileSync(path.join(api, 'Features/CharacterSheets/CharacterReadEndpoints.cs'), 'utf8');
+  assert.ok(reader.includes('ReadCharacter query') && !/AppDbContext|EntityFrameworkCore/.test(reader));
+  assert.ok(!legacy.includes('api.MapGet("/characters/{id:guid}"'));
+  assert.ok(!legacy.includes('api.MapPut("/characters/{id:guid}"'));
+  assert.ok(!legacy.includes('api.MapPost("/campaigns/{campaignId:guid}/characters"'));
+});
+
 test('Domain and application source cannot import HTTP/EF adapters', () => {
   const modules = path.resolve(import.meta.dirname, '../api/Chronicles.Api/modules');
   function inspect(dir) {

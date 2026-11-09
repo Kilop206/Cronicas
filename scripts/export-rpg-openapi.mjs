@@ -10,6 +10,10 @@ document.info = { ...document.info, title: 'Cronicas RPG APIs', version: 'v1' };
 document.servers = [{ url: '/' }];
 document.paths = Object.fromEntries(Object.entries(document.paths).filter(([route]) => route.startsWith('/api/v1/')));
 assert.equal(Object.keys(document.paths).length, 2);
+assert.ok(document.paths['/api/v1/characters/{id}/sheet']?.put, 'Missing revision-aware sheet write contract');
+const requestSchemaRef = document.paths['/api/v1/characters/{id}/sheet'].put.requestBody.content['application/json'].schema.$ref;
+const requestSchema = document.components.schemas[requestSchemaRef.split('/').at(-1)];
+assert.ok(requestSchema.required.includes('version'), 'Write contract must declare the revision as required');
 // Authentication is enforced by the existing custom session middleware/guards, not ASP.NET Authorize metadata.
 for (const entry of Object.values(document.paths)) for (const operation of Object.values(entry)) operation.security = [{ sessionCookie: [] }];
 const allSchemas = document.components?.schemas ?? {};

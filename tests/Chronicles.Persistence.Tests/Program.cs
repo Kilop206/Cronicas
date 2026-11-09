@@ -127,6 +127,7 @@ try
     Check(await db.Users.AnyAsync(u => u.Id == sentinel) && await db.Characters.AnyAsync(c => c.Id == character.Id && c.Health == 17), "Rollback preserves all game data.");
     await db.Database.MigrateAsync();
     Check(await db.Characters.AnyAsync(c => c.Id == character.Id && c.Version == 2), "Re-upgrade preserves revision and state.");
+    await CharacterWritePersistenceTests.Run(Context);
     Console.WriteLine("PostgreSQL: full migration chain, upgrade/rollback/re-upgrade, preserved data, exact EF snapshot, atomic events/history, stale writes, IDOR, retries/idempotency and concurrent claims passed.");
 }
 finally

@@ -24,6 +24,11 @@ builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connect
 builder.Services.AddSingleton(RpgPluginRegistry.BuiltIn());
 builder.Services.AddSingleton<IGameRandom, CryptographicGameRandom>();
 builder.Services.AddScoped<ICharacterRuleStore, EfCharacterRuleStore>();
+builder.Services.AddScoped<ICharacterWriteStore, EfCharacterWriteStore>();
+builder.Services.AddScoped<ICharacterSheetReader>(services => services.GetRequiredService<ICharacterWriteStore>());
+builder.Services.AddScoped<CreateCharacter>();
+builder.Services.AddScoped<SaveCharacter>();
+builder.Services.AddScoped<ReadCharacter>();
 builder.Services.AddScoped<ExecuteCharacterRule>();
 builder.Services.AddScoped<ReadCharacterRules>();
 builder.Services.AddScoped<OutboxDispatcher>();
@@ -48,8 +53,18 @@ app.UseRequestObservability();
 if (app.Environment.IsDevelopment()) app.MapOpenApi();
 app.UseExceptionHandler(handler => handler.Run(async context =>
 {
-    context.Response.StatusCode = 500;
     var error = context.Features.Get<Microsoft.AspNetCore.Diagnostics.IExceptionHandlerFeature>()?.Error;
+    if (error is BadHttpRequestException { StatusCode: >= 400 and < 500 } requestError)
+    {
+        app.Logger.LogWarning("Request rejected with status {StatusCode}; correlation {CorrelationId}", requestError.StatusCode, context.TraceIdentifier);
+        var extensions = new Dictionary<string, object?> { ["correlationId"] = context.TraceIdentifier };
+        IResult response = requestError.StatusCode == StatusCodes.Status400BadRequest
+            ? Results.ValidationProblem(new Dictionary<string, string[]> { ["request"] = ["Confira o JSON e os campos obrigatórios da requisição."] }, extensions: extensions)
+            : Results.Problem("Requisição inválida.", statusCode: requestError.StatusCode, extensions: extensions);
+        await response.ExecuteAsync(context);
+        return;
+    }
+    context.Response.StatusCode = 500;
     app.Logger.LogError(error, "Request failed with correlation {CorrelationId}", context.TraceIdentifier);
     await Results.Problem("Ocorreu um erro inesperado.", extensions: new Dictionary<string, object?> { ["correlationId"] = context.TraceIdentifier }).ExecuteAsync(context);
 }));
