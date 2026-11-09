@@ -74,6 +74,7 @@ Check((await new ExecuteCharacterRule(store, invalidPlugin, random).Execute(init
     store.Commits == beforeInvalid, "Plugin-specific invariants run before commit.");
 await CharacterWriteTests.Run();
 await CharacterLifecycleTests.Run();
+await CharacterAssetTests.Run();
 Console.WriteLine("Architecture: independent inner assemblies, acyclic project references, versioned registry, OP use case, access, conflicts and a new plugin passed.");
 
 sealed class FixedRandom : IGameRandom { public int Draw(int sides) => sides; }

@@ -6,7 +6,7 @@ Auditoria inicial: 04/11/2026, base `f3f51ae`. Validação mais recente: 09/11/2
 | --- | --- | --- |
 | 1 Auditoria | Stack, fluxos, banco, auth, realtime, CI e riscos inspecionados; CURRENT_ARCHITECTURE | Atualizar métricas conforme outras fatias mudarem |
 | 2 Modularização | Assemblies Domain/Application/Infrastructure; fontes e modelos agrupados; Angular organizado por features/core/routing/layouts | Isolar fisicamente cada bounded context, eliminar navegações/repositórios compartilhados legados |
-| 3 Hexagonal | Criação/leitura/save, lista por campanha, duplicação, histórico/restauração e execução/consulta de regras usam portas e casos de uso | Migrar favoritos, segredos, OBS e CRUD de conta, campanha, convites, inventário, habilidades, dados e NPCs |
+| 3 Hexagonal | Criação/leitura/save, lista, duplicação, histórico/restauração, inventário/habilidades e execução/consulta de regras usam portas e casos de uso | Migrar favoritos, segredos, OBS e CRUD de conta, campanha, convites, dados e NPCs |
 | 4 Plugins | Catálogo versionado, regras compiladas, OP e outros motores existentes adaptados; host de apresentações exclusivas; teste de novo plugin sem alterar switch legado | Empacotamento/assinatura comunitária e sandbox de terceiros não implementados |
 | 5 Persistência | EF extraído sem renomear dados; outbox aditivo; transação/revisão/histórico; SQL e rollback testados | Vínculo imutável do schema por ficha, data de criação confiável e revisão completa de template por histórico |
 | 6 Comunicação | API v1 de leitura/escrita/catálogo, revisão obrigatória na escrita v1, eventos duráveis, SignalR autorizado e resync com rascunho preservado | Fanout entre réplicas; migração gradual dos demais contratos legados e eventos explícitos em todos os casos de uso |
@@ -15,9 +15,9 @@ Auditoria inicial: 04/11/2026, base `f3f51ae`. Validação mais recente: 09/11/2
 
 ## Ordem para as próximas fatias
 
-1. Concluído em 09/11/2026: criação/leitura/save, lista, duplicação, histórico/restauração usam portas, validação e projeções de aplicação. Rotas e formatos legados foram preservados; PUT v1 exige revisão. Próxima fatia: favoritos, segredos, OBS, inventário e habilidades. A auditoria confirmou que não existe endpoint de exclusão de personagem; a menção anterior a uma extração desse fluxo estava incorreta. Não foi introduzida uma operação destrutiva nova.
+1. Concluído em 09/11/2026: criação/leitura/save, lista, duplicação, histórico/restauração e CRUD de inventário/habilidades usam portas, validação e projeções de aplicação. Rotas e formatos legados foram preservados; PUT v1 exige revisão. Próxima fatia: favoritos, segredos e OBS. A auditoria confirmou que não existe endpoint de exclusão de personagem; a menção anterior a uma extração desse fluxo estava incorreta. Não foi introduzida uma operação destrutiva nova.
 2. Introduzir revisões imutáveis de sistemas e vínculo opcional por personagem. Primeiro permitir leitura com fallback; depois migração assistida e testes de restauração entre versões. Não inferir edições por nome.
-3. Extrair Campaign/Identity, mantendo convites, revogação e verificações por recurso transacionais; depois inventário/habilidades/NPCs/dados. Substituir joins internos de outros contextos por portas públicas.
+3. Extrair Campaign/Identity, mantendo convites, revogação e verificações por recurso transacionais; depois NPCs/dados. Substituir joins internos de outros contextos por portas públicas.
 4. Dividir projetos por bounded context somente após remover acoplamento real. Acrescentar testes de fronteira para cada contrato migrado e reduzir a lista de exceções legadas.
 5. Criar staging com snapshot anonimizado; revisar migrations e rollback; só então preparar release de produção.
 
@@ -44,3 +44,9 @@ Criação, leitura individual e salvamento de personagem foram extraídos. O ada
 Histórico é limitado às últimas 100 revisões e exige dono/mestre, retornando somente metadados. Restaurar exige a revisão atual e valida os campos contra o template atual: preserva campos históricos desconhecidos inalterados, recalcula fórmulas e verifica os campos de mestre contra o estado atual. A versão avança; não é rebobinada. Não há restauração da definição antiga de regras.
 
 Duplicação lê personagem e coleções em snapshot transacional consistente, revalida acesso/versão/template e atribui a propriedade ao ator autenticado. Inventário e habilidades recebem identidades/revisões novas. Segredos, OBS, favoritos e histórico não são copiados. Testes PostgreSQL incluem conflito da origem e falha após SaveChanges, comprovando rollback de personagem, filhos e outbox. Os smokes HTTP e a regressão de manobras/encontros passaram. Nenhuma migration adicional ou alteração de produção foi necessária.
+
+## Quarta fatia — inventário e habilidades, 09/11/2026
+
+Oito rotas existentes de listagem/criação/edição/exclusão foram mantidas e extraídas para casos de uso, valores puros e duas portas específicas. A contagem antiga antes do INSERT permitia ultrapassar capacidades sob concorrência; agora cada escrita bloqueia a participação e o personagem, revalida acesso e conta dentro da transação ReadCommitted. Quantidade/peso/textos/expressões mantêm as validações anteriores. Atualizações e exclusões exigem a revisão do filho.
+
+Testes passaram com PostgreSQL real, HTTP e Chrome: permissões, IDs vinculados ao personagem, concorrência, limites, rollback, rascunho após conflito, recarga e rolagem de habilidade. Não há nova migration, mudanças de frontend ou eventos novos de coleções nesta fatia. Revisões do inventário/habilidades continuam independentes da ficha, sem invalidar rascunhos do personagem. Histórico/eventos específicos dessas coleções ainda precisam de contrato e integração próprios; não estão concluídos.

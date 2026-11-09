@@ -44,3 +44,12 @@ Não foram comitadas regenerações aleatórias das capturas antigas de `docs/vi
 - `Infrastructure/Characters/EfCharacterLifecycleStore.cs`: histórico autorizado, reconstrução do arquivo e cópia com inventário/habilidades em transação. `CharacterSheetPersistence` compartilha o mapeamento neutro de estado.
 - `Features/CharacterSheets/CharacterLifecycleEndpoints.cs`: mesmos caminhos e formatos HTTP; removidos os quatro handlers e auxiliares sem uso de `Features/Characters/CharacterEndpoints.cs`. DI registrada em `Program.cs`.
 - `CharacterLifecycleTests`, `CharacterLifecyclePersistenceTests`, `scripts/character-lifecycle-smoke.mjs`, teste de fronteira Node e CI cobrem acesso, restauração e isolamento/rollback da cópia. Documentos de fronteiras, dados, segurança e testes atualizados. Nenhuma migration ou mudança de layout. Exclusão de personagem não existia e não foi adicionada.
+
+## Inventário e habilidades — 09/11/2026
+
+- `Domain/Characters/CharacterAssetValues.cs`: valores, limites, validação e normalização puros, com parser seguro de dados existente.
+- `Application/Characters/`: `CharacterAssetContracts`, `ManageCharacterInventory` e `ManageCharacterAbilities`, duas portas de persistência e respostas/projeções sem framework.
+- `Infrastructure/Characters/`: `EfCharacterInventoryStore`, `EfCharacterAbilityStore` e `CharacterAssetPersistence`; autorização no commit, locks e contagens serializadas por personagem para impedir exceder limites com requisições simultâneas.
+- `Features/Characters/CharacterInventoryEndpoints`, `CharacterAbilityEndpoints` e `CharacterAssetHttpResult`: adapters HTTP finos, mantendo DTOs/rotas/status; DI em Program.cs.
+- `CharacterAssetTests`, `CharacterAssetPersistenceTests`, fronteira Node, `scripts/character-assets-smoke.mjs` e CI; `web/character-assets-integration.mjs` verifica a interface existente em desktop/mobile, conflito, recarga, exclusão e rolagem.
+- Documentação de dados/eventos/segurança/fronteiras/testes atualizada. Sem migrations, mudanças de layout ou publicação em produção. Coleções continuam sem histórico/invalidação realtime específicos.

@@ -74,6 +74,15 @@ test('Character list, duplication and history adapters delegate without EF or bu
     'api.MapPost("/characters/{id:guid}/duplicate"', 'api.MapPost("/characters/{id:guid}/revisions/{revisionId:guid}/restore"']) assert.ok(!legacy.includes(route));
 });
 
+test('Inventory and ability HTTP adapters contain no persistence or business rules', () => {
+  const api = path.resolve(import.meta.dirname, '../api/Chronicles.Api');
+  for (const [file, service] of [['CharacterInventoryEndpoints.cs', 'ManageCharacterInventory'], ['CharacterAbilityEndpoints.cs', 'ManageCharacterAbilities']]) {
+    const source = readFileSync(path.join(api, 'Features/Characters', file), 'utf8');
+    assert.ok(source.includes(`${service} command`) && source.includes(`${service} query`));
+    assert.ok(!/AppDbContext|EntityFrameworkCore|SaveChanges|Validate\(|CanEdit\(|\.CountAsync|\.Version\+\+/.test(source));
+  }
+});
+
 test('Domain and application source cannot import HTTP/EF adapters', () => {
   const modules = path.resolve(import.meta.dirname, '../api/Chronicles.Api/modules');
   function inspect(dir) {

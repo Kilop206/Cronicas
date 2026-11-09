@@ -22,6 +22,8 @@ Desde 09/11/2026, criação/salvamento comuns usam casos de uso com autorizaçã
 
 Lista por campanha exige participação e calcula `canEdit` por proprietário/papel. Histórico/restauração exigem dono ou mestre, excluindo espectadores; acesso indevido retorna 404. Uma revisão de outro personagem não pode ser aplicada. Restaurar verifica campos `editRole: gm` contra os valores atuais, inclusive presença/remoção; possuir uma revisão antiga não autoriza reverter uma decisão atual do mestre. Duplicar exige dono ou mestre, revalida o contexto na transação e não transporta segredos, favoritos nem a capacidade de OBS. Esses fluxos têm testes de aplicação, PostgreSQL e HTTP reais.
 
+Inventário/habilidades usam casos de uso com a mesma matriz: membros leem; dono ou mestre escreve; espectador não escreve; não membro recebe 404. IDs de filhos são vinculados ao personagem em toda consulta/mutação. A transação de escrita bloqueia participação/personagem e reconsulta acesso, impedindo que uma revogação concluída após a leitura inicial seja ignorada no commit. Campos de valores não aceitam propriedade, campanha, IDs ou revisão enviada como novo estado confiável. Expressões de habilidades seguem o parser seguro, sem código executável. Pesos precisam de duas casas decimais e categorias/quantidades/textos preservam seus limites.
+
 ## Código e dados não confiáveis
 
 Fórmulas e dados usam parsers existentes com operadores/limites explícitos, sem eval. Schema/template é JSON declarativo; não instala assembly, script, componente remoto ou código no backend. Plugins executáveis desta entrega são compilados e revisados junto ao servidor e bundle Angular. Estratégia para terceiros está no PLUGIN_CONTRACT.

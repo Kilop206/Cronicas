@@ -15,6 +15,8 @@
 
 Uma ponte de transição (`LegacyDomainEvents`) detecta alterações persistentes e adiciona eventos ao DbContext antes do SaveChanges. Escrita e outbox pertencem à mesma transação. Nenhum evento é publicado no hub antes do commit. Rollback/conflito também desfaz os eventos. A ponte existe porque há caminhos de escrita legados; casos de uso futuros podem produzir eventos de domínio explícitos sem depender de detecção EF.
 
+Inventário/habilidades têm casos de uso extraídos, mas ainda não emitem eventos próprios nem incrementam a revisão da ficha. Não reutilizar CharacterSheetUpdated com uma revisão antiga: o cliente descarta revisões já vistas. Uma evolução dessas coleções deverá definir seus eventos/revisões, invalidar o cache adequado e acrescentar histórico se necessário. A extração atual preserva o contrato existente, sem prometer sincronização simultânea dessas listas.
+
 ```mermaid
 sequenceDiagram
   participant API

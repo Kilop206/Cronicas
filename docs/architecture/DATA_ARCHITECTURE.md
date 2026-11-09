@@ -37,3 +37,13 @@ Cada save aceito mantém a semântica anterior de criar uma revisão, mesmo quan
 Não alteram tabelas ou o formato JSON dos arquivos existentes (`CharacterSnapshot`). Histórico retorna até 100 metadados ordenados por versão decrescente; a carga do arquivo exige o par personagem/revisão e autorização. Restaurar cria uma nova revisão usando o mesmo commit de save, incluindo a projeção de condições em encontros. Campos históricos desconhecidos são aceitos somente com o valor arquivado; fórmulas e regras são as do template atual, não uma edição histórica presumida.
 
 Cópia usa RepeatableRead e os locks de contexto compartilhados. Compara a versão/papel/sistema da origem antes de criar o novo personagem, com dono igual ao ator e versão 1. Todos os campos de inventário/habilidades são copiados em uma única transação, com novos UUIDs, versões e datas. Segredos, chave de OBS, favoritos, revisões e vínculos de encontro permanecem na origem. O snapshot permite uma visão consistente das coleções; não promete bloquear toda alteração posterior da origem. Um teste com exceção após SaveChanges verifica que a ausência de commit desfaz também filhos e eventos.
+
+## Escrita de inventário e habilidades — 09/11/2026
+
+Schema e dados existentes não mudaram. `EfCharacterInventoryStore`/`EfCharacterAbilityStore` consultam filhos com personagem e participação; usam o token Version já existente para edição/exclusão. A criação sempre atribui UUID/datas/versão 1 no servidor. Validação e normalização ficam nos valores puros do domínio, chamadas pela aplicação antes de persistir.
+
+`CharacterAssetPersistence` inicia ReadCommitted, bloqueia a participação do ator com FOR SHARE e o personagem com FOR UPDATE e reconsulta a autorização. A contagem de 200 itens/100 habilidades acontece depois do lock. ReadCommitted permite que uma operação que aguardou o lock veja as inclusões confirmadas pela anterior; um snapshot RepeatableRead estabelecido antes da espera poderia usar a contagem antiga. O lock dura até o commit/rollback. Criações, edições e exclusões são atômicas; falhas de concorrência conhecidas retornam 409, outros erros permanecem erros.
+
+A decisão e seus custos estão registrados em [ADR 0002](decisions/0002-character-asset-transactions.md).
+
+Coleções mantêm suas próprias revisões. Não criam artificialmente uma revisão de ficha nem seu histórico/evento; alterações dessas coleções ainda não possuem histórico e invalidação realtime próprios. O teste PostgreSQL confirma limites sob duas inclusões concorrentes e rollback de criação/edição/exclusão mesmo após SaveChanges. Como antes, timestamps persistidos têm precisão de microssegundos, inferior ao relógio .NET da resposta imediata.
