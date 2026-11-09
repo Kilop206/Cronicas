@@ -20,6 +20,8 @@ Origins de todos os hubs são comparados à allowlist; REST mantém a proteção
 
 Desde 09/11/2026, criação/salvamento comuns usam casos de uso com autorização e validador do plugin, além das ações de regras. O store revalida acesso e schema no commit. A revisão é obrigatória no contrato v1 de escrita; a omissão continua permitida no PUT legado apenas por compatibilidade. A leitura individual não executa regras, permitindo consultar/corrigir estado antes de acionar o motor.
 
+Lista por campanha exige participação e calcula `canEdit` por proprietário/papel. Histórico/restauração exigem dono ou mestre, excluindo espectadores; acesso indevido retorna 404. Uma revisão de outro personagem não pode ser aplicada. Restaurar verifica campos `editRole: gm` contra os valores atuais, inclusive presença/remoção; possuir uma revisão antiga não autoriza reverter uma decisão atual do mestre. Duplicar exige dono ou mestre, revalida o contexto na transação e não transporta segredos, favoritos nem a capacidade de OBS. Esses fluxos têm testes de aplicação, PostgreSQL e HTTP reais.
+
 ## Código e dados não confiáveis
 
 Fórmulas e dados usam parsers existentes com operadores/limites explícitos, sem eval. Schema/template é JSON declarativo; não instala assembly, script, componente remoto ou código no backend. Plugins executáveis desta entrega são compilados e revisados junto ao servidor e bundle Angular. Estratégia para terceiros está no PLUGIN_CONTRACT.

@@ -4,7 +4,7 @@
 | --- | --- | --- |
 | Identity & Access | `Features/Identity`, `Services/SessionService`, `Domain/Identity/CharacterAccessPolicy` | Política pura para personagem; sessão/cookie e rotas de conta ainda são adaptadores legados |
 | Campaign Management | `Features/Campaigns`, rotas restantes em `Program.cs` | Participação/convites são autoridade do banco; extração de casos de uso pendente |
-| Character Management | `Features/Characters`, `Features/CharacterSheets`, `Infrastructure/Characters` | Criação, leitura individual e save usam casos de uso; lista, duplicação, exclusão, histórico/restauração e recursos associados ainda têm adapters legados |
+| Character Management | `Features/Characters`, `Features/CharacterSheets`, `Infrastructure/Characters` | Criação, leitura, save, lista, duplicação e histórico/restauração usam casos de uso; favoritos, segredos, OBS, inventário e habilidades ainda têm adapters legados |
 | RPG System Registry | `Domain/RpgSystems`, catálogo JSON, `Features/RpgSystems` | Manifest/edição/schema/ruleset/renderer; contrato REST v1; sistema personalizado permanece de propriedade do criador |
 | Character Sheet Engine | `Domain/CharacterSheets`, `Application/CharacterSheets` | `CharacterSheetState`, validação pura, queries/commands e `ICharacterRuleStore` |
 | RPG Rules Engine | `Domain/Rules/*`, `IRpgRulesPlugin` | Código confiável compilado; RNG injetado; execução autoritativa na API |
@@ -29,5 +29,7 @@ Marketplace, notificações externas e plugins comunitários são extensões fut
 Novos casos de uso recebem valores/contratos, não HttpContext ou DbContext. Portas específicas pertencem à Application; implementações EF pertencem à Infrastructure. Outro contexto deve consumir uma API pública/porta, nunca reutilizar um repositório interno. Use transação imediata para invariantes que exigem resposta; eventos são efeitos posteriores, não autorização nem substitutos de transações.
 
 `ICharacterSheetReader` é consumido pelas queries; `ICharacterWriteStore` expõe criação/salvamento e `ICharacterRuleStore` expõe commit de ações. Os adapters HTTP novos não acessam EF. O teste de arquitetura verifica que POST/GET/PUT individuais não voltam ao controller legado. O DTO HTTP `VersionedCharacterInput` declara revisão obrigatória sem alterar o estado neutro utilizado pelos clientes legados.
+
+`ICharacterLifecycleStore` fornece projeções de lista/histórico, carga de revisão com acesso e duplicação. `ReadCharacterLifecycle` calcula permissões de apresentação; `DuplicateCharacter` aplica a política de cópia; `RestoreCharacter` valida o arquivo e usa a porta de escrita existente. `EfCharacterLifecycleStore` implementa consulta/isolamento transacional sem expor entidades EF. A verificação de fronteiras também impede que esses quatro handlers voltem ao endpoint legado. Exclusão de personagem não é um fluxo existente.
 
 Antes de extrair um contexto em assembly independente, separe suas navegações EF e substitua a ponte legada por APIs públicas. Não mover apenas classes para outro processo mantendo joins remotos síncronos.

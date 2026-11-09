@@ -10,12 +10,14 @@ public sealed record CharacterDocument(Guid Id, Guid CampaignId, Guid OwnerId, s
 public static class CharacterSheetProjection
 {
     public static CharacterDocument Document(CharacterSheetSnapshot c, Guid actor)
-    {
-        var s = c.State;
-        return new(c.Id, c.CampaignId, c.OwnerId, s.Name, s.PortraitUrl, s.BackgroundUrl, s.Health, s.MaxHealth,
-            s.Sanity, s.MaxSanity, s.Mana, s.MaxMana, s.Fields, s.Version ?? 1, c.UpdatedAt,
-            CharacterAccessPolicy.CanEdit(c.OwnerId, actor, c.Role));
-    }
+        => Document(c.Id, c.CampaignId, c.OwnerId, c.State, c.UpdatedAt, c.Role, actor);
+
+    public static CharacterDocument Document(CharacterListEntry c, string role, Guid actor)
+        => Document(c.Id, c.CampaignId, c.OwnerId, c.State, c.UpdatedAt, role, actor);
+
+    private static CharacterDocument Document(Guid id, Guid campaign, Guid owner, CharacterSheetState s, DateTime updatedAt, string role, Guid actor)
+        => new(id, campaign, owner, s.Name, s.PortraitUrl, s.BackgroundUrl, s.Health, s.MaxHealth,
+            s.Sanity, s.MaxSanity, s.Mana, s.MaxMana, s.Fields, s.Version ?? 1, updatedAt, CharacterAccessPolicy.CanEdit(owner, actor, role));
 
     public static CharacterSheetEnvelope Envelope(CharacterSheetSnapshot c, Guid actor, RpgPluginRegistry registry) =>
         new(1, c.Id, c.OwnerId, c.CampaignId, c.SystemId, c.System?.TemplateId, c.System?.RulesetVersion,

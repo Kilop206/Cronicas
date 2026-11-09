@@ -73,6 +73,7 @@ var invalidPlugin = new RpgPluginRegistry([custom], [new CustomPlugin(8)]);
 Check((await new ExecuteCharacterRule(store, invalidPlugin, random).Execute(initial.Id, actor, 4, new("custom"))).Failure == RuleFailure.Invalid &&
     store.Commits == beforeInvalid, "Plugin-specific invariants run before commit.");
 await CharacterWriteTests.Run();
+await CharacterLifecycleTests.Run();
 Console.WriteLine("Architecture: independent inner assemblies, acyclic project references, versioned registry, OP use case, access, conflicts and a new plugin passed.");
 
 sealed class FixedRandom : IGameRandom { public int Draw(int sides) => sides; }

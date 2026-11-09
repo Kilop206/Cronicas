@@ -14,93 +14,7 @@ public static partial class CharacterEndpoints
         MapRuleActions(api);
         MapCharacterWrites(api);
         MapCharacterReads(api);
-        api.MapGet("/campaigns/{campaignId:guid}/characters", async Task<IResult> (Guid campaignId, HttpContext http, AppDbContext db) =>
-        {
-            if (UserId(http) is not { } userId) return Results.Unauthorized();
-            if (!await Member(db, campaignId, userId)) return Results.NotFound();
-            var characters = await db.Characters.AsNoTracking().Where(x => x.CampaignId == campaignId)
-                .OrderBy(x => x.Name).ToListAsync();
-            var role = await db.CampaignMemberships.AsNoTracking().Where(x => x.CampaignId == campaignId && x.UserId == userId).Select(x => x.Role).SingleAsync();
-            var items = characters.Select(x => View(x, role != "spectator" && (x.OwnerId == userId || role is "owner" or "gm" or "co-gm"))).ToList();
-            return Results.Ok(items);
-        });
-
-        api.MapGet("/characters/{id:guid}/revisions", async Task<IResult> (Guid id, HttpContext http, AppDbContext db) =>
-        {
-            if (UserId(http) is not { } userId) return Results.Unauthorized();
-            var character = await db.Characters.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id);
-            if (character is null) return Results.NotFound();
-            var role = await db.CampaignMemberships.AsNoTracking().Where(x => x.CampaignId == character.CampaignId && x.UserId == userId).Select(x => x.Role).SingleOrDefaultAsync();
-            if (role is null or "spectator" || character.OwnerId != userId && role is not ("owner" or "gm" or "co-gm")) return Results.NotFound();
-            var revisions = await db.CharacterRevisions.AsNoTracking().Where(x => x.CharacterId == id).OrderByDescending(x => x.Version).Take(100)
-                .Select(x => new { x.Id, x.Version, x.CreatedAt, editedBy = x.EditedBy.DisplayName }).ToListAsync();
-            return Results.Ok(revisions);
-        });
-
-        api.MapPost("/characters/{id:guid}/revisions/{revisionId:guid}/restore", async Task<IResult> (Guid id, Guid revisionId, RestoreInput input, HttpContext http, AppDbContext db) =>
-        {
-            if (UserId(http) is not { } userId) return Results.Unauthorized();
-            var character = await db.Characters.SingleOrDefaultAsync(x => x.Id == id);
-            if (character is null) return Results.NotFound();
-            var role = await db.CampaignMemberships.AsNoTracking().Where(x => x.CampaignId == character.CampaignId && x.UserId == userId).Select(x => x.Role).SingleOrDefaultAsync();
-            if (role is null or "spectator" || character.OwnerId != userId && role is not ("owner" or "gm" or "co-gm")) return Results.NotFound();
-            if (input.ExpectedVersion != character.Version) return Results.Conflict(new { message = "A ficha mudou. Atualize antes de restaurar." });
-            var revision = await db.CharacterRevisions.AsNoTracking().SingleOrDefaultAsync(x => x.Id == revisionId && x.CharacterId == id);
-            if (revision is null) return Results.NotFound();
-            var snapshot = JsonSerializer.Deserialize<CharacterSnapshot>(revision.SnapshotJson);
-            if (snapshot is null) return Results.Problem("Revisão inválida.", statusCode: 500);
-            var restoredValues = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(snapshot.FieldsJson) ?? [];
-            var fieldErrors = await ValidateFields(db, character.CampaignId, restoredValues, snapshot.FieldsJson,
-                allowGm: role is "owner" or "gm" or "co-gm", authorizationJson: character.FieldsJson);
-            if (fieldErrors is not null) return Results.ValidationProblem(fieldErrors);
-            CharacterHistory.Capture(db, character, userId);
-            CharacterHistory.Restore(character, snapshot with { FieldsJson = JsonSerializer.Serialize(restoredValues) });
-            try{if(await RulesDefinition(db,character.CampaignId) is {} ruleDefinition)await CharacterEncounterConditions.Sync(db,character,ruleDefinition);}
-            catch(ArgumentException exception){return RuleError(exception.Message);}
-            try { await db.SaveChangesAsync(); }
-            catch (DbUpdateConcurrencyException) { return Results.Conflict(new { message = "A ficha mudou. Atualize antes de restaurar." }); }
-            return Results.Ok(View(character, true));
-        });
-
-        api.MapPost("/characters/{id:guid}/duplicate", async Task<IResult> (Guid id, HttpContext http, AppDbContext db) =>
-        {
-            if (UserId(http) is not { } userId) return Results.Unauthorized();
-            var source = await db.Characters.AsNoTracking().SingleOrDefaultAsync(x => x.Id == id);
-            if (source is null) return Results.NotFound();
-            var role = await db.CampaignMemberships.AsNoTracking().Where(x => x.CampaignId == source.CampaignId && x.UserId == userId).Select(x => x.Role).SingleOrDefaultAsync();
-            if (role is null or "spectator") return Results.NotFound();
-            if (source.OwnerId != userId && role is not ("owner" or "gm" or "co-gm"))
-                return Results.Problem("Você não pode duplicar este personagem.", statusCode: 403);
-            var copy = new Character
-            {
-                CampaignId = source.CampaignId, OwnerId = userId,
-                Name = $"{source.Name[..Math.Min(source.Name.Length, 110)]} (cópia)",
-                PortraitUrl = source.PortraitUrl, BackgroundUrl = source.BackgroundUrl,
-                Health = source.Health, MaxHealth = source.MaxHealth,
-                Sanity = source.Sanity, MaxSanity = source.MaxSanity,
-                Mana = source.Mana, MaxMana = source.MaxMana,
-                FieldsJson = source.FieldsJson
-            };
-            var inventory = await db.CharacterInventoryItems.AsNoTracking().Where(x => x.CharacterId == id).ToListAsync();
-            var abilities = await db.CharacterAbilities.AsNoTracking().Where(x => x.CharacterId == id).ToListAsync();
-            db.Characters.Add(copy);
-            foreach (var item in inventory)
-                db.CharacterInventoryItems.Add(new CharacterInventoryItem
-                {
-                    CharacterId = copy.Id, Name = item.Name, Category = item.Category,
-                    Quantity = item.Quantity, Weight = item.Weight, Notes = item.Notes
-                });
-            foreach (var ability in abilities)
-                db.CharacterAbilities.Add(new CharacterAbility
-                {
-                    CharacterId = copy.Id, Name = ability.Name, Description = ability.Description, Cost = ability.Cost,
-                    Effect = ability.Effect, Duration = ability.Duration, Limitations = ability.Limitations,
-                    Recharge = ability.Recharge, RollExpression = ability.RollExpression
-                });
-            await db.SaveChangesAsync();
-            return Results.Created($"/api/characters/{copy.Id}", View(copy, true));
-        });
-
+        MapCharacterLifecycle(api);
         api.MapGet("/characters/{id:guid}/favorite", async Task<IResult> (Guid id, HttpContext http, AppDbContext db) =>
         {
             if (UserId(http) is not { } userId) return Results.Unauthorized();
@@ -230,11 +144,8 @@ public static partial class CharacterEndpoints
     }
 
     private static Guid? UserId(HttpContext http) => Guid.TryParse(http.User.FindFirstValue(ClaimTypes.NameIdentifier), out var id) ? id : null;
-    private static Task<SystemDefinition?> RulesDefinition(AppDbContext db, Guid campaignId) => CharacterEncounterConditions.Definition(db, campaignId);
     private static CharacterInput RuleInput(Character c) => new(c.Name, c.PortraitUrl, c.BackgroundUrl, c.Health, c.MaxHealth,
         c.Sanity, c.MaxSanity, c.Mana, c.MaxMana, JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(c.FieldsJson), c.Version);
-    private static Task<bool> Member(AppDbContext db, Guid campaignId, Guid userId) => db.CampaignMemberships.AnyAsync(x => x.CampaignId == campaignId && x.UserId == userId);
-    private static object View(Character x, bool canEdit = false) => new { x.Id, x.CampaignId, x.OwnerId, x.Name, x.PortraitUrl, x.BackgroundUrl, x.Health, x.MaxHealth, x.Sanity, x.MaxSanity, x.Mana, x.MaxMana, fields = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(x.FieldsJson), x.Version, x.UpdatedAt, canEdit };
     private static string Hash(string key) => Convert.ToHexString(SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(key))).ToLowerInvariant();
     private static int ResourceValue(Character character, Dictionary<string, JsonElement> values, string key) => key switch { "health" => character.Health, "sanity" => character.Sanity, "mana" => character.Mana, _ => values.TryGetValue(key, out var value) && value.ValueKind == JsonValueKind.Number && value.TryGetInt32(out var number) ? number : 0 };
     private static int ResourceMax(Character character, string key) => key switch { "health" => character.MaxHealth, "sanity" => character.MaxSanity, "mana" => character.MaxMana, _ => 1 };
@@ -250,15 +161,5 @@ public static partial class CharacterEndpoints
             _ => false
         };
     }
-    private static async Task<Dictionary<string, string[]>?> ValidateFields(AppDbContext db, Guid campaignId, Dictionary<string, JsonElement>? values, string? previousJson = null,
-        bool allowGm = false, string? authorizationJson = null, bool ruleExecution = false)
-    {
-        var definition = await CharacterEncounterConditions.Definition(db, campaignId);
-        return CharacterSheetValidation.ValidateFields(definition, values,
-            previousJson is null ? null : JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(previousJson), allowGm,
-            authorizationJson is null ? null : JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(authorizationJson), ruleExecution,
-            newCharacter: previousJson is null);
-    }
-    public sealed record RestoreInput(int ExpectedVersion);
     public sealed record SecretInput(string Notes, int Revision);
 }

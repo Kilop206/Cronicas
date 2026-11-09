@@ -64,6 +64,16 @@ test('Character creation/save HTTP adapters delegate without EF or business vali
   assert.ok(!legacy.includes('api.MapPost("/campaigns/{campaignId:guid}/characters"'));
 });
 
+test('Character list, duplication and history adapters delegate without EF or business validation', () => {
+  const api = path.resolve(import.meta.dirname, '../api/Chronicles.Api');
+  const source = readFileSync(path.join(api, 'Features/CharacterSheets/CharacterLifecycleEndpoints.cs'), 'utf8');
+  assert.ok(source.includes('ReadCharacterLifecycle query') && source.includes('DuplicateCharacter command') && source.includes('RestoreCharacter command'));
+  assert.ok(!/AppDbContext|EntityFrameworkCore|SaveChanges|CharacterHistory|ValidateFields|CanEdit\(/.test(source));
+  const legacy = readFileSync(path.join(api, 'Features/Characters/CharacterEndpoints.cs'), 'utf8');
+  for (const route of ['api.MapGet("/campaigns/{campaignId:guid}/characters"', 'api.MapGet("/characters/{id:guid}/revisions"',
+    'api.MapPost("/characters/{id:guid}/duplicate"', 'api.MapPost("/characters/{id:guid}/revisions/{revisionId:guid}/restore"']) assert.ok(!legacy.includes(route));
+});
+
 test('Domain and application source cannot import HTTP/EF adapters', () => {
   const modules = path.resolve(import.meta.dirname, '../api/Chronicles.Api/modules');
   function inspect(dir) {

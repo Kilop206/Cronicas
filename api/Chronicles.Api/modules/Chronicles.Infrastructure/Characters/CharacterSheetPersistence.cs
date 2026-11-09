@@ -28,9 +28,10 @@ internal static class CharacterSheetPersistence
         firstId == secondId && JsonSerializer.Serialize(first) == JsonSerializer.Serialize(second);
 
     internal static CharacterSheetSnapshot Snapshot(Character c, string role, SystemDefinition? system, Guid? systemId) =>
-        new(c.Id, c.CampaignId, c.OwnerId, role, new(c.Name, c.PortraitUrl, c.BackgroundUrl, c.Health, c.MaxHealth,
-            c.Sanity, c.MaxSanity, c.Mana, c.MaxMana, JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(c.FieldsJson), c.Version),
-            system, c.UpdatedAt, systemId);
+        new(c.Id, c.CampaignId, c.OwnerId, role, State(c), system, c.UpdatedAt, systemId);
+
+    internal static CharacterSheetState State(Character c) => new(c.Name, c.PortraitUrl, c.BackgroundUrl, c.Health, c.MaxHealth,
+        c.Sanity, c.MaxSanity, c.Mana, c.MaxMana, JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(c.FieldsJson), c.Version);
 
     internal static void Apply(Character c, CharacterSheetState s)
     {

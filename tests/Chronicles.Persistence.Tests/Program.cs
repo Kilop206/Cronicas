@@ -128,6 +128,7 @@ try
     await db.Database.MigrateAsync();
     Check(await db.Characters.AnyAsync(c => c.Id == character.Id && c.Version == 2), "Re-upgrade preserves revision and state.");
     await CharacterWritePersistenceTests.Run(Context);
+    await CharacterLifecyclePersistenceTests.Run(Context);
     Console.WriteLine("PostgreSQL: full migration chain, upgrade/rollback/re-upgrade, preserved data, exact EF snapshot, atomic events/history, stale writes, IDOR, retries/idempotency and concurrent claims passed.");
 }
 finally

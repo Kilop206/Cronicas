@@ -37,3 +37,10 @@ Não foram comitadas regenerações aleatórias das capturas antigas de `docs/vi
 - `Features/CharacterSheets`: adapters finos de criação/leitura/salvamento e DTO `VersionedCharacterInput`; removidos os handlers correspondentes com EF do endpoint antigo. `PluginEndpoints` oferece PUT v1 com revisão obrigatória. Formato e revisão opcional do PUT legado foram mantidos.
 - `Program.cs`/`RequestObservability`: DI dos novos casos de uso; entrada inválida mantém status 400 e erro de validação estruturado; correlação também é garantida após o tratamento central de exceções.
 - `CharacterWriteTests`, `CharacterWritePersistenceTests`, `scripts/character-writes-smoke.mjs`, teste de fronteira e CI cobrem os novos fluxos. OpenAPI e documentos foram atualizados. Nenhuma migration adicional foi criada.
+
+## Ciclo de vida — 09/11/2026
+
+- `Application/CharacterSheets/{CharacterLifecycleContracts,ReadCharacterLifecycle,DuplicateCharacter,RestoreCharacter}.cs`: projeções, porta e casos de uso para os quatro fluxos existentes. `CharacterSheetProjection` compartilha mapeamento de lista/documento.
+- `Infrastructure/Characters/EfCharacterLifecycleStore.cs`: histórico autorizado, reconstrução do arquivo e cópia com inventário/habilidades em transação. `CharacterSheetPersistence` compartilha o mapeamento neutro de estado.
+- `Features/CharacterSheets/CharacterLifecycleEndpoints.cs`: mesmos caminhos e formatos HTTP; removidos os quatro handlers e auxiliares sem uso de `Features/Characters/CharacterEndpoints.cs`. DI registrada em `Program.cs`.
+- `CharacterLifecycleTests`, `CharacterLifecyclePersistenceTests`, `scripts/character-lifecycle-smoke.mjs`, teste de fronteira Node e CI cobrem acesso, restauração e isolamento/rollback da cópia. Documentos de fronteiras, dados, segurança e testes atualizados. Nenhuma migration ou mudança de layout. Exclusão de personagem não existia e não foi adicionada.

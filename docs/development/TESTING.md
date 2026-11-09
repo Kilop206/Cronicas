@@ -63,3 +63,13 @@ As três suites de inimigos também passaram nas imagens Docker: criação/impor
 `SMOKE_BASE_URL=http://127.0.0.1:8082 node scripts/character-writes-smoke.mjs` verifica os contratos reais. Inclui POST autorizado, PUT v1 com revisão, erros 400/401/403/404/409, JSON inválido com correlação, preservação de campos/fórmulas e concorrência com histórico exato. A mesma suite foi adicionada ao smoke de CI. Não precisa de nova migration.
 
 Em 09/11/2026 passaram as suites .NET de regras/arquitetura/persistência, os cinco testes de fronteira Node, o build Docker da API, os smokes HTTP/SignalR e a regressão de navegador dos quatro RPGs. O cenário de duas janelas OP/D&D também passou, verificando autosave, rascunho, navegação, resync e quatro viewports. As capturas regeneradas ficaram no disco, fora dos commits desta etapa; nenhuma alteração de layout foi introduzida.
+
+## Lista, cópia e histórico/restauração — 09/11/2026
+
+`CharacterLifecycleTests` verifica políticas e casos de uso sem EF: permissões individuais na lista, limite do histórico, dono da cópia, conflitos, arquivos de outro personagem, preservação de campos históricos e validação dos campos de mestre contra o estado atual.
+
+`CharacterLifecyclePersistenceTests`, executado no mesmo banco descartável, verifica consultas autorizadas, recuperação de campos retirados, arquivos anteriores preservados e duplicação de todos os campos das coleções. Um interceptor lança uma falha após SaveChanges para comprovar rollback real de personagem/inventário/habilidades/outbox. Também testa origem/template modificados e permissão revogada entre leitura e cópia.
+
+`SMOKE_BASE_URL=http://127.0.0.1:8082 node scripts/character-lifecycle-smoke.mjs` verifica os contratos existentes via HTTP: ownership da lista, privacidade/metadados do histórico, rejeição de revisão estrangeira/obsoleta, bloqueio de alteração ou remoção de campo de mestre, cópias independentes e isolamento de segredos/favoritos/OBS. A suite está incluída no CI.
+
+Nesta fatia passaram o build Docker Release, as suites .NET de regras/arquitetura/PostgreSQL, os seis testes Node de fronteiras e os smokes HTTP de lifecycle, escrita e SignalR. O OpenAPI v1 foi exportado novamente sem alteração de contrato. `RULES_TEST_URL=http://127.0.0.1:8082 node web/threat-maneuvers-integration.mjs` passou em Chrome contra a nova API, incluindo restauração de personagem e projeção de condições no encontro. As quatro capturas regeneradas dessa suite permanecem no disco, fora do commit; nenhum layout foi alterado. A execução local não confirma o resultado do CI remoto nem um deploy de produção.
