@@ -47,3 +47,13 @@ Schema e dados existentes não mudaram. `EfCharacterInventoryStore`/`EfCharacter
 A decisão e seus custos estão registrados em [ADR 0002](decisions/0002-character-asset-transactions.md).
 
 Coleções mantêm suas próprias revisões. Não criam artificialmente uma revisão de ficha nem seu histórico/evento; alterações dessas coleções ainda não possuem histórico e invalidação realtime próprios. O teste PostgreSQL confirma limites sob duas inclusões concorrentes e rollback de criação/edição/exclusão mesmo após SaveChanges. Como antes, timestamps persistidos têm precisão de microssegundos, inferior ao relógio .NET da resposta imediata.
+
+## Favoritos, segredos e capacidades OBS — 09/11/2026
+
+Mesmas tabelas/FKs/índices, sem migration adicional. Os três fluxos usam o protocolo ReadCommitted com locks de participação/personagem e uma exigência de acesso explícita. Favoritos verificam a chave composta após o lock; dois PUTs ou DELETEs simultâneos terminam idempotentemente. Notas privadas revalidam mestre e revisão; erros de integridade desconhecidos não viram 409 por um catch genérico.
+
+Por compatibilidade, notas ausentes retornam revisão 1/updatedAt null; a primeira gravação também mantém revisão 1. O PUT aceita `expectedExists?: boolean`: false exige ausência e true exige existência, tanto na aplicação quanto no commit. O Angular envia esse valor a partir de updatedAt, protegendo inclusive o primeiro rascunho obsoleto. O campo é opcional para clientes antigos; sua omissão mantém a ambiguidade inicial anterior, que um contrato futuro obrigatório deve eliminar. Dois snapshots de ausência preparados antes da escrita também são comparados no adaptador para impedir dupla criação.
+
+OBS continua com uma capacidade de 32 bytes aleatórios representada em 64 dígitos hexadecimais, normalizada e armazenada somente como SHA-256. A resposta com a chave em claro só ocorre depois do commit. Rotação substitui o hash anterior atomicamente; rollback mantém a URL antiga. Não há histórico da chave recuperável nem nova revisão de ficha por essa operação. A ponte de eventos existente ainda observa a alteração da entidade; não se promete uma nova revisão ou um canal de notas/OBS em tempo real.
+
+A leitura do overlay busca personagem e sistema efetivo em um SQL e devolve somente a projeção permitida. Perfis especializados usam ID/edição/schema do registry; layout explícito ou edição desconhecida usa os blocos configurados. Não executar regras de outra edição para compor indicadores. A fonte continua atualizada por polling do navegador. O ADR 0003 detalha os contratos e limites.

@@ -17,6 +17,8 @@ Uma ponte de transição (`LegacyDomainEvents`) detecta alterações persistente
 
 Inventário/habilidades têm casos de uso extraídos, mas ainda não emitem eventos próprios nem incrementam a revisão da ficha. Não reutilizar CharacterSheetUpdated com uma revisão antiga: o cliente descarta revisões já vistas. Uma evolução dessas coleções deverá definir seus eventos/revisões, invalidar o cache adequado e acrescentar histórico se necessário. A extração atual preserva o contrato existente, sem prometer sincronização simultânea dessas listas.
 
+Favoritos e notas privadas também não possuem eventos próprios. Rotacionar OBS altera o hash na entidade Character, portanto a ponte existente ainda gera seus metadados de atualização sem incrementar a revisão da ficha; não é um evento de domínio específico de capacidade. O payload nunca inclui chave, hash ou notas. A fonte OBS usa polling, e revogação de chave é observada na próxima leitura. Eventos explícitos dessas responsabilidades continuam como evolução futura, com consumidores e política de sigilo próprios.
+
 ```mermaid
 sequenceDiagram
   participant API

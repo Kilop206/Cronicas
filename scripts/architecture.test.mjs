@@ -83,6 +83,16 @@ test('Inventory and ability HTTP adapters contain no persistence or business rul
   }
 });
 
+test('Favorites, private notes and OBS use cases own their logic outside HTTP', () => {
+  const api = path.resolve(import.meta.dirname, '../api/Chronicles.Api');
+  const source = readFileSync(path.join(api, 'Features/CharacterSheets/CharacterCompanionEndpoints.cs'), 'utf8');
+  for (const service of ['ManageCharacterFavorites', 'ManageCharacterSecrets', 'ManageCharacterOverlay']) assert.ok(source.includes(service));
+  assert.ok(!/AppDbContext|EntityFrameworkCore|SaveChanges|IsMaster\(|CanEdit\(|SHA256|RandomNumberGenerator|D20Conditions|TemplateVersion|\.Trim\(/.test(source));
+  const composition = readFileSync(path.join(api, 'Features/Characters/CharacterEndpoints.cs'), 'utf8');
+  assert.ok(composition.includes('MapCharacterCompanions(api)'));
+  assert.ok(!/AppDbContext|EntityFrameworkCore|api\.Map/.test(composition));
+});
+
 test('Domain and application source cannot import HTTP/EF adapters', () => {
   const modules = path.resolve(import.meta.dirname, '../api/Chronicles.Api/modules');
   function inspect(dir) {

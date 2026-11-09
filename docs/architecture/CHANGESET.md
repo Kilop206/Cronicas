@@ -53,3 +53,12 @@ Não foram comitadas regenerações aleatórias das capturas antigas de `docs/vi
 - `Features/Characters/CharacterInventoryEndpoints`, `CharacterAbilityEndpoints` e `CharacterAssetHttpResult`: adapters HTTP finos, mantendo DTOs/rotas/status; DI em Program.cs.
 - `CharacterAssetTests`, `CharacterAssetPersistenceTests`, fronteira Node, `scripts/character-assets-smoke.mjs` e CI; `web/character-assets-integration.mjs` verifica a interface existente em desktop/mobile, conflito, recarga, exclusão e rolagem.
 - Documentação de dados/eventos/segurança/fronteiras/testes atualizada. Sem migrations, mudanças de layout ou publicação em produção. Coleções continuam sem histórico/invalidação realtime específicos.
+
+## Favoritos, notas e OBS — 09/11/2026
+
+- `Domain/Identity/{CharacterAccessPolicy,OverlayCapability}` e `Domain/Characters/CharacterSecretValues`: exigências de acesso, validação/hash de capacidade e valores de notas privadas.
+- `Application/Characters/{CharacterCompanionContracts,ManageCharacterFavorites,ManageCharacterSecrets,ManageCharacterOverlay,CharacterOverlayProjection}`: portas/casos de uso, geração injetada e projeção pública com registry versionado.
+- `Infrastructure/Characters/{EfCharacterCompanionStore,CryptographicOverlayKeyGenerator}` e `CharacterAssetPersistence`: persistência autorizada, favoritos idempotentes, concorrência de notas, rotação e rollback; requisito de acesso explícito nos locks compartilhados.
+- `Features/CharacterSheets/CharacterCompanionEndpoints` e `Features/Characters/CharacterEndpoints`: sete handlers substituídos por adapters finos; arquivo anterior agora só registra grupos/identificação. DI em Program.cs. Cache no-store para notas/chaves/fontes.
+- `web/src/app/core/api/api.service.ts` e `features/characters/studio-pages.ts`: indicador opcional de existência das notas, usado para proteger o primeiro rascunho sem alterar layout ou clientes antigos.
+- `CharacterCompanionTests`, `CharacterCompanionPersistenceTests`, fronteira Node, `scripts/character-companions-smoke.mjs`/CI e `web/character-companions-integration.mjs`. ADR 0003 e documentação atualizados. Sem migration adicional ou produção alterada.

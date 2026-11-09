@@ -13,7 +13,8 @@ internal static class CharacterAssetPersistence
                 c.Campaign.Memberships.Where(m => m.UserId == actor).Select(m => m.Role).First())).SingleOrDefaultAsync(ct);
 
     internal static async Task<CharacterAssetResult<T>> Write<T>(AppDbContext db, CharacterAssetAccess before, Guid actor,
-        string denied, string changed, Func<Task<CharacterAssetResult<T>>> mutate, CancellationToken ct)
+        string denied, string changed, Func<Task<CharacterAssetResult<T>>> mutate, CancellationToken ct,
+        CharacterAccessRequirement requirement = CharacterAccessRequirement.Edit)
     {
         // ReadCommitted is intentional: after waiting for the parent lock, capacity counts must see the last commit.
         await using var transaction = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, ct);
@@ -25,7 +26,9 @@ internal static class CharacterAssetPersistence
                 .AsNoTracking().ToListAsync(ct);
             var fresh = await LoadAccess(db, before.CharacterId, actor, ct);
             if (fresh is null) return new(Failure: CharacterAssetFailure.NotFound);
-            if (!CharacterAccessPolicy.CanEdit(fresh.OwnerId, actor, fresh.Role)) return new(Failure: CharacterAssetFailure.Forbidden, Message: denied);
+            if (!CharacterAccessPolicy.Allows(requirement, fresh.OwnerId, actor, fresh.Role))
+                return new(Failure: requirement is CharacterAccessRequirement.Master or CharacterAccessRequirement.Owner
+                    ? CharacterAssetFailure.NotFound : CharacterAssetFailure.Forbidden, Message: denied);
             if (fresh != before) return new(Failure: CharacterAssetFailure.Conflict, Message: changed);
             var result = await mutate();
             if (result.Failure is not null) return result;

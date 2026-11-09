@@ -31,6 +31,14 @@ builder.Services.AddScoped<ICharacterInventoryStore, EfCharacterInventoryStore>(
 builder.Services.AddScoped<ICharacterAbilityStore, EfCharacterAbilityStore>();
 builder.Services.AddScoped<ManageCharacterInventory>();
 builder.Services.AddScoped<ManageCharacterAbilities>();
+builder.Services.AddScoped<EfCharacterCompanionStore>();
+builder.Services.AddScoped<ICharacterFavoriteStore>(services => services.GetRequiredService<EfCharacterCompanionStore>());
+builder.Services.AddScoped<ICharacterSecretStore>(services => services.GetRequiredService<EfCharacterCompanionStore>());
+builder.Services.AddScoped<ICharacterOverlayStore>(services => services.GetRequiredService<EfCharacterCompanionStore>());
+builder.Services.AddSingleton<IOverlayKeyGenerator, CryptographicOverlayKeyGenerator>();
+builder.Services.AddScoped<ManageCharacterFavorites>();
+builder.Services.AddScoped<ManageCharacterSecrets>();
+builder.Services.AddScoped<ManageCharacterOverlay>();
 builder.Services.AddScoped<ICharacterSheetReader>(services => services.GetRequiredService<ICharacterWriteStore>());
 builder.Services.AddScoped<CreateCharacter>();
 builder.Services.AddScoped<SaveCharacter>();
