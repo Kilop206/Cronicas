@@ -70,4 +70,12 @@ Não foram comitadas regenerações aleatórias das capturas antigas de `docs/vi
 - `CharacterSystemEndpoints`, DI e projeções legadas/v1: leitura de modelo por personagem, POST v1 com identidade/revisões obrigatórias e metadados de vínculo. Estado neutro da ficha permanece sem aceitar vínculo arbitrário.
 - Cópias, histórico, regras, OBS, exportação de conta, encontros e alvos de NPCs usam a definição efetiva. `SystemEndpoints` bloqueia a origem e exclui fichas fixadas de renomes/cálculos/restauração do template; sistemas com capturas não são apagados.
 - Cliente HTTP/contratos/editor Angular: modelo efetivo, ação Fixar versão atual, proteção de rascunhos, resync de vínculo e exportação individual com a definição. A cena de câmera OBS também consulta o modelo efetivo para mostrar recursos próprios. Sem troca dos layouts especializados.
-- Testes de arquitetura/aplicação/PostgreSQL, `character-systems-smoke.mjs`, `character-systems-integration.mjs`, CI e OpenAPI atualizados. SQL, ADR 0004, roteiro de release e quatro capturas novas documentados. Produção permanece sem alteração; troca/desfixação de versão e migração assistida ainda não foram implementadas.
+- Testes de arquitetura/aplicação/PostgreSQL, `character-systems-smoke.mjs`, `character-systems-integration.mjs`, CI e OpenAPI atualizados. SQL, ADR 0004, roteiro de release e quatro capturas novas documentados. Produção permanece sem alteração. A migração entre vínculos foi acrescentada na fatia seguinte; desfixação continua indisponível.
+
+## Migração assistida entre versões — 09/11/2026
+
+- `Domain/CharacterSheets/CharacterSystemMigration.cs`: plano puro com diferenças, mapeamentos sem colisões, valores legados preservados, defaults, limites e fórmulas seguras. Nenhum conversor de edição foi inventado.
+- `Application/CharacterSheets/CharacterSystemMigrationContracts.cs`: portas, destinos, prévia, comandos, recibo e digest canônico; somente mestres e fichas fixadas.
+- `Infrastructure/Characters/EfCharacterSystemMigrationStore.cs`: destinos autorizados, recibos, revalidação/locks, deduplicação e commit atômico com histórico/outbox/condições. `CharacterHistory` recebe recibo opcional no JSONB existente. Nenhuma migration SQL adicional.
+- `CharacterSystemEndpoints`, DI, contratos OpenAPI e serviços Angular: três rotas v1 novas, sem quebrar as existentes. `character-system-migration.component.ts` integra o assistente ao editor e recarrega o modelo após aplicar; a ficha especializada continua sendo renderizada pelo host anterior.
+- Testes de domínio/aplicação/PostgreSQL/HTTP/Chrome específicos, CI e documentação. Conversões entre edições, importação de modelos executáveis e publicação automática em produção ficam fora deste fluxo.

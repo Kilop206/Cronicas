@@ -103,6 +103,17 @@ test('Character version selection stays in application and the editor reads its 
   assert.ok(!editor.includes('this.api.system(campaign.systemId)'));
 });
 
+test('Assisted migration HTTP adapters delegate and the UI sends reviewed plans, not computed state', () => {
+  const api = path.resolve(import.meta.dirname, '../api/Chronicles.Api');
+  const source = readFileSync(path.join(api, 'Features/CharacterSheets/CharacterSystemEndpoints.cs'), 'utf8');
+  assert.ok(source.includes('MigrateCharacterSystem migration'));
+  assert.ok(!/AppDbContext|EntityFrameworkCore|SaveChanges|ValidateFields|CharacterSystemMigration\.Plan/.test(source));
+  const adapter = readFileSync(path.join(root, 'core/api/api.service.ts'), 'utf8');
+  assert.ok(adapter.includes('{ plan, previewHash }'));
+  const editor = readFileSync(path.join(root, 'features/characters/studio-pages.ts'), 'utf8');
+  assert.ok(editor.includes('app-character-system-migration') && editor.includes('onSystemMigrated'));
+});
+
 test('Domain and application source cannot import HTTP/EF adapters', () => {
   const modules = path.resolve(import.meta.dirname, '../api/Chronicles.Api/modules');
   function inspect(dir) {

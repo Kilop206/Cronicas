@@ -30,6 +30,8 @@ builder.Services.AddScoped<ICharacterLifecycleStore, EfCharacterLifecycleStore>(
 builder.Services.AddScoped<ICharacterSystemStore, EfCharacterSystemStore>();
 builder.Services.AddScoped<ReadCharacterSystem>();
 builder.Services.AddScoped<PinCharacterSystem>();
+builder.Services.AddScoped<ICharacterSystemMigrationStore, EfCharacterSystemMigrationStore>();
+builder.Services.AddScoped<MigrateCharacterSystem>();
 builder.Services.AddScoped<ICharacterInventoryStore, EfCharacterInventoryStore>();
 builder.Services.AddScoped<ICharacterAbilityStore, EfCharacterAbilityStore>();
 builder.Services.AddScoped<ManageCharacterInventory>();

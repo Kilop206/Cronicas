@@ -40,3 +40,7 @@ Existem quatro layouts realmente diferentes. A seleção só identifica o compon
 **Antes de aceitar código comunitário:** pacote assinado/versionado, revisão e allowlist de capacidades; execução de regras em processo/worker isolado sem acesso livre a rede/disco/banco/segredos; quota de CPU/memória/tempo e limite de dados; resultado validado pelo servidor contra revisão e permissões. UI não confiável exigirá iframe/origem isolada, CSP e protocolo mínimo de mensagens. Não usar eval nem carregar módulo remoto no processo atual.
 
 Permissões propostas devem distinguir leitura de estado autorizado, produção de propostas de alteração e solicitação de rolagem ao servidor. Plugins nunca escolhem usuários/campanhas arbitrários, escrevem diretamente em tabelas ou publicam mensagens privadas. Nenhum sandbox de terceiros foi implementado nesta entrega; não anunciar suporte público a código arbitrário.
+
+## Evolução de schemas fixados
+
+O assistente de migração aceita apenas mesma origem/ID estável/edição, recusa schemas conhecidos não suportados e impede perder um executor anteriormente disponível. Defaults declarados são inicializados, fórmulas usam o parser seguro e a validação do plugin de destino permanece no servidor. Valores retirados são preservados e ajustes são explícitos. A prévia é recalculada sob locks antes do commit; o cliente não envia funções nem estado derivado confiável. Conversores entre edições exigem outro contrato compilado/testado; ainda não estão implementados. Ver ADR 0005.

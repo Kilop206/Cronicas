@@ -39,3 +39,9 @@ Nunca suprimir `PendingModelChangesWarning` para fazer uma migration passar. Ger
 ## Produção
 
 Não usar Development em produção para contornar a política de migrations. Revisar SQL/backup/staging antes de aplicar a migration de outbox; a nova API para com erro claro se houver migration pendente. A aplicação anterior pode continuar em operação até o release preparado. Nenhuma credencial externa é necessária para desenvolver/testar esta refatoração local.
+
+## Exercitar a migração de versões
+
+Com API/frontend locais e as migrations existentes aplicadas, crie um sistema próprio, associe-o à campanha, crie uma ficha e fixe seu modelo como mestre. Altere o sistema e abra a ficha fixada: Migrar versão da ficha oferece destino atual/arquivado, mapeamentos, ajustes e prévia. Confirmar cria outra revisão; para voltar, escolha a captura anterior no mesmo assistente. Nunca automatize esse procedimento sobre personagens reais. Os scripts e as limitações estão em TESTING e ADR 0005.
+
+O nome efetivo da configuração de origens é `ALLOWED_ORIGINS`, uma lista separada por vírgulas, por exemplo `http://127.0.0.1:8082,http://localhost:8082`. Sem a origem do frontend local, escritas e negociação SignalR pelo navegador recebem 403, mesmo quando chamadas HTTP sem Origin passam. Não remova a checagem de origem para executar os testes.

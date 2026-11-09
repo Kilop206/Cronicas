@@ -47,3 +47,7 @@ Erros de binding/JSON do cliente preservam seu status HTTP e, para 400, usam err
 Revisar todos os endpoints legados com matriz IDOR/papel, incluir testes adicionais por recurso e separar autorização de EF. Não há pentest externo nem isolamento de processo para plugins comunitários. Não há uploads/marketplace público para certificar. Medidas contra negação de serviço devem ser acompanhadas por métricas reais; não reduzir limites apenas por pressuposto, preservando a correção do problema de “muitas tentativas”.
 
 Na instalação limpa do Docker foram reportados 22 advisories moderados na árvore de desenvolvimento. A auditoria de dependências de runtime (`npm audit --omit=dev`) retornou zero vulnerabilidades em 05/11/2026. Não foi executado upgrade forçado de toolchain; a dívida de desenvolvimento permanece explícita.
+
+## Migração de versões
+
+Somente mestres acessam destinos/recibos/prévia/aplicação de migrações. UUIDs de outra origem ou capturas privadas fora do escopo retornam 404. Uma campanha desvinculada não ganha acesso a schemas futuros privados pela posse de uma captura antiga; conserva apenas referências de sua ficha/histórico. O commit bloqueia e revalida a participação. Digests de prévia não substituem autorização, não são secretos e não comprovam revisão humana. Ajustes são dados declarativos validados; fórmulas não executam JavaScript. Todos esses endpoints usam no-store. Testes verificam IDOR, papel, revogação no commit, plano adulterado, conflito e rollback. Ver ADR 0005.

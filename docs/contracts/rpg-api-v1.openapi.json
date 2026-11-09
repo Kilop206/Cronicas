@@ -10,6 +10,194 @@
     }
   ],
   "paths": {
+    "/api/v1/characters/{id}/system-migrations/targets": {
+      "get": {
+        "tags": [
+          "Chronicles.Api"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemMigrationOptions"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/characters/{id}/system-migrations/preview": {
+      "post": {
+        "tags": [
+          "Chronicles.Api"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/MigrationInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/SystemMigrationPreview"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "409": {
+            "description": "Conflict"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ]
+      }
+    },
+    "/api/v1/characters/{id}/system-migrations": {
+      "post": {
+        "tags": [
+          "Chronicles.Api"
+        ],
+        "parameters": [
+          {
+            "name": "id",
+            "in": "path",
+            "required": true,
+            "schema": {
+              "type": "string",
+              "format": "uuid"
+            }
+          }
+        ],
+        "requestBody": {
+          "content": {
+            "application/json": {
+              "schema": {
+                "$ref": "#/components/schemas/ApplyMigrationInput"
+              }
+            }
+          },
+          "required": true
+        },
+        "responses": {
+          "200": {
+            "description": "OK",
+            "content": {
+              "application/json": {
+                "schema": {
+                  "$ref": "#/components/schemas/CharacterDocument"
+                }
+              }
+            }
+          },
+          "400": {
+            "description": "Bad Request",
+            "content": {
+              "application/problem+json": {
+                "schema": {
+                  "$ref": "#/components/schemas/HttpValidationProblemDetails"
+                }
+              }
+            }
+          },
+          "401": {
+            "description": "Unauthorized"
+          },
+          "403": {
+            "description": "Forbidden"
+          },
+          "404": {
+            "description": "Not Found"
+          },
+          "409": {
+            "description": "Conflict"
+          }
+        },
+        "security": [
+          {
+            "sessionCookie": []
+          }
+        ]
+      }
+    },
     "/api/v1/characters/{id}/system-version": {
       "post": {
         "tags": [
@@ -219,6 +407,21 @@
   },
   "components": {
     "schemas": {
+      "ApplyMigrationInput": {
+        "required": [
+          "plan",
+          "previewHash"
+        ],
+        "type": "object",
+        "properties": {
+          "plan": {
+            "$ref": "#/components/schemas/MigrationInput"
+          },
+          "previewHash": {
+            "type": "string"
+          }
+        }
+      },
       "CharacterDocument": {
         "required": [
           "id",
@@ -594,6 +797,123 @@
           }
         }
       },
+      "JsonElement": {},
+      "MigrationFieldChange": {
+        "required": [
+          "key",
+          "kind",
+          "before",
+          "after",
+          "previousValue",
+          "nextValue"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "kind": {
+            "type": "string"
+          },
+          "before": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SystemField"
+              }
+            ]
+          },
+          "after": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/SystemField"
+              }
+            ]
+          },
+          "previousValue": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/JsonElement"
+              }
+            ]
+          },
+          "nextValue": {
+            "oneOf": [
+              {
+                "type": "null"
+              },
+              {
+                "$ref": "#/components/schemas/JsonElement"
+              }
+            ]
+          }
+        }
+      },
+      "MigrationInput": {
+        "required": [
+          "expectedVersion",
+          "sourceVersionId",
+          "targetVersionId",
+          "targetRevision",
+          "targetHash"
+        ],
+        "type": "object",
+        "properties": {
+          "expectedVersion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "sourceVersionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "targetVersionId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "targetRevision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "targetHash": {
+            "type": "string"
+          },
+          "mappings": {
+            "type": [
+              "null",
+              "object"
+            ],
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "values": {
+            "type": [
+              "null",
+              "object"
+            ]
+          }
+        }
+      },
       "PinSystemInput": {
         "required": [
           "expectedVersion",
@@ -701,6 +1021,327 @@
             "items": {
               "type": "string"
             }
+          }
+        }
+      },
+      "SystemColumn": {
+        "required": [
+          "key",
+          "label",
+          "type"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          }
+        }
+      },
+      "SystemField": {
+        "required": [
+          "key",
+          "label",
+          "type",
+          "section",
+          "min",
+          "max",
+          "options"
+        ],
+        "type": "object",
+        "properties": {
+          "key": {
+            "type": "string"
+          },
+          "label": {
+            "type": "string"
+          },
+          "type": {
+            "type": "string"
+          },
+          "section": {
+            "type": "string"
+          },
+          "min": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "max": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "options": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "type": "string"
+            }
+          },
+          "span": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "null",
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "formula": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "rollExpression": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "defaultValue": {},
+          "columns": {
+            "type": [
+              "null",
+              "array"
+            ],
+            "items": {
+              "$ref": "#/components/schemas/SystemColumn"
+            }
+          },
+          "editRole": {
+            "type": [
+              "null",
+              "string"
+            ]
+          }
+        }
+      },
+      "SystemMigrationAudit": {
+        "required": [
+          "characterRevision",
+          "editedBy",
+          "receipt"
+        ],
+        "type": "object",
+        "properties": {
+          "characterRevision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "editedBy": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "receipt": {
+            "$ref": "#/components/schemas/SystemMigrationReceipt"
+          }
+        }
+      },
+      "SystemMigrationOptions": {
+        "required": [
+          "targets",
+          "history"
+        ],
+        "type": "object",
+        "properties": {
+          "targets": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SystemMigrationTarget"
+            }
+          },
+          "history": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SystemMigrationAudit"
+            }
+          }
+        }
+      },
+      "SystemMigrationPlan": {
+        "required": [
+          "fields",
+          "changes",
+          "preservedKeys",
+          "errors"
+        ],
+        "type": "object",
+        "properties": {
+          "fields": {
+            "type": "object"
+          },
+          "changes": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/MigrationFieldChange"
+            }
+          },
+          "preservedKeys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "errors": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "array",
+              "items": {
+                "type": "string"
+              }
+            }
+          }
+        }
+      },
+      "SystemMigrationPreview": {
+        "required": [
+          "target",
+          "plan",
+          "previewHash"
+        ],
+        "type": "object",
+        "properties": {
+          "target": {
+            "$ref": "#/components/schemas/SystemMigrationTarget"
+          },
+          "plan": {
+            "$ref": "#/components/schemas/SystemMigrationPlan"
+          },
+          "previewHash": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "canApply": {
+            "type": "boolean"
+          }
+        }
+      },
+      "SystemMigrationReceipt": {
+        "required": [
+          "sourceVersionId",
+          "targetVersionId",
+          "previewHash",
+          "mappings",
+          "adjustedKeys",
+          "appliedAt"
+        ],
+        "type": "object",
+        "properties": {
+          "sourceVersionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "targetVersionId": {
+            "type": "string",
+            "format": "uuid"
+          },
+          "previewHash": {
+            "type": "string"
+          },
+          "mappings": {
+            "type": "object",
+            "additionalProperties": {
+              "type": "string"
+            }
+          },
+          "adjustedKeys": {
+            "type": "array",
+            "items": {
+              "type": "string"
+            }
+          },
+          "appliedAt": {
+            "type": "string",
+            "format": "date-time"
+          }
+        }
+      },
+      "SystemMigrationTarget": {
+        "required": [
+          "versionId",
+          "name",
+          "revision",
+          "templateId",
+          "templateVersion",
+          "rulesetVersion",
+          "contentHash",
+          "fields",
+          "current"
+        ],
+        "type": "object",
+        "properties": {
+          "versionId": {
+            "type": [
+              "null",
+              "string"
+            ],
+            "format": "uuid"
+          },
+          "name": {
+            "type": "string"
+          },
+          "revision": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "templateId": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "templateVersion": {
+            "pattern": "^-?(?:0|[1-9]\\d*)$",
+            "type": [
+              "integer",
+              "string"
+            ],
+            "format": "int32"
+          },
+          "rulesetVersion": {
+            "type": [
+              "null",
+              "string"
+            ]
+          },
+          "contentHash": {
+            "type": "string"
+          },
+          "fields": {
+            "type": "array",
+            "items": {
+              "$ref": "#/components/schemas/SystemField"
+            }
+          },
+          "current": {
+            "type": "boolean"
           }
         }
       },

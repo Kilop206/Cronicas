@@ -20,3 +20,7 @@ Antes de habilitar o uso da fixação em produção, conservar um binário compa
 Antes de qualquer captura, o Down de versões pode ser validado contra tabela vazia. Após haver capturas, ele aborta deliberadamente e não deve ser contornado. Rollback de aplicação precisa continuar reconhecendo os vínculos; um binário anterior a esse recurso pode ignorá-los e migrar campos de fichas fixadas. Não usar esse binário para edição após fixações.
 
 Outbox também deve ser mantida ao voltar um binário; não executar seu Down com eventos pendentes. Os arquivos Down são referências técnicas para cenários vazios controlados, não comandos de limpeza de produção. Não apagar capturas, remover triggers ou desfixar dados para facilitar um deploy.
+
+## Migração assistida de fichas
+
+A ADR 0005 usa o schema de versões já listado acima, sem outro SQL. Publicar a API com as três rotas `system-migrations` antes do frontend que as consome. Em staging, fixar uma ficha descartável, alterar seu modelo, revisar/aplicar a migração, confirmar o histórico e retornar por outra prévia. Não executar migrações de personagens em massa como parte do deploy. O backend mantém estado, captura, recibo e outbox na mesma transação; a autorização de publicação não substitui a revisão por ficha.

@@ -24,3 +24,15 @@ Também passaram separadamente as suites reais de regras para OP/D&D/T20/CoC e o
 | [1440×900](system-binding-1440x900.png) | [1920×1080](system-binding-1920x1080.png) | [768×1024](system-binding-768x1024.png) | [390×844](system-binding-390x844.png) |
 
 Capturas full-page; dimensões acima são o viewport. Desktop e mobile foram abertos para inspeção: indicação de modelo fixado legível, campos preservados e reorganização sem overflow. O teste verifica as quatro larguras. A composição genérica existente foi preservada; essas imagens demonstram o fluxo de versionamento, não uma nova comparação com C.R.I.S./D&D Beyond. Regenerações das capturas anteriores durante regressões foram mantidas fora deste commit.
+
+## Assistente de migração — 09/11/2026
+
+Capturas reais de `web/character-migrations-integration.mjs`, com API Docker/Nginx/PostgreSQL e Chrome, sem mocks. O mestre seleciona o modelo revisado, mapeia `score → new_score` e revisa a preservação de `score` e a fórmula `new_score * 3`. O botão Aplicar permanece bloqueado antes da confirmação.
+
+| Desktop | Amplo | Tablet | Mobile |
+| --- | --- | --- | --- |
+| [1440×900](assisted-migration-1440x900.png) | [1920×1080](assisted-migration-1920x1080.png) | [768×1024](assisted-migration-768x1024.png) | [390×844](assisted-migration-390x844.png) |
+
+Viewport é o tamanho da janela; a captura inclui a página inteira. A inspeção inicial identificou rolagem horizontal na comparação mobile; o layout foi corrigido para mostrar Campo/Alteração/Antes/Depois empilhados e o teste foi repetido. Não há overflow horizontal da página nas quatro resoluções. A ficha personalizada de teste preserva o layout anterior; este fluxo não redesenha as fichas especializadas.
+
+O mesmo script aplica um ajuste validado, verifica persistência/reload e atualização da janela do jogador, abre recibos e retorna à captura original por uma nova prévia/confirmacão. Jogador não tem ação de migração e rascunho privado impede o mestre de iniciá-la. Capturas de diagnóstico de execuções intermediárias ficam fora do commit.

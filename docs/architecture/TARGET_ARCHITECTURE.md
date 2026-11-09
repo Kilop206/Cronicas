@@ -35,7 +35,7 @@ Os projetos ficam em `api/Chronicles.Api/modules/` para preservar o contexto Doc
 
 `Features/*` organiza os adaptadores por responsabilidade, mas organização em pastas não significa isolamento completo de bounded contexts. Endpoints legados ainda acessam o `AppDbContext` compartilhado. `Entities` EF foram divididas por contexto, mas mantêm navegações cruzadas. As regras puras compartilham um assembly/namespace; dependências entre classes internas de RPG ainda não são impedidas por assembly separado.
 
-Não há banco CQRS separado; a separação comando/consulta é seletiva. Não há isolamento de plugins de terceiros em execução: somente código compilado/revisado é carregado. Fichas podem fixar a versão atual explicitamente; a migração assistida entre vínculos, a data de criação histórica e a recuperação completa do schema de fichas nunca capturadas continuam pendentes. Veja DATA_ARCHITECTURE.
+Não há banco CQRS separado; a separação comando/consulta é seletiva. Não há isolamento de plugins de terceiros em execução: somente código compilado/revisado é carregado. Fichas podem fixar e migrar versões explicitamente, com prévia/digest/recibo. Conversores entre edições, data de criação histórica e recuperação completa do schema de fichas nunca capturadas continuam pendentes. Veja DATA_ARCHITECTURE e ADR 0005.
 
 ## Operação
 

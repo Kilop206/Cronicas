@@ -77,6 +77,7 @@ await CharacterLifecycleTests.Run();
 await CharacterAssetTests.Run();
 await CharacterCompanionTests.Run();
 await CharacterSystemTests.Run();
+await CharacterSystemMigrationTests.Run();
 Console.WriteLine("Architecture: independent inner assemblies, acyclic project references, versioned registry, OP use case, access, conflicts and a new plugin passed.");
 
 sealed class FixedRandom : IGameRandom { public int Draw(int sides) => sides; }
