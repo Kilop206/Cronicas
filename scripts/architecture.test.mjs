@@ -114,6 +114,18 @@ test('Assisted migration HTTP adapters delegate and the UI sends reviewed plans,
   assert.ok(editor.includes('app-character-system-migration') && editor.includes('onSystemMigrated'));
 });
 
+test('Campaign, invitation and membership HTTP routes depend on application contracts', () => {
+  const api = path.resolve(import.meta.dirname, '../api/Chronicles.Api');
+  for (const [file, service] of [['CampaignEndpoints.cs', 'ManageCampaigns'], ['InviteEndpoints.cs', 'ManageCampaignInvites'], ['CampaignMembersEndpoints.cs', 'ManageCampaignMembers']]) {
+    const source = readFileSync(path.join(api, 'Features/Campaigns', file), 'utf8');
+    assert.ok(source.includes(service));
+    assert.ok(!/AppDbContext|EntityFrameworkCore|SaveChanges|RandomNumberGenerator|CampaignPolicy|RoomAccessService/.test(source), file);
+  }
+  const root = readFileSync(path.join(api, 'Program.cs'), 'utf8');
+  for (const legacy of ['api.MapGet("/campaigns"', 'api.MapPost("/campaigns"', 'api.MapPatch("/campaigns/{id:guid}"']) assert.ok(!root.includes(legacy));
+  assert.ok(root.includes('api.MapCampaignEndpoints()'));
+});
+
 test('Domain and application source cannot import HTTP/EF adapters', () => {
   const modules = path.resolve(import.meta.dirname, '../api/Chronicles.Api/modules');
   function inspect(dir) {

@@ -54,6 +54,8 @@ jobs:
           SMOKE_BASE_URL=http://localhost:8081 node scripts/character-lifecycle-smoke.mjs
           SMOKE_BASE_URL=http://localhost:8081 node scripts/sheet-events-smoke.mjs
           docker compose restart api
-          node scripts/room-smoke.mjs
+          for i in $(seq 1 30); do curl -fsS http://localhost:8081/health && break || sleep 2; done
+          SMOKE_BASE_URL=http://localhost:8081 node scripts/campaigns-smoke.mjs
+          SMOKE_BASE_URL=http://localhost:8081 node scripts/room-smoke.mjs
       - if: always()
         run: docker compose down

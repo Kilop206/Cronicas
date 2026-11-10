@@ -36,3 +36,13 @@ Capturas reais de `web/character-migrations-integration.mjs`, com API Docker/Ngi
 Viewport é o tamanho da janela; a captura inclui a página inteira. A inspeção inicial identificou rolagem horizontal na comparação mobile; o layout foi corrigido para mostrar Campo/Alteração/Antes/Depois empilhados e o teste foi repetido. Não há overflow horizontal da página nas quatro resoluções. A ficha personalizada de teste preserva o layout anterior; este fluxo não redesenha as fichas especializadas.
 
 O mesmo script aplica um ajuste validado, verifica persistência/reload e atualização da janela do jogador, abre recibos e retorna à captura original por uma nova prévia/confirmacão. Jogador não tem ação de migração e rascunho privado impede o mestre de iniciá-la. Capturas de diagnóstico de execuções intermediárias ficam fora do commit.
+
+## Convites e campanhas — 10/11/2026
+
+`web/campaigns-integration.mjs` usou Chrome, API Docker/Nginx e PostgreSQL reais. O owner criou a campanha e o convite na interface; uma janela sem cookies abriu o link, entrou na conta preservando returnUrl, voltou ao convite e fez refresh antes de aceitar. A campanha abriu no destino correto e continuou acessível após refresh. Depois o owner alterou o papel, o participante saiu e o link usado deixou de oferecer entrada.
+
+| Desktop | Mobile |
+| --- | --- |
+| [1440×900](campaign-invite-1440x900.png) | [390×844](campaign-invite-390x844.png) |
+
+Ambas as capturas foram abertas para inspeção. Texto e botão de aceite legíveis, reorganização mobile sem overflow; nenhum erro JavaScript no fluxo. São evidências de integração dos contratos refatorados, não uma reconstrução visual ou nova comparação de fichas. O frontend existente permaneceu inalterado nesta etapa.

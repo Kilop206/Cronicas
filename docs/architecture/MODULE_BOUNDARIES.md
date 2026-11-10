@@ -3,7 +3,7 @@
 | Contexto | Código em execução | Contrato/fronteira atual |
 | --- | --- | --- |
 | Identity & Access | `Features/Identity`, `Services/SessionService`, `Domain/Identity/CharacterAccessPolicy` | Política pura para personagem; sessão/cookie e rotas de conta ainda são adaptadores legados |
-| Campaign Management | `Features/Campaigns`, rotas restantes em `Program.cs` | Participação/convites são autoridade do banco; extração de casos de uso pendente |
+| Campaign Management | `Domain/Campaigns`, `Application/Campaigns`, `Infrastructure/Campaigns`, `Features/Campaigns` | CRUD básico/convites/participantes usam portas; associações sistema/universo e dashboard ainda legados |
 | Character Management | `Features/Characters`, `Features/CharacterSheets`, `Application/Characters`, `Infrastructure/Characters` | Personagens, histórico, coleções, favoritos, segredos e OBS usam casos de uso; autorização ainda usa joins EF entre contextos no adaptador |
 | RPG System Registry | `Domain/RpgSystems`, catálogo JSON, `Features/RpgSystems` | Manifest/edição/schema/ruleset/renderer; contrato REST v1; sistema personalizado permanece de propriedade do criador |
 | Character Sheet Engine | `Domain/CharacterSheets`, `Application/CharacterSheets` | `CharacterSheetState`, validação pura, queries/commands e `ICharacterRuleStore` |
@@ -39,5 +39,7 @@ Novos casos de uso recebem valores/contratos, não HttpContext ou DbContext. Por
 `FrozenSystemTemplate` é um valor puro de captura. `ICharacterSystemStore` expõe leitura do sistema efetivo e commit da fixação; `PinCharacterSystem`/`ReadCharacterSystem` não conhecem EF/HTTP. `EfCharacterSystemStore` implementa captura/deduplicação transacional, e a persistência compartilhada resolve o FK opcional antes do fallback de campanha. Os adapters legados de NPC/encontros consomem essa resolução por personagem; sua extração integral para casos de uso ainda está pendente. O teste de fronteira impede o editor de voltar à consulta do sistema da campanha.
 
 `CharacterSystemMigration` descreve transformações puras; `MigrateCharacterSystem` orquestra acesso, revisão e digest através de `ICharacterSystemMigrationStore`; `EfCharacterSystemMigrationStore` resolve destinos autorizados e implementa transações/JSONB/locks. O Angular envia mapeamentos/ajustes declarativos e nunca um estado calculado confiável. O adapter HTTP só traduz os contratos. Testes verificam essas dependências e o fluxo real.
+
+`ReadCampaigns`/`ManageCampaigns`/`ManageCampaignMembers`/`ManageCampaignInvites` usam `ICampaignStore`, `ICampaignMembershipStore`, `ICampaignInviteStore`, gerador de capacidade e porta de reconciliação realtime. Valores/políticas estão em Domain/Campaigns; adapters EF em Infrastructure/Campaigns. A sala consome a consulta pública de participação, sem acessar repositórios internos. Onze handlers não importam EF/RoomAccessService nem contêm regras. Autenticação/rotas de conta e associações de sistema/universo ainda não foram extraídas; joins de autorização dos outros adapters são dívida explícita.
 
 Antes de extrair um contexto em assembly independente, separe suas navegações EF e substitua a ponte legada por APIs públicas. Não mover apenas classes para outro processo mantendo joins remotos síncronos.

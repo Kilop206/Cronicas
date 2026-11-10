@@ -49,3 +49,9 @@ O envelope é seguro para uma integração futura, mas o transporte atual é int
 Claims de outbox suportam concorrência no PostgreSQL. **Fanout SignalR atual é de uma instância:** watchers vivem em memória. Para múltiplas réplicas, usar backplane/serviço de realtime e transporte que distribua a invalidação para todos os processos com sockets, antes de habilitar escala horizontal. Não confundir múltiplos consumidores seguros com broadcast distribuído completo.
 
 Migração assistida atualiza a mesma entidade Character e utiliza a invalidação já existente; não cria outro evento redundante. Captura, estado, recibo e outbox confirmam na mesma transação. O cliente sem rascunho recarrega o modelo quando SystemVersionId muda. Recibos/mapeamentos/valores não entram no payload público de invalidação. O teste de falha após SaveChanges verifica rollback inclusive da outbox.
+
+## Eventos de participação
+
+`CampaignMemberRoleChanged` e `CampaignMemberLeft`, contrato 1, usam o envelope existente: AggregateId é o usuário, CampaignId é a campanha, Revision é null. Não carregam token, perfil ou campos de ficha. A ponte EF só emite mudança de papel quando Role realmente foi modificado. A criação/entrada mantém `CampaignCreated`/`PlayerJoinedCampaign`.
+
+O caso de uso pede reconciliação imediata após commit. A outbox garante uma tentativa durável pelo `CampaignAccessInvalidationHandler`, que lê a participação atual pela porta pública e compara papel/JoinedAt com a conexão. Duplicatas e eventos atrasados não removem uma conexão que já representa esses valores atuais. Conexões retiradas do registry mas cuja notificação falhou permanecem numa fila em memória até o retry concluir; a falha continua pendente na outbox. Reiniciar o processo encerra os próprios sockets, dispensando persistir IDs de conexão. Testes simulam erro no transporte, reentrega e reentrada válida. Isso não implementa fanout entre réplicas nem substitui autorização transacional.

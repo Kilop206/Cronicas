@@ -79,3 +79,12 @@ Não foram comitadas regenerações aleatórias das capturas antigas de `docs/vi
 - `Infrastructure/Characters/EfCharacterSystemMigrationStore.cs`: destinos autorizados, recibos, revalidação/locks, deduplicação e commit atômico com histórico/outbox/condições. `CharacterHistory` recebe recibo opcional no JSONB existente. Nenhuma migration SQL adicional.
 - `CharacterSystemEndpoints`, DI, contratos OpenAPI e serviços Angular: três rotas v1 novas, sem quebrar as existentes. `character-system-migration.component.ts` integra o assistente ao editor e recarrega o modelo após aplicar; a ficha especializada continua sendo renderizada pelo host anterior.
 - Testes de domínio/aplicação/PostgreSQL/HTTP/Chrome específicos, CI e documentação. Conversões entre edições, importação de modelos executáveis e publicação automática em produção ficam fora deste fluxo.
+
+## Campanhas, convites e acesso — 10/11/2026
+
+- `Domain/Campaigns/CampaignValues.cs`: detalhes normalizados, status/papéis permitidos, owner protegido e formato/hash de convite. Não depende de EF/ASP.NET.
+- `Application/Campaigns/CampaignContracts.cs`: consultas/casos de uso de campanhas, participantes e convites, portas específicas de persistência, capacidade e reconciliação realtime.
+- `Infrastructure/Campaigns/{CampaignPersistence,EfCampaignStore,EfCampaignInviteStore}.cs`: gravações transacionais, revalidação de autoridade, locks para concorrência de adesões e snapshots, RNG criptográfico e preservação das tabelas existentes.
+- `Features/Campaigns`: onze handlers usam casos de uso. Cinco handlers saíram de Program.cs; JSON/rotas e frontend existentes foram mantidos. `Program.cs` registra as novas portas/adapters.
+- `GameEventTypes`/`LegacyDomainEvents`, `CampaignAccessInvalidation`, `RoomRegistry`, `RoomAccessService` e `CampaignRoomHub`: eventos duráveis de papel/saída, reconciliação por papel/adesão, retomada de notificação após falha e consulta de papel atual antes de publicar mídia.
+- Testes em Application/PostgreSQL e sala, `scripts/campaigns-smoke.mjs`, `web/campaigns-integration.mjs`, CI e onze fronteiras. Capturas de convite desktop/mobile comprovam login/retorno/refresh/aceite reais. Sem nova migration SQL ou alteração de produção. Associações de sistema/universo, dashboard e Identity permanecem legados.

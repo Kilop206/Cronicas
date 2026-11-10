@@ -17,7 +17,7 @@ public sealed class CampaignRoomHub(AppDbContext db, RoomRegistry registry) : Hu
         if (userId is null || sessionId is null || !await ActiveSession(sessionId.Value) || mode is not ("room" or "obs"))
             throw new HubException("Acesso à sala negado.");
         var member = await db.CampaignMemberships.AsNoTracking().Where(x => x.CampaignId == campaignId && x.UserId == userId)
-            .Select(x => new { x.Role, x.User.DisplayName }).SingleOrDefaultAsync();
+            .Select(x => new { x.Role, x.User.DisplayName, x.JoinedAt }).SingleOrDefaultAsync();
         if (member is null) throw new HubException("Acesso à sala negado.");
         Guid? targetUserId = null;
         if (mode == "obs")
@@ -30,7 +30,7 @@ public sealed class CampaignRoomHub(AppDbContext db, RoomRegistry registry) : Hu
         var previous = registry.Remove(Context.ConnectionId);
         if (previous is not null) await Groups.RemoveFromGroupAsync(Context.ConnectionId, Group(previous.CampaignId));
         var peer = new RoomPeer(Context.ConnectionId, campaignId, userId.Value, member.DisplayName, member.Role, mode, TargetUserId: targetUserId);
-        var existing = registry.Join(peer, sessionId.Value);
+        var existing = registry.Join(peer, sessionId.Value, member.JoinedAt);
         await Groups.AddToGroupAsync(Context.ConnectionId, Group(campaignId));
         foreach (var other in existing) await Clients.Client(other.ConnectionId).SendAsync("PeerJoined", peer);
         return existing;
@@ -39,9 +39,10 @@ public sealed class CampaignRoomHub(AppDbContext db, RoomRegistry registry) : Hu
     public async Task SetMediaState(bool cameraEnabled, bool screenEnabled)
     {
         var peer = registry.Get(Context.ConnectionId) ?? throw new HubException("Entre na sala primeiro.");
-        if (!await Member(peer.CampaignId, peer.UserId) || registry.SessionFor(Context.ConnectionId) is not { } sessionId || !await ActiveSession(sessionId))
+        var role = await db.CampaignMemberships.AsNoTracking().Where(m => m.CampaignId == peer.CampaignId && m.UserId == peer.UserId).Select(m => m.Role).SingleOrDefaultAsync();
+        if (role is null || registry.SessionFor(Context.ConnectionId) is not { } sessionId || !await ActiveSession(sessionId))
             throw new HubException("Acesso à sala negado.");
-        if (peer.Mode == "obs" || peer.Role == "spectator" && (cameraEnabled || screenEnabled))
+        if (peer.Mode == "obs" || role == "spectator" && (cameraEnabled || screenEnabled))
             throw new HubException("Este papel não pode publicar mídia.");
         var updated = registry.Update(Context.ConnectionId, cameraEnabled, screenEnabled);
         if (updated is not null) await Clients.OthersInGroup(Group(peer.CampaignId)).SendAsync("PeerState", updated);

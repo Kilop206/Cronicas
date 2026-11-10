@@ -8,6 +8,8 @@ public static class GameEventTypes
     public const string CharacterSheetUpdated = "CharacterSheetUpdated";
     public const string CampaignCreated = "CampaignCreated";
     public const string PlayerJoinedCampaign = "PlayerJoinedCampaign";
+    public const string CampaignMemberRoleChanged = "CampaignMemberRoleChanged";
+    public const string CampaignMemberLeft = "CampaignMemberLeft";
     public const string DiceRolled = "DiceRolled";
     public const string RPGSystemRegistered = "RPGSystemRegistered";
 }

@@ -1,12 +1,12 @@
 # Migração incremental — situação efetiva
 
-Auditoria inicial: 04/11/2026, base `f3f51ae`. Validação mais recente: 09/11/2026. Não interpretar a migração dos fluxos de personagens e regras como conclusão de todos os contextos da plataforma.
+Auditoria inicial: 04/11/2026, base `f3f51ae`. Validação mais recente: 10/11/2026. Não interpretar a migração de personagens, regras e fluxos básicos de campanhas como conclusão de todos os contextos da plataforma.
 
 | Marco | Implementado | Trabalho ainda necessário |
 | --- | --- | --- |
 | 1 Auditoria | Stack, fluxos, banco, auth, realtime, CI e riscos inspecionados; CURRENT_ARCHITECTURE | Atualizar métricas conforme outras fatias mudarem |
 | 2 Modularização | Assemblies Domain/Application/Infrastructure; fontes e modelos agrupados; Angular organizado por features/core/routing/layouts | Isolar fisicamente cada bounded context, eliminar navegações/repositórios compartilhados legados |
-| 3 Hexagonal | Fluxos de personagens, histórico, inventário/habilidades, favoritos, segredos, OBS e regras usam portas e casos de uso | Migrar CRUD de conta, campanha, convites, dados e NPCs; substituir joins entre contextos |
+| 3 Hexagonal | Personagens, histórico, coleções, favoritos, segredos, OBS, regras e operações básicas de campanhas/convites/participantes usam portas e casos de uso | Migrar conta, associações de campanha, dashboard, dados e NPCs; substituir joins entre contextos |
 | 4 Plugins | Catálogo versionado, regras compiladas, OP e outros motores existentes adaptados; host de apresentações exclusivas; teste de novo plugin sem alterar switch legado | Empacotamento/assinatura comunitária e sandbox de terceiros não implementados |
 | 5 Persistência | EF extraído; outbox; transação/revisão/histórico; versões imutáveis; migração assistida com prévia/mapeamento/recibo/retorno; SQL/rollback testados | Conversores entre edições, data de criação histórica confiável e tratamento de todo histórico anterior à captura |
 | 6 Comunicação | API v1 de leitura/escrita/catálogo, revisão obrigatória na escrita v1, eventos duráveis, SignalR autorizado e resync com rascunho preservado | Fanout entre réplicas; migração gradual dos demais contratos legados e eventos explícitos em todos os casos de uso |
@@ -17,7 +17,7 @@ Auditoria inicial: 04/11/2026, base `f3f51ae`. Validação mais recente: 09/11/2
 
 1. Concluído em 09/11/2026: fluxos existentes de personagens, histórico, inventário/habilidades, favoritos, segredos e OBS usam portas, validação e projeções de aplicação. Rotas e formatos legados foram preservados; PUT v1 exige revisão. Notas aceitam `expectedExists` opcional, enviado pelo editor atual para distinguir notas vazias da primeira revisão gravada. A auditoria confirmou que não existe endpoint de exclusão de personagem; a menção anterior a uma extração desse fluxo estava incorreta. Não foi introduzida uma operação destrutiva nova.
 2. Implementados captura imutável, vínculo opcional, leitura efetiva e migração assistida entre capturas da mesma origem/edição. Prévia, mapeamentos sem colisões, ajustes validados, digest de revisão e recibo atômico preservam campos legados. Retorno é outra migração explícita. Conversores de edição continuam pendentes; não inferir edições por nome nem desfixar fichas automaticamente. Ver ADR 0005.
-3. Extrair Campaign/Identity, mantendo convites, revogação e verificações por recurso transacionais; depois NPCs/dados. Substituir joins internos de outros contextos por portas públicas.
+3. Campanhas básicas, convites e participantes foram extraídos em 10/11/2026, com autoridade revalidada, concorrência, outbox e reconciliação da sala. Extrair Identity, associações de sistema/universo e dashboard; depois NPCs/dados. Substituir joins internos de outros contextos por portas públicas. Ver ADR 0006.
 4. Dividir projetos por bounded context somente após remover acoplamento real. Acrescentar testes de fronteira para cada contrato migrado e reduzir a lista de exceções legadas.
 5. Criar staging com snapshot anonimizado; revisar migrations e rollback; só então preparar release de produção.
 
@@ -70,3 +70,9 @@ Passaram testes de unidade/aplicação/PostgreSQL, HTTP, Chrome com duas contas 
 Prévia somente de leitura, mapeamentos sem colisões, ajustes explícitos, preservação de campos retirados, fórmulas/defaults/validação do plugin e confirmação do plano. Origem e edição precisam ser iguais. Revisões/fingerprint/digest são revalidados sob locks; confirmação concorrente tem um único vencedor. Histórico anterior e recibo confirmam com vínculo, estado e outbox. Retorno usa o mesmo assistente. Destinos privados fora da origem autorizada permanecem ocultos, inclusive após desvincular a campanha. Não há migration SQL nova, desfixação ou conversor oficial entre edições.
 
 Testes próprios em Domain/Application, PostgreSQL descartável (incluindo rollback após SaveChanges e permissão revogada), HTTP e duas janelas Chrome verificam o fluxo. Ver ADR 0005, TESTING e capturas do assistente. Produção não foi modificada.
+
+## Oitava fatia — campanhas e acesso, 10/11/2026
+
+Onze handlers preservam as rotas e usam casos de uso/portas de Campaigns. Detalhes, status, papéis, proteção do owner e tokens têm valores/políticas puros. Criação, edição, participação e aceite confirmam sob transações, revalidando autoridade. Corridas de convites distintos para a mesma pessoa retornam um aceite e um 409, sem violação de PK/500 ou consumo indevido de outro convite.
+
+Mudança de papel/saída têm eventos duráveis e reconciliação imediata da sala. Papel e adesão associados à conexão são comparados à participação atual; eventos repetidos não derrubam uma conexão já atualizada. A publicação de mídia consulta o papel atual. PostgreSQL, HTTP, SignalR, Chrome/login/refresh e onze fronteiras passaram. Não há nova migration SQL. Associação de sistema/universo e Identity permanecem pendentes; não há ETag obrigatório de campanha no cliente legado. Nenhuma alteração de produção.

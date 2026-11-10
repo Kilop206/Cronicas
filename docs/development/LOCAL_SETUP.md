@@ -45,3 +45,9 @@ Não usar Development em produção para contornar a política de migrations. Re
 Com API/frontend locais e as migrations existentes aplicadas, crie um sistema próprio, associe-o à campanha, crie uma ficha e fixe seu modelo como mestre. Altere o sistema e abra a ficha fixada: Migrar versão da ficha oferece destino atual/arquivado, mapeamentos, ajustes e prévia. Confirmar cria outra revisão; para voltar, escolha a captura anterior no mesmo assistente. Nunca automatize esse procedimento sobre personagens reais. Os scripts e as limitações estão em TESTING e ADR 0005.
 
 O nome efetivo da configuração de origens é `ALLOWED_ORIGINS`, uma lista separada por vírgulas, por exemplo `http://127.0.0.1:8082,http://localhost:8082`. Sem a origem do frontend local, escritas e negociação SignalR pelo navegador recebem 403, mesmo quando chamadas HTTP sem Origin passam. Não remova a checagem de origem para executar os testes.
+
+## Validar campanhas e convites
+
+Os casos de uso de campanhas/participantes/convites utilizam o schema existente, sem SQL adicional. Execute `scripts/campaigns-smoke.mjs` e `scripts/room-smoke.mjs` com `SMOKE_BASE_URL` no frontend local. Para o percurso real de login/convite/refresh, execute `web/campaigns-integration.mjs` com `ARCHITECTURE_BROWSER_URL`; o script usa Chrome instalado e contas descartáveis.
+
+Se a porta 5544 recusar conexão, confira o Docker e o PostgreSQL local antes de rodar a suíte de persistência. Não inicie/remova containers de outros projetos. Caso substitua a API de validação e o Nginx ainda use seu IP anterior, reinicie somente o frontend local depois de a nova API ficar ready. Não alterar o rate limit para acomodar muitos cadastros de fixtures; separar grupos com reinício da API local é suficiente.

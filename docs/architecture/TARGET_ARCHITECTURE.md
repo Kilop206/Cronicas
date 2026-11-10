@@ -1,13 +1,13 @@
 # Arquitetura implementada e direção de evolução
 
-A base permanece um monólito modular Angular 21/.NET 10/PostgreSQL. As fatias hexagonais em execução abrangem criação, leitura, salvamento, lista, duplicação, histórico/restauração, inventário, habilidades, favoritos, notas privadas e OBS de personagens, além da consulta/execução de regras. A modularização completa dos demais CRUDs ainda não terminou. Não há microsserviços, broker, gateway ou segunda stack introduzidos por esta mudança.
+A base permanece um monólito modular Angular 21/.NET 10/PostgreSQL. As fatias hexagonais em execução abrangem personagens, coleções, histórico, OBS, regras, modelos fixados/migração e fluxos básicos de campanhas/convites/participantes. A modularização completa dos demais CRUDs ainda não terminou. Não há microsserviços, broker, gateway ou segunda stack introduzidos por esta mudança.
 
 ```mermaid
 flowchart LR
   UI[Angular: features + host de renderizadores] --> HTTP[API: adaptadores REST /api e /api/v1]
-  HTTP --> App[Application: personagens e regras]
+  HTTP --> App[Application: personagens, campanhas e regras]
   App --> Domain[Domain: schemas, invariantes, políticas, plugins, regras e dados]
-  Infra[Infrastructure: adapters EF de personagens e regras] --> App
+  Infra[Infrastructure: adapters EF de personagens, campanhas e regras] --> App
   Infra --> Domain
   Infra --> PG[(PostgreSQL: estado, histórico e outbox)]
   PG --> Dispatcher[OutboxDispatcher]
@@ -29,7 +29,8 @@ Os projetos ficam em `api/Chronicles.Api/modules/` para preservar o contexto Doc
 - **Character assets:** casos de uso específicos de inventário/habilidades, valores validados em Domain e adapters EF transacionais. A capacidade é verificada sob lock do personagem, com revisão independente de cada filho. As rotas e componentes Angular existentes foram preservados.
 - **Companions/OBS:** portas de favoritos/segredos/capacidades, política explícita de membro/mestre/dono e geração criptográfica isolada. A projeção OBS está em Application e usa o registry versionado; endpoints não fazem cálculos nem consultam EF. O editor envia o indicador de existência das notas para resolver a ambiguidade da revisão inicial legada.
 - **Presentation:** host Angular cria componentes próprios OP/D&D/CoC/T20, reaproveita suas instâncias e conecta outputs de edição/restauração/ocupação. O editor de personagem não importa layouts concretos. Templates livres mantêm o editor visual.
-- **Events:** ponte de transição transforma alterações EF em envelopes versionados gravados na mesma transação. Consumidor autorizado invalida fichas por SignalR; cliente busca novamente o estado do servidor.
+- **Campaigns:** detalhes/status, convites e participantes foram extraídos para casos de uso/portas. Autoridade de owner, token, uso único e concorrência são validados no backend; transações preservam participações e outbox. Sistema/universo e conta ainda têm adapters legados.
+- **Events:** ponte de transição transforma alterações EF em envelopes versionados gravados na mesma transação. Consumidor autorizado invalida fichas por SignalR; cliente busca novamente o estado do servidor. Papel/saída de campanha também geram eventos duráveis, reconciliados com a participação atual para tolerar replay.
 
 ## Limites atuais
 

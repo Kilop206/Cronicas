@@ -9,6 +9,8 @@ using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.EntityFrameworkCore;
 using Chronicles.Application.CharacterSheets;
 using Chronicles.Application.Characters;
+using Chronicles.Application.Campaigns;
+using Chronicles.Infrastructure.Campaigns;
 using Chronicles.Infrastructure.Characters;
 using Chronicles.Application.Events;
 using Chronicles.Infrastructure.Messaging;
@@ -24,6 +26,16 @@ var connectionString = builder.Configuration.GetConnectionString("Default")
 builder.Services.AddDbContext<AppDbContext>(options => options.UseNpgsql(connectionString));
 builder.Services.AddSingleton(RpgPluginRegistry.BuiltIn());
 builder.Services.AddSingleton<IGameRandom, CryptographicGameRandom>();
+builder.Services.AddScoped<EfCampaignStore>();
+builder.Services.AddScoped<ICampaignStore>(services => services.GetRequiredService<EfCampaignStore>());
+builder.Services.AddScoped<ICampaignMembershipStore>(services => services.GetRequiredService<EfCampaignStore>());
+builder.Services.AddScoped<ICampaignInviteStore, EfCampaignInviteStore>();
+builder.Services.AddSingleton<ICampaignInviteTokenGenerator, CryptographicCampaignInviteTokenGenerator>();
+builder.Services.AddScoped<ICampaignRealtimeAccess, CampaignRealtimeAccess>();
+builder.Services.AddScoped<ReadCampaigns>();
+builder.Services.AddScoped<ManageCampaigns>();
+builder.Services.AddScoped<ManageCampaignMembers>();
+builder.Services.AddScoped<ManageCampaignInvites>();
 builder.Services.AddScoped<ICharacterRuleStore, EfCharacterRuleStore>();
 builder.Services.AddScoped<ICharacterWriteStore, EfCharacterWriteStore>();
 builder.Services.AddScoped<ICharacterLifecycleStore, EfCharacterLifecycleStore>();
@@ -55,6 +67,7 @@ builder.Services.AddScoped<ExecuteCharacterRule>();
 builder.Services.AddScoped<ReadCharacterRules>();
 builder.Services.AddScoped<OutboxDispatcher>();
 builder.Services.AddScoped<IGameEventHandler, SheetInvalidationHandler>();
+builder.Services.AddScoped<IGameEventHandler, CampaignAccessInvalidationHandler>();
 builder.Services.AddSingleton<SheetWatchers>();
 builder.Services.AddHostedService<OutboxWorker>();
 builder.Services.AddScoped<IPasswordHasher<User>, PasswordHasher<User>>();
@@ -127,6 +140,7 @@ app.MapHealthChecks("/health/ready");
 app.MapHub<CampaignRoomHub>("/api/hubs/campaign");
 app.MapHub<SheetUpdatesHub>("/api/hubs/sheets");
 var api = app.MapGroup("/api");
+api.MapCampaignEndpoints();
 api.MapCharacterEndpoints();
 api.MapCharacterInventoryEndpoints();
 api.MapCharacterAbilityEndpoints();
@@ -277,76 +291,6 @@ api.MapGet("/dashboard", async Task<IResult> (HttpContext http, AppDbContext db)
     return Results.Ok(new { totalCampaigns = total, activeCampaigns = await db.CampaignMemberships.CountAsync(x => x.UserId == id && x.Campaign.Status == "active"), recentCampaigns = campaigns, favoriteCharacters = favorites, upcomingSessions = upcoming });
 });
 
-api.MapGet("/campaigns", async Task<IResult> (HttpContext http, AppDbContext db, int? page, string? search) =>
-{
-    if (CurrentUserId(http) is not { } id) return Results.Unauthorized();
-    var currentPage = Math.Clamp(page ?? 1, 1, 100000);
-    var query = db.CampaignMemberships.AsNoTracking().Where(x => x.UserId == id);
-    if (!string.IsNullOrWhiteSpace(search))
-    {
-        var term = search.Trim();
-        query = query.Where(x => EF.Functions.ILike(x.Campaign.Name, $"%{term}%"));
-    }
-    var total = await query.CountAsync();
-    var items = await query.OrderByDescending(x => x.Campaign.UpdatedAt).Skip((currentPage - 1) * 20).Take(20)
-        .Select(x => new CampaignView(x.CampaignId, x.Campaign.Name, x.Campaign.Description, x.Campaign.Status,
-            x.Campaign.AccentColor, x.Role, x.Campaign.UpdatedAt, x.Campaign.SystemId, x.Campaign.WorldId)).ToListAsync();
-    return Results.Ok(new { items, total, page = currentPage });
-});
-
-api.MapPost("/campaigns", async Task<IResult> (CampaignRequest input, HttpContext http, AppDbContext db) =>
-{
-    if (CurrentUserId(http) is not { } id) return Results.Unauthorized();
-    var name = input.Name?.Trim() ?? "";
-    if (name.Length is < 3 or > 120 || input.Description is null || input.Description.Length > 2000 || input.AccentColor is null || !System.Text.RegularExpressions.Regex.IsMatch(input.AccentColor, "^#[0-9a-fA-F]{6}$"))
-        return Results.ValidationProblem(new Dictionary<string, string[]> { ["campaign"] = ["Verifique nome, descrição e cor."] });
-    var campaign = new Campaign { Name = name, Description = input.Description.Trim(), AccentColor = input.AccentColor, OwnerId = id };
-    campaign.Memberships.Add(new CampaignMembership { UserId = id, Role = "owner" });
-    db.Campaigns.Add(campaign);
-    await db.SaveChangesAsync();
-    return Results.Created($"/api/campaigns/{campaign.Id}", new CampaignView(campaign.Id, campaign.Name, campaign.Description, campaign.Status, campaign.AccentColor, "owner", campaign.UpdatedAt, campaign.SystemId, campaign.WorldId));
-});
-
-api.MapGet("/campaigns/{id:guid}", async Task<IResult> (Guid id, HttpContext http, AppDbContext db) =>
-{
-    if (CurrentUserId(http) is not { } userId) return Results.Unauthorized();
-    var member = await db.CampaignMemberships.AsNoTracking().Where(x => x.UserId == userId && x.CampaignId == id)
-        .Select(x => new CampaignView(x.CampaignId, x.Campaign.Name, x.Campaign.Description, x.Campaign.Status,
-            x.Campaign.AccentColor, x.Role, x.Campaign.UpdatedAt, x.Campaign.SystemId, x.Campaign.WorldId)).SingleOrDefaultAsync();
-    return member is null ? Results.NotFound() : Results.Ok(member);
-});
-
-api.MapPatch("/campaigns/{id:guid}", async Task<IResult> (Guid id, CampaignRequest input, HttpContext http, AppDbContext db) =>
-{
-    if (CurrentUserId(http) is not { } userId) return Results.Unauthorized();
-    var member = await db.CampaignMemberships.Include(x => x.Campaign).SingleOrDefaultAsync(x => x.UserId == userId && x.CampaignId == id);
-    if (member is null) return Results.NotFound();
-    if (member.Role != "owner") return Results.Problem("Apenas o proprietário pode alterar a campanha.", statusCode: 403);
-    var name = input.Name?.Trim() ?? "";
-    if (name.Length is < 3 or > 120 || input.Description is null || input.Description.Length > 2000 || input.AccentColor is null || !System.Text.RegularExpressions.Regex.IsMatch(input.AccentColor, "^#[0-9a-fA-F]{6}$"))
-        return Results.ValidationProblem(new Dictionary<string, string[]> { ["campaign"] = ["Verifique nome, descrição e cor."] });
-    member.Campaign.Name = name;
-    member.Campaign.Description = input.Description.Trim();
-    member.Campaign.AccentColor = input.AccentColor;
-    member.Campaign.UpdatedAt = DateTime.UtcNow;
-    await db.SaveChangesAsync();
-    return Results.Ok(new CampaignView(id, member.Campaign.Name, member.Campaign.Description, member.Campaign.Status, member.Campaign.AccentColor, member.Role, member.Campaign.UpdatedAt, member.Campaign.SystemId, member.Campaign.WorldId));
-});
-
-api.MapPatch("/campaigns/{id:guid}/status", async Task<IResult> (Guid id, StatusRequest input, HttpContext http, AppDbContext db) =>
-{
-    if (CurrentUserId(http) is not { } userId) return Results.Unauthorized();
-    var member = await db.CampaignMemberships.Include(x => x.Campaign).SingleOrDefaultAsync(x => x.UserId == userId && x.CampaignId == id);
-    if (member is null) return Results.NotFound();
-    if (member.Role != "owner") return Results.Problem("Apenas o proprietário pode alterar a campanha.", statusCode: 403);
-    if (input.Status is not ("planning" or "active" or "paused" or "completed" or "archived"))
-        return Results.ValidationProblem(new Dictionary<string, string[]> { ["status"] = ["Status inválido."] });
-    member.Campaign.Status = input.Status;
-    member.Campaign.UpdatedAt = DateTime.UtcNow;
-    await db.SaveChangesAsync();
-    return Results.NoContent();
-});
-
 using (var scope = app.Services.CreateScope())
 {
     var db = scope.ServiceProvider.GetRequiredService<AppDbContext>();
@@ -364,6 +308,4 @@ record ResetRequest(string Email);
 record ResetCompleteRequest(string Email, string Code, string Password);
 record ProfileRequest(string DisplayName, string? Bio, string? AvatarUrl);
 record PreferencesRequest(string Accent);
-record CampaignRequest(string Name, string Description, string AccentColor);
-record StatusRequest(string Status);
 record CampaignView(Guid Id, string Name, string Description, string Status, string AccentColor, string Role, DateTime UpdatedAt, Guid? SystemId, Guid? WorldId);
