@@ -1,6 +1,6 @@
 # Release da refatoração arquitetural
 
-Preparação local; produção não foi modificada. A branch é `refactor/modular-rpg-architecture`, separada de main. Não publicar a nova aplicação sem preparar seu schema.
+As duas migrations abaixo foram aplicadas ao banco de produção em 11/11/2026, com autorização explícita, snapshot e ensaio em branch isolada. Consulte o [registro de execução](2026-11-11-production-migrations.md). A aplicação da branch `refactor/modular-rpg-architecture` permanece separada de main; essa execução não publicou novos binários nem frontend.
 
 ## SQL em ordem
 
