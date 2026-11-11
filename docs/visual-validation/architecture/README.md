@@ -46,3 +46,13 @@ O mesmo script aplica um ajuste validado, verifica persistência/reload e atuali
 | [1440×900](campaign-invite-1440x900.png) | [390×844](campaign-invite-390x844.png) |
 
 Ambas as capturas foram abertas para inspeção. Texto e botão de aceite legíveis, reorganização mobile sem overflow; nenhum erro JavaScript no fluxo. São evidências de integração dos contratos refatorados, não uma reconstrução visual ou nova comparação de fichas. O frontend existente permaneceu inalterado nesta etapa.
+
+## Associações e modelo efetivo — 11/11/2026
+
+`web/campaign-associations-integration.mjs` abriu proprietário, notas, ficha livre e ficha fixada em quatro páginas Chrome, usando API/Nginx/PostgreSQL reais. O proprietário associou universo e outro sistema pelos controles existentes. Os rascunhos da ficha/notas foram preservados, o jogador confirmou recarga e recebeu o modelo novo com o valor 4 intacto. A troca seguinte com a ficha limpa atualizou automaticamente o modelo. A ficha fixada manteve a captura de origem.
+
+| Desktop | Mobile | Rascunho protegido |
+| --- | --- | --- |
+| [1440×900](campaign-association-1440x900.png) | [390×844](campaign-association-390x844.png) | [Antes da recarga](campaign-association-draft.png) |
+
+Desktop/mobile foram abertos para inspeção: identificação do novo modelo, campo/valor persistido e layout sem overflow horizontal. O script também verifica desassociação, revisão dos personagens intacta, universo após refresh e ausência de erros JavaScript. As capturas usam um modelo personalizado simples para provar integração; não representam novo design especializado ou nova comparação com as referências de RPG.

@@ -78,4 +78,12 @@ As mesmas tabelas/PKs/FKs são usadas, sem migration SQL. Campanha + participaç
 
 Aceite bloqueia convite/emissor/campanha e revalida expiração, uso e autoridade. O lock da campanha cobre a ausência de uma futura linha de participação: convites diferentes para a mesma pessoa não podem inserir duas linhas nem consumir o segundo token indevidamente. Token de 24 bytes continua representado por 48 caracteres hexadecimais, sete dias e hash SHA-256 persistido. Saída não apaga personagens ou seus filhos. Rollback após SaveChanges foi testado para criação, remoção e aceite, incluindo outbox e uso do token. Ver ADR 0006.
 
+## Operação das versões imutáveis
+
 SQL revisável: `releases/character-system-versions-up.sql` e Down correspondente. Up é aditivo e não faz UPDATE/backfill de personagens. Down só permite retornar quando a tabela de capturas está vazia e nenhum vínculo existe; caso contrário aborta antes de remover objetos. Depois de usar a fixação, um rollback de aplicação precisa preservar suporte aos vínculos, pois um binário antigo pode ignorá-los mesmo mantendo as colunas. Não automatizar esse retorno. As versões congelam definição de dados, não binários dos executores ou conteúdo remoto de imagens. Ver ADR 0004.
+
+## Associações de sistema/universo — 11/11/2026
+
+As mesmas FKs de campanha e tabelas são preservadas, sem migration. O commit bloqueia participação/campanha e usa os contratos públicos dos destinos para obter uma referência própria protegida por FOR SHARE. Exclusões adquirem FOR UPDATE antes de conferir uso. A referência não desaparece entre a validação e o commit; se a exclusão venceu, a associação retorna destino indisponível. Falha após SaveChanges reverte FK, timestamp e outbox.
+
+Conflitos são comparados na associação específica, preservando gravações independentes de sistema/universo. Um destino idêntico é no-op. Trocar a associação não regrava estado ou revisão de personagens; as fichas fixadas continuam na captura, e as demais resolvem o sistema corrente. Eventos de configuração têm apenas metadados. O contrato legado ainda não obriga a referência esperada de sistema em cada save de ficha nem ETag de campanha; limites na ADR 0007.

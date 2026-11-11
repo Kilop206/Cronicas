@@ -126,6 +126,20 @@ test('Campaign, invitation and membership HTTP routes depend on application cont
   assert.ok(root.includes('api.MapCampaignEndpoints()'));
 });
 
+test('Campaign associations use public module contracts and thin HTTP adapters', () => {
+  const api = path.resolve(import.meta.dirname, '../api/Chronicles.Api');
+  const endpoint = readFileSync(path.join(api, 'Features/Campaigns/CampaignAssociationEndpoints.cs'), 'utf8');
+  assert.ok(endpoint.includes('ManageCampaignAssociations command'));
+  assert.ok(!/AppDbContext|EntityFrameworkCore|SaveChanges|CampaignPolicy/.test(endpoint));
+  for (const [file, route] of [['RpgSystems/SystemEndpoints.cs', '/system'], ['Worlds/WorldEndpoints.cs', '/world']]) {
+    const legacy = readFileSync(path.join(api, 'Features', file), 'utf8');
+    assert.ok(!legacy.includes(`api.MapPatch("/campaigns/{campaignId:guid}${route}"`));
+  }
+  const persistence = readFileSync(path.join(api, 'modules/Chronicles.Infrastructure/Campaigns/EfCampaignAssociationStore.cs'), 'utf8');
+  assert.ok(persistence.includes('IRpgSystemCampaignAccess') && persistence.includes('IWorldCampaignAccess'));
+  assert.ok(!/db\.(RpgSystems|Worlds)|EfRpgSystemCampaignAccess|EfWorldCampaignAccess/.test(persistence));
+});
+
 test('Domain and application source cannot import HTTP/EF adapters', () => {
   const modules = path.resolve(import.meta.dirname, '../api/Chronicles.Api/modules');
   function inspect(dir) {

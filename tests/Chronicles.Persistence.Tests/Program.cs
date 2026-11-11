@@ -133,6 +133,7 @@ try
     Check(await db.Characters.AnyAsync(c => c.Id == character.Id && c.Version == 2), "Re-upgrade preserves revision and state.");
     await CharacterWritePersistenceTests.Run(Context);
     await CampaignPersistenceTests.Run(Context);
+    await CampaignAssociationPersistenceTests.Run(Context);
     await CharacterLifecyclePersistenceTests.Run(Context);
     await CharacterAssetPersistenceTests.Run(Context);
     await CharacterCompanionPersistenceTests.Run(Context);

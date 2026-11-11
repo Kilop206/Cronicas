@@ -15,9 +15,9 @@ async function register(name) {
   const response = await request('/api/auth/register', null, 'POST', { displayName: name, email: `${name}-${suffix}@example.test`, password: 'architecture-local-password-123' });
   assert.equal(response.status, 201, JSON.stringify(response.body)); return response;
 }
-function next(hub, name) {
+function next(hub, name, accept = () => true) {
   return new Promise((resolve, reject) => {
-    const handler = message => { clearTimeout(timer); hub.off(name, handler); resolve(message); };
+    const handler = message => { if (!accept(message)) return; clearTimeout(timer); hub.off(name, handler); resolve(message); };
     const timer = setTimeout(() => { hub.off(name, handler); reject(new Error(`Timed out waiting for ${name}`)); }, 12000);
     hub.on(name, handler);
   });
@@ -59,18 +59,19 @@ try {
   assert.equal(invite.status, 201);
   assert.equal((await request(`/api/invites/${invite.body.token}/accept`, outsider.cookie, 'POST', {})).status, 200);
   await connections[1].invoke('Subscribe', characterId);
-  const ownNotice = next(connections[0], 'SheetInvalidated'); const playerNotice = next(connections[1], 'SheetInvalidated');
+  const stateChanged = event => event.type === 'CharacterSheetUpdated' && event.characterId === characterId;
+  const ownNotice = next(connections[0], 'SheetInvalidated', stateChanged); const playerNotice = next(connections[1], 'SheetInvalidated', stateChanged);
   const applied = await request(`/api/characters/${characterId}/rules`, owner.cookie, 'POST', { expectedVersion: 1, command: { action: 'damage', amount: 3, visibility: 'private' } });
   assert.equal(applied.status, 200, JSON.stringify(applied.body)); assert.equal(applied.body.character.health, 17);
   const message = await ownNotice; const received = await playerNotice;
   assert.deepEqual(Object.keys(message).sort(), ['characterId', 'eventId', 'revision', 'type']);
-  assert.equal(message.revision, 2); assert.equal(received.eventId, message.eventId);
+  assert.equal(message.type, 'CharacterSheetUpdated'); assert.equal(message.revision, 2); assert.equal(received.eventId, message.eventId);
   assert.equal((await request(`/api/characters/${characterId}/rules`, outsider.cookie, 'POST', { expectedVersion: 2, command: { action: 'heal', amount: 1 } })).status, 403);
   assert.equal((await request(`/api/characters/${characterId}/rules`, owner.cookie, 'POST', { expectedVersion: 1, command: { action: 'heal', amount: 1 } })).status, 409);
   assert.equal((await request(read, owner.cookie)).body.state.health, 17);
   let revokedMessages = 0; connections[1].on('SheetInvalidated', () => revokedMessages++);
   assert.equal((await request(`/api/campaigns/${campaign.body.id}/members/${outsider.body.id}`, owner.cookie, 'DELETE')).status, 204);
-  const delivered = next(connections[0], 'SheetInvalidated');
+  const delivered = next(connections[0], 'SheetInvalidated', stateChanged);
   assert.equal((await request(`/api/characters/${characterId}/rules`, owner.cookie, 'POST', { expectedVersion: 2, command: { action: 'heal', amount: 1, visibility: 'private' } })).status, 200);
   await delivered;
   assert.equal((await request(read, outsider.cookie)).status, 404);

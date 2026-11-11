@@ -51,3 +51,9 @@ O nome efetivo da configuração de origens é `ALLOWED_ORIGINS`, uma lista sepa
 Os casos de uso de campanhas/participantes/convites utilizam o schema existente, sem SQL adicional. Execute `scripts/campaigns-smoke.mjs` e `scripts/room-smoke.mjs` com `SMOKE_BASE_URL` no frontend local. Para o percurso real de login/convite/refresh, execute `web/campaigns-integration.mjs` com `ARCHITECTURE_BROWSER_URL`; o script usa Chrome instalado e contas descartáveis.
 
 Se a porta 5544 recusar conexão, confira o Docker e o PostgreSQL local antes de rodar a suíte de persistência. Não inicie/remova containers de outros projetos. Caso substitua a API de validação e o Nginx ainda use seu IP anterior, reinicie somente o frontend local depois de a nova API ficar ready. Não alterar o rate limit para acomodar muitos cadastros de fixtures; separar grupos com reinício da API local é suficiente.
+
+## Associações e referências
+
+Os novos contratos de Registry/Worlds precisam compartilhar o DbContext/unidade de trabalho da associação; exigem transação ativa para manter a referência protegida. As inscrições de DI estão em Program.cs. Não registrar outro contexto/banco para esses adapters sem rever o protocolo da ADR 0007. Nenhum SQL adicional é necessário além das migrations já existentes da branch.
+
+Use `scripts/campaign-associations-smoke.mjs` para HTTP/SignalR e `web/campaign-associations-integration.mjs` para a troca real de modelo e os rascunhos no Chrome. A base mutável .NET teve download lento nesta validação; um Dockerfile apenas local, em `.docker-local/` ignorado, fixou os mesmos digests anteriores para testar a aplicação. As instruções do Dockerfile versionado não foram alteradas; os digests e o limite dessa evidência estão em TESTING. Revalidar a base escolhida em staging antes de publicar.

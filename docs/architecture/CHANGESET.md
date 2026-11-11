@@ -88,3 +88,11 @@ Não foram comitadas regenerações aleatórias das capturas antigas de `docs/vi
 - `Features/Campaigns`: onze handlers usam casos de uso. Cinco handlers saíram de Program.cs; JSON/rotas e frontend existentes foram mantidos. `Program.cs` registra as novas portas/adapters.
 - `GameEventTypes`/`LegacyDomainEvents`, `CampaignAccessInvalidation`, `RoomRegistry`, `RoomAccessService` e `CampaignRoomHub`: eventos duráveis de papel/saída, reconciliação por papel/adesão, retomada de notificação após falha e consulta de papel atual antes de publicar mídia.
 - Testes em Application/PostgreSQL e sala, `scripts/campaigns-smoke.mjs`, `web/campaigns-integration.mjs`, CI e onze fronteiras. Capturas de convite desktop/mobile comprovam login/retorno/refresh/aceite reais. Sem nova migration SQL ou alteração de produção. Associações de sistema/universo, dashboard e Identity permanecem legados.
+
+## Associações de sistema/universo — 11/11/2026
+
+- `Application/Campaigns/CampaignAssociationContracts.cs`, contratos públicos `Application/RpgSystems/IRpgSystemCampaignAccess` e `Application/Worlds/IWorldCampaignAccess`: proprietário, tipo de associação e referência própria, sem dependência de frameworks.
+- `Infrastructure/Campaigns/EfCampaignAssociationStore` e adapters públicos de Registry/Worlds: transação, revalidação, referência protegida, conflitos por vínculo e no-op sem regravação.
+- `Features/Campaigns/CampaignAssociationEndpoints`: duas rotas preservadas extraídas dos catálogos; DI atualizada. Exclusões existentes de sistemas/universos bloqueiam a referência antes de conferir uso, evitando disputa de FK com a associação. Não foram extraídos todos os CRUDs desses catálogos.
+- `GameEventTypes`, ponte outbox e `SheetUpdatesHub`: eventos de associação atômicos e invalidação autorizada apenas de fichas não fixadas. O editor recarrega o modelo limpo ou preserva edição/notas privadas com salvamento pausado.
+- Testes de aplicação/PostgreSQL/HTTP/SignalR/Chrome, doze fronteiras, CI, documentação e três capturas. Nenhuma migration SQL, transformação de estado de personagens ou alteração de produção. Identity/dashboard e demais contextos continuam pendentes.

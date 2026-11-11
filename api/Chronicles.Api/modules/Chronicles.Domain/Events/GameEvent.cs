@@ -7,6 +7,8 @@ public static class GameEventTypes
     public const string CharacterDeleted = "CharacterDeleted";
     public const string CharacterSheetUpdated = "CharacterSheetUpdated";
     public const string CampaignCreated = "CampaignCreated";
+    public const string CampaignSystemChanged = "CampaignSystemChanged";
+    public const string CampaignWorldChanged = "CampaignWorldChanged";
     public const string PlayerJoinedCampaign = "PlayerJoinedCampaign";
     public const string CampaignMemberRoleChanged = "CampaignMemberRoleChanged";
     public const string CampaignMemberLeft = "CampaignMemberLeft";

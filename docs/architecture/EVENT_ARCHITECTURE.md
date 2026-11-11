@@ -55,3 +55,11 @@ Migração assistida atualiza a mesma entidade Character e utiliza a invalidaç�
 `CampaignMemberRoleChanged` e `CampaignMemberLeft`, contrato 1, usam o envelope existente: AggregateId é o usuário, CampaignId é a campanha, Revision é null. Não carregam token, perfil ou campos de ficha. A ponte EF só emite mudança de papel quando Role realmente foi modificado. A criação/entrada mantém `CampaignCreated`/`PlayerJoinedCampaign`.
 
 O caso de uso pede reconciliação imediata após commit. A outbox garante uma tentativa durável pelo `CampaignAccessInvalidationHandler`, que lê a participação atual pela porta pública e compara papel/JoinedAt com a conexão. Duplicatas e eventos atrasados não removem uma conexão que já representa esses valores atuais. Conexões retiradas do registry mas cuja notificação falhou permanecem numa fila em memória até o retry concluir; a falha continua pendente na outbox. Reiniciar o processo encerra os próprios sockets, dispensando persistir IDs de conexão. Testes simulam erro no transporte, reentrega e reentrada válida. Isso não implementa fanout entre réplicas nem substitui autorização transacional.
+
+## Eventos de associação
+
+`CampaignSystemChanged`/`CampaignWorldChanged`, contrato 1, usam AggregateId/CampaignId iguais à campanha e Revision null. Não carregam o novo ID do catálogo, nomes, schemas ou valores de personagens. Confirmam na mesma transação da referência; o no-op não emite evento.
+
+O handler de fichas consome a troca de sistema consultando apenas os IDs atualmente observados que pertencem à campanha e não têm SystemVersionId. Cada envio ainda verifica sessão e participação. A mensagem existente `SheetInvalidated` leva o ID da ficha destinatária, tipo e revision null. O cliente limpo busca o modelo efetivo; rascunho de ficha/notas pausa o salvamento e exige revisão/recarga explícita. Fichas fixadas não recebem essa invalidação de campanha. O evento de universo registra a mudança; não cria acesso por mensagem e não ganhou uma UI realtime nesta etapa.
+
+O transporte continua single-instance/ao menos uma vez. Não há replay de toda configuração perdida offline ou backplane entre réplicas; refresh da página continua sendo a forma de reconstruir o modelo completo nesses cenários. Ver ADR 0007.

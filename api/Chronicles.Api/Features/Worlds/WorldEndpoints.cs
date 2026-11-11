@@ -54,21 +54,11 @@ public static class WorldEndpoints
         api.MapDelete("/worlds/{id:guid}", async Task<IResult> (Guid id, HttpContext http, AppDbContext db) =>
         {
             if (UserId(http) is not { } userId) return Results.Unauthorized();
-            var world = await db.Worlds.SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == userId);
+            await using var transaction = await db.Database.BeginTransactionAsync(http.RequestAborted);
+            var world = await db.Worlds.FromSqlInterpolated($"SELECT * FROM worlds WHERE \"Id\" = {id} AND \"OwnerId\" = {userId} FOR UPDATE").SingleOrDefaultAsync(http.RequestAborted);
             if (world is null) return Results.NotFound();
             if (await db.Campaigns.AnyAsync(x => x.WorldId == id)) return Results.Conflict(new { message = "Desassocie as campanhas antes de excluir o universo." });
-            db.Worlds.Remove(world); await db.SaveChangesAsync(); return Results.NoContent();
-        });
-
-        api.MapPatch("/campaigns/{campaignId:guid}/world", async Task<IResult> (Guid campaignId, WorldLinkInput input, HttpContext http, AppDbContext db) =>
-        {
-            if (UserId(http) is not { } userId) return Results.Unauthorized();
-            var campaign = await db.Campaigns.SingleOrDefaultAsync(x => x.Id == campaignId && x.OwnerId == userId);
-            if (campaign is null) return Results.NotFound();
-            if (input.WorldId is { } worldId && !await db.Worlds.AnyAsync(x => x.Id == worldId && x.OwnerId == userId))
-                return Results.ValidationProblem(new Dictionary<string, string[]> { ["worldId"] = ["Universo indisponível."] });
-            campaign.WorldId = input.WorldId; campaign.UpdatedAt = DateTime.UtcNow;
-            await db.SaveChangesAsync(); return Results.NoContent();
+            db.Worlds.Remove(world); await db.SaveChangesAsync(); await transaction.CommitAsync(http.RequestAborted); return Results.NoContent();
         });
 
         api.MapGet("/worlds/{worldId:guid}/articles", async Task<IResult> (Guid worldId, int? page, string? search, HttpContext http, AppDbContext db) =>
@@ -216,7 +206,6 @@ public static class WorldEndpoints
     }
     private sealed record WorldAccess(bool Member, bool Master, bool Write, bool Owner);
     public sealed record WorldInput(string Name, string Description);
-    public sealed record WorldLinkInput(Guid? WorldId);
     public sealed record ArticleInput(string Title, string Body, string Category, string Visibility, int Revision);
     public sealed record LinkInput(Guid TargetId, string Label);
 }

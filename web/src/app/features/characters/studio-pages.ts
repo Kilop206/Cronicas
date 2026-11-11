@@ -180,11 +180,13 @@ export class CharacterEditorPage implements OnDestroy {
     const current = this.character(); if (!current || event && event.characterId !== current.id) return;
     this.realtimeOffline.set(false);
     if (event && event.type !== 'CharacterDeleted' && event.revision !== null && event.revision <= current.version) return;
-    if (this.saving() || this.ruleBusy() || this.editRevision > 0 && !this.saved()) {
+    const modelChanged = event?.type === 'CampaignSystemChanged';
+    if (this.pendingChanges() || this.secretBusy() || this.secret() && this.secretDraft.trim() !== this.secret()?.notes) {
       // Never merge a remote snapshot into a pending local edit. The server still enforces expectedVersion.
-      if (event) { clearTimeout(this.saveTimer); this.observedRemoteVersion = Math.max(this.observedRemoteVersion, event.type === 'CharacterDeleted' ? Infinity : event.revision ?? 0); this.remoteRevision.set(true); }
+      if (event) { clearTimeout(this.saveTimer); this.observedRemoteVersion = Math.max(this.observedRemoteVersion, event.type === 'CharacterDeleted' || modelChanged ? Infinity : event.revision ?? 0); this.remoteRevision.set(true); }
       return;
     }
+    if (modelChanged && !current.systemVersionId) { this.loadCharacter(current.id); return; }
     const revision = this.editRevision;
     this.api.character(current.id).subscribe({ next: item => {
       if (this.character()?.id !== current.id || this.editRevision !== revision || this.saving() || this.ruleBusy()) return;

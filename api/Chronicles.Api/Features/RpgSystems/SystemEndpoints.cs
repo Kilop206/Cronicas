@@ -123,23 +123,13 @@ public static class SystemEndpoints
         api.MapDelete("/systems/{id:guid}", async Task<IResult> (Guid id, HttpContext http, AppDbContext db) =>
         {
             if (UserId(http) is not { } userId) return Results.Unauthorized();
-            var system = await db.RpgSystems.SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == userId);
+            await using var transaction = await db.Database.BeginTransactionAsync(http.RequestAborted);
+            var system = await db.RpgSystems.FromSqlInterpolated($"SELECT * FROM rpg_systems WHERE \"Id\" = {id} AND \"OwnerId\" = {userId} FOR UPDATE").SingleOrDefaultAsync(http.RequestAborted);
             if (system is null) return Results.NotFound();
             if (await db.Campaigns.AnyAsync(x => x.SystemId == id)) return Results.Conflict(new { message = "Remova este sistema das campanhas antes de excluí-lo." });
             if (await db.RpgSystemVersions.AnyAsync(x => x.RpgSystemId == id)) return Results.Conflict(new { message = "Este sistema possui versões fixadas em fichas e precisa ser preservado." });
             db.RpgSystems.Remove(system); await db.SaveChangesAsync();
-            return Results.NoContent();
-        });
-
-        api.MapPatch("/campaigns/{campaignId:guid}/system", async Task<IResult> (Guid campaignId, SetSystemInput input, HttpContext http, AppDbContext db) =>
-        {
-            if (UserId(http) is not { } userId) return Results.Unauthorized();
-            var campaign = await db.Campaigns.SingleOrDefaultAsync(x => x.Id == campaignId && x.OwnerId == userId);
-            if (campaign is null) return Results.NotFound();
-            var allowed = input.SystemId is null || await db.RpgSystems.AnyAsync(x => x.Id == input.SystemId && x.OwnerId == userId);
-            if (!allowed) return Results.ValidationProblem(new Dictionary<string, string[]> { ["systemId"] = ["Sistema indisponível."] });
-            campaign.SystemId = input.SystemId; campaign.UpdatedAt = DateTime.UtcNow;
-            await db.SaveChangesAsync();
+            await transaction.CommitAsync(http.RequestAborted);
             return Results.NoContent();
         });
     }
@@ -226,5 +216,4 @@ public static class SystemEndpoints
         string? RendererMode = null, int? Revision = null, Dictionary<string, string>? FieldRenames = null,
         NpcTemplate[]? NpcTemplates = null, CthulhuOccupationDefinition? CthulhuOccupations = null);
     public sealed record RestoreSystemInput(int ExpectedRevision);
-    public sealed record SetSystemInput(Guid? SystemId);
 }
