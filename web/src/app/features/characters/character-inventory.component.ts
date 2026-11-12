@@ -18,6 +18,11 @@ const blank = (): InventoryInput => ({ name: '', category: 'item', quantity: 1, 
         <article *ngFor="let item of items()" class="inventory-row">
           <div><strong>{{ item.name }}</strong><small>{{ categoryLabel(item.category) }} · {{ item.quantity }} × {{ item.weight }} de peso</small><p *ngIf="item.notes">{{ item.notes }}</p></div>
           <div *ngIf="character.canEdit" class="inventory-actions">
+            <div class="inventory-quantity" role="group" [attr.aria-label]="'Quantidade de ' + item.name">
+              <button type="button" [attr.aria-label]="'Diminuir quantidade de ' + item.name" [disabled]="busy() || !!editingId() || item.quantity <= 1" (click)="adjustQuantity(item, -1)">−</button>
+              <span aria-hidden="true">{{ item.quantity }}</span>
+              <button type="button" [attr.aria-label]="'Aumentar quantidade de ' + item.name" [disabled]="busy() || !!editingId() || item.quantity >= 9999" (click)="adjustQuantity(item, 1)">+</button>
+            </div>
             <button type="button" class="text-link" (click)="edit(item)" [disabled]="busy()">Editar</button>
             <button type="button" class="text-link danger" (click)="remove(item)" [disabled]="busy()">{{ removingId() === item.id ? 'Confirmar exclusão' : 'Excluir' }}</button>
           </div>
@@ -44,7 +49,11 @@ const blank = (): InventoryInput => ({ name: '', category: 'item', quantity: 1, 
     .inventory-row strong { display: block; font: 20px var(--font-editorial); }
     .inventory-row small { display: block; color: var(--muted); margin-top: 3px; }
     .inventory-row p { margin: 8px 0 0; white-space: pre-wrap; }
-    .inventory-actions { display: flex; flex-wrap: wrap; gap: 12px; }
+    .inventory-actions { display: flex; align-items: center; flex-wrap: wrap; gap: 12px; }
+    .inventory-quantity { display: inline-flex; align-items: center; gap: 8px; }
+    .inventory-quantity button { min-width: 32px; min-height: 32px; border: 1px solid var(--border); background: transparent; color: var(--text); cursor: pointer; }
+    .inventory-quantity button:disabled { opacity: .45; cursor: default; }
+    .inventory-quantity span { min-width: 1.5em; text-align: center; font-variant-numeric: tabular-nums; }
     .inventory-form { border-top: 1px solid var(--border); padding-top: 18px; }
     .inventory-fields { display: grid; grid-template-columns: minmax(180px, 2fr) repeat(3, minmax(95px, 1fr)); gap: 12px; }
     .inventory-form label { margin-bottom: 12px; }
@@ -64,6 +73,16 @@ export class CharacterInventoryComponent implements OnInit {
   categoryLabel(category: InventoryItem['category']) { return ({ item: 'Item', equipment: 'Equipamento', weapon: 'Arma', consumable: 'Consumível', other: 'Outro' })[category]; }
   edit(item: InventoryItem) { this.editingId.set(item.id); this.removingId.set(null); this.draft = { name: item.name, category: item.category, quantity: item.quantity, weight: item.weight, notes: item.notes, version: item.version }; }
   cancel() { this.editingId.set(null); this.draft = blank(); }
+  adjustQuantity(item: InventoryItem, delta: -1 | 1) {
+    const quantity = item.quantity + delta;
+    if (this.busy() || this.editingId() || quantity < 1 || quantity > 9999) return;
+    this.error.set(''); this.busy.set(true); this.removingId.set(null);
+    const input: InventoryInput = { name: item.name, category: item.category, quantity, weight: item.weight, notes: item.notes, version: item.version };
+    this.api.updateInventoryItem(this.character.id, item.id, input).pipe(finalize(() => this.busy.set(false))).subscribe({
+      next: updated => this.items.update(items => items.map(current => current.id === updated.id ? updated : current)),
+      error: e => this.error.set(apiError(e))
+    });
+  }
   save() {
     if (this.busy()) return;
     this.error.set(''); this.busy.set(true);

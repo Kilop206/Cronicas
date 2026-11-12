@@ -50,6 +50,12 @@ try {
   assert.equal(await inventory.getByLabel('Quantidade', { exact: true }).inputValue(), '4', 'Reload shows authoritative value');
   await inventory.getByLabel('Quantidade', { exact: true }).fill('5');
   assert.equal((await saved('PUT', 'inventory', () => inventory.getByRole('button', { name: 'Salvar item', exact: true }).click())).version, 3);
+  const reduced = await saved('PUT', 'inventory', () => row.getByRole('button', { name: 'Diminuir quantidade de Corda de ensaio' }).click());
+  assert.equal(reduced.quantity, 4);
+  assert.equal(reduced.version, 4);
+  const increased = await saved('PUT', 'inventory', () => row.getByRole('button', { name: 'Aumentar quantidade de Corda de ensaio' }).click());
+  assert.equal(increased.quantity, 5);
+  assert.equal(increased.version, 5);
   await row.getByRole('button', { name: 'Excluir', exact: true }).click();
   await saved('DELETE', 'inventory', () => row.getByRole('button', { name: 'Confirmar exclusão', exact: true }).click());
   await inventory.getByText('Nenhum item registrado.', { exact: true }).waitFor();

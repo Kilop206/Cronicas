@@ -40,6 +40,15 @@ const resources: Record<ResourceKey, { label: string; max: MaxResourceKey }> = {
           <strong>{{ block.title || resourceLabel(block.key) }} · {{ resourceValue(block.key) }} / {{ resourceValue(resourceMaxKey(block)) }}</strong>
           <div class="sheet-resource-track" role="meter" [attr.aria-label]="block.title || resourceLabel(block.key)" [attr.aria-valuenow]="resourceValue(block.key)" aria-valuemin="0" [attr.aria-valuemax]="resourceValue(resourceMaxKey(block))"><span [style.width.%]="resourcePercent(block)"></span></div>
           <div *ngIf="mode === 'read' && resourceCanWrite(block)" class="sheet-resource-steps"><button type="button" [attr.aria-label]="'Diminuir ' + (block.title || resourceLabel(block.key))" [disabled]="resourceValue(block.key) <= 0" (click)="adjustResource(block, -1)">−</button><button type="button" [attr.aria-label]="'Aumentar ' + (block.title || resourceLabel(block.key))" [disabled]="resourceValue(block.key) >= resourceValue(resourceMaxKey(block))" (click)="adjustResource(block, 1)">+</button></div>
+          <details *ngIf="mode === 'read' && resourceCanWrite(block)" class="sheet-resource-adjust">
+            <summary>Alterar quantidade</summary>
+            <div class="sheet-resource-adjust-controls">
+              <label>Quantidade<input type="number" inputmode="numeric" min="1" step="1" [attr.aria-label]="'Quantidade para alterar ' + (block.title || resourceLabel(block.key))" [ngModel]="resourceAmount(block)" (ngModelChange)="resourceAmounts[block.key || ''] = $event" [ngModelOptions]="{standalone: true}"></label>
+              <button type="button" [disabled]="!validResourceAmount(block) || resourceValue(block.key) <= 0" (click)="adjustByAmount(block, -1)">Diminuir</button>
+              <button type="button" [disabled]="!validResourceAmount(block) || resourceValue(block.key) >= resourceValue(resourceMaxKey(block))" (click)="adjustByAmount(block, 1)">Aumentar</button>
+            </div>
+            <small>O valor permanece entre zero e o máximo.</small>
+          </details>
           <div *ngIf="mode === 'edit'" class="sheet-resource-controls"><label>Atual<input type="number" [ngModel]="resourceValue(block.key)" (ngModelChange)="setResourceValue(block.key, $event)" [ngModelOptions]="{standalone: true}" min="0" max="999999"></label><label>Máximo<input type="number" [ngModel]="resourceValue(resourceMaxKey(block))" (ngModelChange)="setResourceValue(resourceMaxKey(block), $event)" [ngModelOptions]="{standalone: true}" min="0" max="999999"></label></div>
         </ng-container>
         <ng-container *ngIf="block.kind === 'tracker'"><strong>{{ block.title || resourceLabel(block.key) }} · {{ resourceValue(block.key) }} / {{ resourceValue(resourceMaxKey(block)) }}</strong>
@@ -75,6 +84,13 @@ const resources: Record<ResourceKey, { label: string; max: MaxResourceKey }> = {
     .custom-sheet-tabs button { flex: 0 0 auto; min-height: 44px; padding: 11px 15px; border: 0; border-bottom: 2px solid transparent; background: transparent; color: var(--muted); font-weight: 600; white-space: nowrap; }
     .custom-sheet-tabs button:hover, .custom-sheet-tabs button.active { border-color: var(--sheet-accent); color: var(--text); background: color-mix(in srgb, var(--sheet-accent) 9%, transparent); }
     .sheet-canvas-block label { display: block; min-width: 0; margin: 12px 0 0; }
+    .sheet-resource-adjust { margin-top: 10px; }
+    .sheet-resource-adjust summary { cursor: pointer; color: var(--sheet-accent); font-size: 0.85rem; font-weight: 600; }
+    .sheet-resource-adjust-controls { display: flex; flex-wrap: wrap; align-items: end; gap: 7px; margin-top: 8px; }
+    .sheet-resource-adjust-controls label { flex: 1 1 80px; margin: 0; font-size: 0.8rem; }
+    .sheet-resource-adjust-controls input { width: 100%; min-width: 0; }
+    .sheet-resource-adjust-controls button { min-height: 38px; }
+    .sheet-resource-adjust > small { display: block; margin-top: 6px; color: var(--muted); }
     .sheet-resource-controls { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 9px; }
     .sheet-resource-track { height: 5px; margin: 13px 0 5px; background: var(--border); }
     .sheet-resource-track span { display: block; height: 100%; background: var(--sheet-accent); }
@@ -104,6 +120,7 @@ export class SheetLayoutComponent {
   @Output() changed = new EventEmitter<void>();
   @Output() restored = new EventEmitter<Character>();
   selectedPageId = signal('');
+  resourceAmounts: Record<string, number | null> = {};
   activePage(): SheetPage { return this.layout.pages.find(page => page.id === this.selectedPageId()) || this.layout.pages[0]; }
   pageNumber(page: SheetPage) { return String(this.layout.pages.indexOf(page) + 1).padStart(2, '0'); }
   visiblePages() { return this.mode === 'print' ? this.layout.pages : [this.activePage()]; }
@@ -118,6 +135,9 @@ export class SheetLayoutComponent {
     return Number(this.draft.fields[key || ''] ?? 0);
   }
   resourcePercent(block: SheetBlock) { const maximum = this.resourceValue(this.resourceMaxKey(block)); return Math.max(0, Math.min(100, maximum > 0 ? this.resourceValue(block.key) / maximum * 100 : 0)); }
+  resourceAmount(block: SheetBlock): number | null { const key = block.key || ''; return key in this.resourceAmounts ? this.resourceAmounts[key] : 1; }
+  validResourceAmount(block: SheetBlock) { const amount = this.resourceAmount(block); return amount !== null && Number.isSafeInteger(amount) && amount > 0; }
+  adjustByAmount(block: SheetBlock, direction: -1 | 1) { const amount = this.resourceAmount(block); if (this.resourceCanWrite(block) && amount !== null && this.validResourceAmount(block)) this.adjustResource(block, direction * amount); }
   adjustResource(block: SheetBlock, delta: number) { const max = this.resourceValue(this.resourceMaxKey(block)); this.setResourceValue(block.key, Math.max(0, Math.min(max, this.resourceValue(block.key) + delta))); }
   setResourceValue(key: string | null, value: number) {
     if (!key) return;
