@@ -29,3 +29,70 @@ Base auditada: `f3f51ae`. Implementação separada em commits de backend e front
 - `docs/architecture/*`, `docs/plugins/*`, `docs/development/*`, OpenAPI v1, SQL de release e `docs/visual-validation/architecture/` documentam código, operação, extensão, evidências e limites.
 
 Não foram comitadas regenerações aleatórias das capturas antigas de `docs/visual-validation/rules`; elas foram mantidas no disco. Não houve alteração de produção. Para critérios ainda pendentes e próximos passos, consultar MIGRATION_PLAN e MICROSERVICES_ROADMAP.
+
+## Continuação — 09/11/2026
+
+- `Application/CharacterSheets`: `CreateCharacter`, `ReadCharacter`, `SaveCharacter`, contratos de escrita/leitura e projeções de resposta. `CharacterSheetSnapshot` é compartilhado por consultas e comandos; cálculos ocorrem em uma cópia do rascunho.
+- `Infrastructure/Characters`: `EfCharacterWriteStore` e `CharacterSheetPersistence` compartilham leitura, locks, mapeamento e classificação de conflitos com o adapter de regras. Inclui colisão específica do índice de histórico em saves simultâneos.
+- `Features/CharacterSheets`: adapters finos de criação/leitura/salvamento e DTO `VersionedCharacterInput`; removidos os handlers correspondentes com EF do endpoint antigo. `PluginEndpoints` oferece PUT v1 com revisão obrigatória. Formato e revisão opcional do PUT legado foram mantidos.
+- `Program.cs`/`RequestObservability`: DI dos novos casos de uso; entrada inválida mantém status 400 e erro de validação estruturado; correlação também é garantida após o tratamento central de exceções.
+- `CharacterWriteTests`, `CharacterWritePersistenceTests`, `scripts/character-writes-smoke.mjs`, teste de fronteira e CI cobrem os novos fluxos. OpenAPI e documentos foram atualizados. Nenhuma migration adicional foi criada.
+
+## Ciclo de vida — 09/11/2026
+
+- `Application/CharacterSheets/{CharacterLifecycleContracts,ReadCharacterLifecycle,DuplicateCharacter,RestoreCharacter}.cs`: projeções, porta e casos de uso para os quatro fluxos existentes. `CharacterSheetProjection` compartilha mapeamento de lista/documento.
+- `Infrastructure/Characters/EfCharacterLifecycleStore.cs`: histórico autorizado, reconstrução do arquivo e cópia com inventário/habilidades em transação. `CharacterSheetPersistence` compartilha o mapeamento neutro de estado.
+- `Features/CharacterSheets/CharacterLifecycleEndpoints.cs`: mesmos caminhos e formatos HTTP; removidos os quatro handlers e auxiliares sem uso de `Features/Characters/CharacterEndpoints.cs`. DI registrada em `Program.cs`.
+- `CharacterLifecycleTests`, `CharacterLifecyclePersistenceTests`, `scripts/character-lifecycle-smoke.mjs`, teste de fronteira Node e CI cobrem acesso, restauração e isolamento/rollback da cópia. Documentos de fronteiras, dados, segurança e testes atualizados. Nenhuma migration ou mudança de layout. Exclusão de personagem não existia e não foi adicionada.
+
+## Inventário e habilidades — 09/11/2026
+
+- `Domain/Characters/CharacterAssetValues.cs`: valores, limites, validação e normalização puros, com parser seguro de dados existente.
+- `Application/Characters/`: `CharacterAssetContracts`, `ManageCharacterInventory` e `ManageCharacterAbilities`, duas portas de persistência e respostas/projeções sem framework.
+- `Infrastructure/Characters/`: `EfCharacterInventoryStore`, `EfCharacterAbilityStore` e `CharacterAssetPersistence`; autorização no commit, locks e contagens serializadas por personagem para impedir exceder limites com requisições simultâneas.
+- `Features/Characters/CharacterInventoryEndpoints`, `CharacterAbilityEndpoints` e `CharacterAssetHttpResult`: adapters HTTP finos, mantendo DTOs/rotas/status; DI em Program.cs.
+- `CharacterAssetTests`, `CharacterAssetPersistenceTests`, fronteira Node, `scripts/character-assets-smoke.mjs` e CI; `web/character-assets-integration.mjs` verifica a interface existente em desktop/mobile, conflito, recarga, exclusão e rolagem.
+- Documentação de dados/eventos/segurança/fronteiras/testes atualizada. Sem migrations, mudanças de layout ou publicação em produção. Coleções continuam sem histórico/invalidação realtime específicos.
+
+## Favoritos, notas e OBS — 09/11/2026
+
+- `Domain/Identity/{CharacterAccessPolicy,OverlayCapability}` e `Domain/Characters/CharacterSecretValues`: exigências de acesso, validação/hash de capacidade e valores de notas privadas.
+- `Application/Characters/{CharacterCompanionContracts,ManageCharacterFavorites,ManageCharacterSecrets,ManageCharacterOverlay,CharacterOverlayProjection}`: portas/casos de uso, geração injetada e projeção pública com registry versionado.
+- `Infrastructure/Characters/{EfCharacterCompanionStore,CryptographicOverlayKeyGenerator}` e `CharacterAssetPersistence`: persistência autorizada, favoritos idempotentes, concorrência de notas, rotação e rollback; requisito de acesso explícito nos locks compartilhados.
+- `Features/CharacterSheets/CharacterCompanionEndpoints` e `Features/Characters/CharacterEndpoints`: sete handlers substituídos por adapters finos; arquivo anterior agora só registra grupos/identificação. DI em Program.cs. Cache no-store para notas/chaves/fontes.
+- `web/src/app/core/api/api.service.ts` e `features/characters/studio-pages.ts`: indicador opcional de existência das notas, usado para proteger o primeiro rascunho sem alterar layout ou clientes antigos.
+- `CharacterCompanionTests`, `CharacterCompanionPersistenceTests`, fronteira Node, `scripts/character-companions-smoke.mjs`/CI e `web/character-companions-integration.mjs`. ADR 0003 e documentação atualizados. Sem migration adicional ou produção alterada.
+
+## Versões fixadas por personagem — 09/11/2026
+
+- `Domain/RpgSystems/FrozenSystemTemplate`: captura independente, sem catálogo de NPCs/histórico mutável, com fingerprint. `Application/CharacterSheets/CharacterSystemContracts`: portas, DTOs e casos de uso ReadCharacterSystem/PinCharacterSystem.
+- `Infrastructure/Characters/EfCharacterSystemStore` e resolução compartilhada: fixação autorizada/transacional e modelo efetivo. Modelos `Character`/`RpgSystemVersion`, DbContext, migration `20261109121911_CharacterSystemVersions`, Designer/snapshot EF e proteções de imutabilidade/Down.
+- `CharacterSystemEndpoints`, DI e projeções legadas/v1: leitura de modelo por personagem, POST v1 com identidade/revisões obrigatórias e metadados de vínculo. Estado neutro da ficha permanece sem aceitar vínculo arbitrário.
+- Cópias, histórico, regras, OBS, exportação de conta, encontros e alvos de NPCs usam a definição efetiva. `SystemEndpoints` bloqueia a origem e exclui fichas fixadas de renomes/cálculos/restauração do template; sistemas com capturas não são apagados.
+- Cliente HTTP/contratos/editor Angular: modelo efetivo, ação Fixar versão atual, proteção de rascunhos, resync de vínculo e exportação individual com a definição. A cena de câmera OBS também consulta o modelo efetivo para mostrar recursos próprios. Sem troca dos layouts especializados.
+- Testes de arquitetura/aplicação/PostgreSQL, `character-systems-smoke.mjs`, `character-systems-integration.mjs`, CI e OpenAPI atualizados. SQL, ADR 0004, roteiro de release e quatro capturas novas documentados. Produção permanece sem alteração. A migração entre vínculos foi acrescentada na fatia seguinte; desfixação continua indisponível.
+
+## Migração assistida entre versões — 09/11/2026
+
+- `Domain/CharacterSheets/CharacterSystemMigration.cs`: plano puro com diferenças, mapeamentos sem colisões, valores legados preservados, defaults, limites e fórmulas seguras. Nenhum conversor de edição foi inventado.
+- `Application/CharacterSheets/CharacterSystemMigrationContracts.cs`: portas, destinos, prévia, comandos, recibo e digest canônico; somente mestres e fichas fixadas.
+- `Infrastructure/Characters/EfCharacterSystemMigrationStore.cs`: destinos autorizados, recibos, revalidação/locks, deduplicação e commit atômico com histórico/outbox/condições. `CharacterHistory` recebe recibo opcional no JSONB existente. Nenhuma migration SQL adicional.
+- `CharacterSystemEndpoints`, DI, contratos OpenAPI e serviços Angular: três rotas v1 novas, sem quebrar as existentes. `character-system-migration.component.ts` integra o assistente ao editor e recarrega o modelo após aplicar; a ficha especializada continua sendo renderizada pelo host anterior.
+- Testes de domínio/aplicação/PostgreSQL/HTTP/Chrome específicos, CI e documentação. Conversões entre edições, importação de modelos executáveis e publicação automática em produção ficam fora deste fluxo.
+
+## Campanhas, convites e acesso — 10/11/2026
+
+- `Domain/Campaigns/CampaignValues.cs`: detalhes normalizados, status/papéis permitidos, owner protegido e formato/hash de convite. Não depende de EF/ASP.NET.
+- `Application/Campaigns/CampaignContracts.cs`: consultas/casos de uso de campanhas, participantes e convites, portas específicas de persistência, capacidade e reconciliação realtime.
+- `Infrastructure/Campaigns/{CampaignPersistence,EfCampaignStore,EfCampaignInviteStore}.cs`: gravações transacionais, revalidação de autoridade, locks para concorrência de adesões e snapshots, RNG criptográfico e preservação das tabelas existentes.
+- `Features/Campaigns`: onze handlers usam casos de uso. Cinco handlers saíram de Program.cs; JSON/rotas e frontend existentes foram mantidos. `Program.cs` registra as novas portas/adapters.
+- `GameEventTypes`/`LegacyDomainEvents`, `CampaignAccessInvalidation`, `RoomRegistry`, `RoomAccessService` e `CampaignRoomHub`: eventos duráveis de papel/saída, reconciliação por papel/adesão, retomada de notificação após falha e consulta de papel atual antes de publicar mídia.
+- Testes em Application/PostgreSQL e sala, `scripts/campaigns-smoke.mjs`, `web/campaigns-integration.mjs`, CI e onze fronteiras. Capturas de convite desktop/mobile comprovam login/retorno/refresh/aceite reais. Sem nova migration SQL ou alteração de produção. Associações de sistema/universo, dashboard e Identity permanecem legados.
+
+## Associações de sistema/universo — 11/11/2026
+
+- `Application/Campaigns/CampaignAssociationContracts.cs`, contratos públicos `Application/RpgSystems/IRpgSystemCampaignAccess` e `Application/Worlds/IWorldCampaignAccess`: proprietário, tipo de associação e referência própria, sem dependência de frameworks.
+- `Infrastructure/Campaigns/EfCampaignAssociationStore` e adapters públicos de Registry/Worlds: transação, revalidação, referência protegida, conflitos por vínculo e no-op sem regravação.
+- `Features/Campaigns/CampaignAssociationEndpoints`: duas rotas preservadas extraídas dos catálogos; DI atualizada. Exclusões existentes de sistemas/universos bloqueiam a referência antes de conferir uso, evitando disputa de FK com a associação. Não foram extraídos todos os CRUDs desses catálogos.
+- `GameEventTypes`, ponte outbox e `SheetUpdatesHub`: eventos de associação atômicos e invalidação autorizada apenas de fichas não fixadas. O editor recarrega o modelo limpo ou preserva edição/notas privadas com salvamento pausado.
+- Testes de aplicação/PostgreSQL/HTTP/SignalR/Chrome, doze fronteiras, CI, documentação e três capturas. Nenhuma migration SQL, transformação de estado de personagens ou alteração de produção. Identity/dashboard e demais contextos continuam pendentes.

@@ -26,6 +26,7 @@ await using (var create = new NpgsqlCommand($"CREATE DATABASE \"{database}\"", a
 var settings = new NpgsqlConnectionStringBuilder(configured) { Database = database, Pooling = false };
 AppDbContext Context() => new(new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(settings.ConnectionString).Options);
 const string previousMigration = "20261104120000_NpcThreatSheets";
+const string outboxMigration = "20261104172257_IntegrationOutbox";
 try
 {
     await using var db = Context();
@@ -43,7 +44,8 @@ try
     Check(!(await db.Database.GetPendingMigrationsAsync()).Any(), "All migrations applied.");
     var latest = (await db.Database.GetAppliedMigrationsAsync()).Last();
     var sql = migrator.GenerateScript(previousMigration, latest, MigrationsSqlGenerationOptions.Idempotent);
-    Check(sql.Contains("CREATE TABLE integration_outbox") && !sql.Contains("DROP TABLE") && !sql.Contains("DELETE FROM") && !sql.Contains("UPDATE characters"), "Release migration must only add outbox schema.");
+    Check(sql.Contains("CREATE TABLE integration_outbox") && sql.Contains("CREATE TABLE rpg_system_versions") &&
+        !sql.Contains("DROP TABLE") && !sql.Contains("DELETE FROM") && !sql.Contains("UPDATE characters"), "Release migrations must only add schema without backfilling character data.");
     var migrationCount = (await db.Database.GetAppliedMigrationsAsync()).Count();
     await db.Database.ExecuteSqlRawAsync(sql);
     await db.Database.ExecuteSqlRawAsync(sql);
@@ -52,8 +54,10 @@ try
     var root = new DirectoryInfo(Directory.GetCurrentDirectory());
     while (root is not null && !File.Exists(Path.Combine(root.FullName, "compose.yaml"))) root = root.Parent;
     var output = Path.Combine(root!.FullName, "docs/architecture/releases"); Directory.CreateDirectory(output);
-    await File.WriteAllTextAsync(Path.Combine(output, "integration-outbox-up.sql"), sql.TrimEnd() + "\n");
-    await File.WriteAllTextAsync(Path.Combine(output, "integration-outbox-down.sql"), migrator.GenerateScript(latest, previousMigration).TrimEnd() + "\n");
+    await File.WriteAllTextAsync(Path.Combine(output, "integration-outbox-up.sql"), migrator.GenerateScript(previousMigration, outboxMigration, MigrationsSqlGenerationOptions.Idempotent).TrimEnd() + "\n");
+    await File.WriteAllTextAsync(Path.Combine(output, "integration-outbox-down.sql"), migrator.GenerateScript(outboxMigration, previousMigration).TrimEnd() + "\n");
+    await File.WriteAllTextAsync(Path.Combine(output, "character-system-versions-up.sql"), migrator.GenerateScript(outboxMigration, latest, MigrationsSqlGenerationOptions.Idempotent).TrimEnd() + "\n");
+    await File.WriteAllTextAsync(Path.Combine(output, "character-system-versions-down.sql"), migrator.GenerateScript(latest, outboxMigration).TrimEnd() + "\n");
 
     var user = new User { Email = "owner@example.test", PasswordHash = "fixture", DisplayName = "Owner" };
     var system = new RpgSystem { OwnerId = user.Id, Name = "Renamed campaign system", SchemaJson = JsonSerializer.Serialize(new SystemDefinition([
@@ -127,6 +131,14 @@ try
     Check(await db.Users.AnyAsync(u => u.Id == sentinel) && await db.Characters.AnyAsync(c => c.Id == character.Id && c.Health == 17), "Rollback preserves all game data.");
     await db.Database.MigrateAsync();
     Check(await db.Characters.AnyAsync(c => c.Id == character.Id && c.Version == 2), "Re-upgrade preserves revision and state.");
+    await CharacterWritePersistenceTests.Run(Context);
+    await CampaignPersistenceTests.Run(Context);
+    await CampaignAssociationPersistenceTests.Run(Context);
+    await CharacterLifecyclePersistenceTests.Run(Context);
+    await CharacterAssetPersistenceTests.Run(Context);
+    await CharacterCompanionPersistenceTests.Run(Context);
+    await CharacterSystemMigrationPersistenceTests.Run(Context);
+    await CharacterSystemPersistenceTests.Run(Context);
     Console.WriteLine("PostgreSQL: full migration chain, upgrade/rollback/re-upgrade, preserved data, exact EF snapshot, atomic events/history, stale writes, IDOR, retries/idempotency and concurrent claims passed.");
 }
 finally

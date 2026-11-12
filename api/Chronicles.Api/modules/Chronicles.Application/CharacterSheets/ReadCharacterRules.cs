@@ -2,9 +2,9 @@ using Chronicles.Domain;
 
 namespace Chronicles.Application.CharacterSheets;
 
-public sealed record CharacterRulesQueryResult(CharacterRuleSnapshot Character, RPGSystemPlugin? Plugin, RuleView? Rules);
+public sealed record CharacterRulesQueryResult(CharacterSheetSnapshot Character, RPGSystemPlugin? Plugin, RuleView? Rules);
 
-public sealed class ReadCharacterRules(ICharacterRuleStore store, RpgPluginRegistry registry)
+public sealed class ReadCharacterRules(ICharacterSheetReader store, RpgPluginRegistry registry)
 {
     public async Task<CharacterRulesQueryResult?> Read(Guid id, Guid actor, CancellationToken ct = default)
     {

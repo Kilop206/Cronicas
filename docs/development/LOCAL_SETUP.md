@@ -22,7 +22,7 @@ dotnet run --project api/Chronicles.Api
 
 Em outro terminal: `npm --prefix web ci`, depois `npm --prefix web start -- --port 4200`. O proxy Angular encaminha `/api`, WebSockets e `/health` para 5099. Se SignalR indicar indisponibilidade mas REST funcionar, confira primeiro a allowlist de Origin e o proxy `ws: true`; não desative autenticação.
 
-Health: `/health/live` processo, `/health/ready` e `/health` PostgreSQL. OpenAPI em Development: `/openapi/v1.json`. API v1 nova: `/api/v1/rpg-plugins` e `/api/v1/characters/{id}/sheet`, ambas autenticadas. Rotas `/api` anteriores continuam disponíveis.
+Health: `/health/live` processo, `/health/ready` e `/health` PostgreSQL. OpenAPI em Development: `/openapi/v1.json`. API v1: GET `/api/v1/rpg-plugins` e GET/PUT `/api/v1/characters/{id}/sheet`, autenticados. O PUT v1 exige `version` no JSON e devolve envelope/ETag atualizados. Rotas `/api` anteriores continuam disponíveis; o PUT legado mantém a versão opcional.
 
 ## Ferramentas EF
 
@@ -32,8 +32,28 @@ Instale `dotnet-ef` 10.0.13 em tool path local ou em sua instalação de ferrame
 dotnet ef migrations add Nome --project api/Chronicles.Api/modules/Chronicles.Infrastructure --startup-project api/Chronicles.Api --output-dir Persistence/Migrations --namespace Chronicles.Api.Migrations
 ```
 
+Se usar `--no-build`, informe a mesma configuração do build (`--configuration Release` para binários Release); apontar para Debug antigo pode gerar uma migration vazia. Sempre verificar `HasPendingModelChanges` e o SQL no banco temporário antes de publicar. A migration `20261109121911_CharacterSystemVersions` é aditiva, sem backfill; não executar seu Down com capturas. Ver `docs/architecture/releases/README.md` para ordem e limites de rollback.
+
 Nunca suprimir `PendingModelChangesWarning` para fazer uma migration passar. Gere snapshot/migration corretos e execute a suíte de persistência.
 
 ## Produção
 
 Não usar Development em produção para contornar a política de migrations. Revisar SQL/backup/staging antes de aplicar a migration de outbox; a nova API para com erro claro se houver migration pendente. A aplicação anterior pode continuar em operação até o release preparado. Nenhuma credencial externa é necessária para desenvolver/testar esta refatoração local.
+
+## Exercitar a migração de versões
+
+Com API/frontend locais e as migrations existentes aplicadas, crie um sistema próprio, associe-o à campanha, crie uma ficha e fixe seu modelo como mestre. Altere o sistema e abra a ficha fixada: Migrar versão da ficha oferece destino atual/arquivado, mapeamentos, ajustes e prévia. Confirmar cria outra revisão; para voltar, escolha a captura anterior no mesmo assistente. Nunca automatize esse procedimento sobre personagens reais. Os scripts e as limitações estão em TESTING e ADR 0005.
+
+O nome efetivo da configuração de origens é `ALLOWED_ORIGINS`, uma lista separada por vírgulas, por exemplo `http://127.0.0.1:8082,http://localhost:8082`. Sem a origem do frontend local, escritas e negociação SignalR pelo navegador recebem 403, mesmo quando chamadas HTTP sem Origin passam. Não remova a checagem de origem para executar os testes.
+
+## Validar campanhas e convites
+
+Os casos de uso de campanhas/participantes/convites utilizam o schema existente, sem SQL adicional. Execute `scripts/campaigns-smoke.mjs` e `scripts/room-smoke.mjs` com `SMOKE_BASE_URL` no frontend local. Para o percurso real de login/convite/refresh, execute `web/campaigns-integration.mjs` com `ARCHITECTURE_BROWSER_URL`; o script usa Chrome instalado e contas descartáveis.
+
+Se a porta 5544 recusar conexão, confira o Docker e o PostgreSQL local antes de rodar a suíte de persistência. Não inicie/remova containers de outros projetos. Caso substitua a API de validação e o Nginx ainda use seu IP anterior, reinicie somente o frontend local depois de a nova API ficar ready. Não alterar o rate limit para acomodar muitos cadastros de fixtures; separar grupos com reinício da API local é suficiente.
+
+## Associações e referências
+
+Os novos contratos de Registry/Worlds precisam compartilhar o DbContext/unidade de trabalho da associação; exigem transação ativa para manter a referência protegida. As inscrições de DI estão em Program.cs. Não registrar outro contexto/banco para esses adapters sem rever o protocolo da ADR 0007. Nenhum SQL adicional é necessário além das migrations já existentes da branch.
+
+Use `scripts/campaign-associations-smoke.mjs` para HTTP/SignalR e `web/campaign-associations-integration.mjs` para a troca real de modelo e os rascunhos no Chrome. A base mutável .NET teve download lento nesta validação; um Dockerfile apenas local, em `.docker-local/` ignorado, fixou os mesmos digests anteriores para testar a aplicação. As instruções do Dockerfile versionado não foram alteradas; os digests e o limite dessa evidência estão em TESTING. Revalidar a base escolhida em staging antes de publicar.

@@ -44,8 +44,19 @@ jobs:
           docker compose up -d --build
           for i in $(seq 1 30); do curl -fsS http://localhost:8081/health && break || sleep 3; done
           SMOKE_MAILPIT_URL=http://localhost:8025 node scripts/smoke.mjs
+          SMOKE_BASE_URL=http://localhost:8081 node scripts/character-writes-smoke.mjs
+          SMOKE_BASE_URL=http://localhost:8081 node scripts/character-assets-smoke.mjs
+          SMOKE_BASE_URL=http://localhost:8081 node scripts/character-companions-smoke.mjs
+          SMOKE_BASE_URL=http://localhost:8081 node scripts/character-systems-smoke.mjs
+          docker compose restart api
+          for i in $(seq 1 30); do curl -fsS http://localhost:8081/health && break || sleep 2; done
+          SMOKE_BASE_URL=http://localhost:8081 node scripts/character-migrations-smoke.mjs
+          SMOKE_BASE_URL=http://localhost:8081 node scripts/character-lifecycle-smoke.mjs
           SMOKE_BASE_URL=http://localhost:8081 node scripts/sheet-events-smoke.mjs
           docker compose restart api
-          node scripts/room-smoke.mjs
+          for i in $(seq 1 30); do curl -fsS http://localhost:8081/health && break || sleep 2; done
+          SMOKE_BASE_URL=http://localhost:8081 node scripts/campaigns-smoke.mjs
+          SMOKE_BASE_URL=http://localhost:8081 node scripts/campaign-associations-smoke.mjs
+          SMOKE_BASE_URL=http://localhost:8081 node scripts/room-smoke.mjs
       - if: always()
         run: docker compose down

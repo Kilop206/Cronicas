@@ -18,7 +18,7 @@ Use o editor de sistemas existente para definir campos, listas/tabelas, cálculo
 
 Não alterar o significado de uma versão já salva. Acrescentar versão nova, manter leitura da anterior e preparar migração explícita com `SheetSchemaMigration`/renomes/validação. Preservar campos desconhecidos históricos conforme a compatibilidade atual; não apagar inventário, habilidades ou campos antigos apenas para encaixar no modelo.
 
-O editor atual prepara atualização do sistema com revisão/histórico; personagens ainda seguem o sistema corrente da campanha. Vínculos imutáveis por ficha e restauração completa de edição histórica estão pendentes em DATA_ARCHITECTURE. Não prometer que declarar um novo número no manifest migra todos os personagens com segurança.
+O editor prepara atualização do sistema com revisão/histórico. Personagens sem vínculo continuam acompanhando a campanha; mestres podem usar Fixar versão atual para capturar o modelo e impedir alterações automáticas nessa ficha. A API exige ID de origem e revisões atuais e mantém a definição em JSONB imutável. Novas edições de template migram automaticamente apenas fichas não fixadas. Para fichas fixadas, Migrar versão da ficha abre a prévia com mapeamentos/ajustes/recibo. O mesmo ID de origem e a mesma edição são obrigatórios; declarar um novo número no manifest não cria um conversor de edição. Cópia, regras e OBS usam a mesma definição efetiva. Regras nunca capturadas não podem ser recuperadas automaticamente. Ver ADR 0005 e DATA_ARCHITECTURE.
 
 ## Checklist verificável
 

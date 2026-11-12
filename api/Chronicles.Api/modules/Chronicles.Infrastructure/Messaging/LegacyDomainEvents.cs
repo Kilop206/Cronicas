@@ -30,7 +30,14 @@ internal static class LegacyDomainEvents
                     if (changed) Add(GameEventTypes.CharacterSheetUpdated, c.Id, c.CampaignId, c.Version);
                     break;
                 case Campaign c when added: Add(GameEventTypes.CampaignCreated, c.Id, c.Id); break;
+                case Campaign c when changed:
+                    if (entry.Property(nameof(c.SystemId)).IsModified) Add(GameEventTypes.CampaignSystemChanged, c.Id, c.Id);
+                    if (entry.Property(nameof(c.WorldId)).IsModified) Add(GameEventTypes.CampaignWorldChanged, c.Id, c.Id);
+                    break;
                 case CampaignMembership m when added: Add(GameEventTypes.PlayerJoinedCampaign, m.UserId, m.CampaignId); break;
+                case CampaignMembership m when changed && entry.Property(nameof(m.Role)).IsModified:
+                    Add(GameEventTypes.CampaignMemberRoleChanged, m.UserId, m.CampaignId); break;
+                case CampaignMembership m when deleted: Add(GameEventTypes.CampaignMemberLeft, m.UserId, m.CampaignId); break;
                 case DiceRoll d when added: Add(GameEventTypes.DiceRolled, d.Id, d.CampaignId); break;
                 case RpgSystem s when added: Add(GameEventTypes.RPGSystemRegistered, s.Id); break;
             }

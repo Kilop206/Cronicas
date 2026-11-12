@@ -12,6 +12,8 @@ Não há motivo comprovado para transformar cada pasta atual em serviço. A base
 
 Identity, Campaign e Character permanecem juntos enquanto as invariantes exigirem joins/transações locais. Extrair primeiro seus contratos internos, não suas tabelas. Banco compartilhado entre serviços não representa isolamento concluído.
 
+Em 10/11/2026, o básico de Campaign ganhou portas/casos de uso e eventos de participação; em 11/11, associações passaram a contratos públicos com Registry/Worlds. O aceite e a proteção de referências ainda usam transações locais; adapters de personagem continuam consultando participação no mesmo banco. Antes de separar processos, definir autoridade de acesso/revogação, compatibilidade de referências e propagação de alterações. Não trocar locks locais por chamadas remotas dentro de uma transação longa. Identity, dashboard e restante dos catálogos são as próximas fronteiras a extrair.
+
 ## Infraestrutura por necessidade
 
 - **Redis/backplane:** antes de escalar sockets, suportar broadcast para todas as réplicas e revogação. Persistência de jogo permanece PostgreSQL; cache nunca substitui autorização/versão.

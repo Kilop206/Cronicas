@@ -5,6 +5,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize, Subscription, timer } from 'rxjs';
 import { ApiService, apiError, Character, CharacterInput, CharacterSecret, OverlayCharacter, OverlayIndicator, OverlayResource, RpgSystem, SheetFieldValue, SystemField } from '../../api';
 import { CharacterHistoryPanelComponent } from './character-history.component';
+import { CharacterSystemMigrationComponent } from './character-system-migration.component';
 import { CharacterInventoryComponent } from './character-inventory.component';
 import { CharacterAbilitiesComponent } from './character-abilities.component';
 import { SheetLayoutComponent } from '../sheets/editor/sheet-layout.component';
@@ -59,7 +60,7 @@ export class SheetFieldsViewComponent {
   }
 }
 
-@Component({ standalone: true, imports: [CommonModule, FormsModule, RouterLink, SheetFieldsViewComponent, SheetLayoutComponent, SheetPluginHostComponent, SheetRuleControlsComponent, SheetCollectionFieldComponent, SheetRollComponent, forwardRef(() => OverlayCardComponent), CharacterHistoryPanelComponent, CharacterInventoryComponent, CharacterAbilitiesComponent], template: `
+@Component({ standalone: true, imports: [CommonModule, FormsModule, RouterLink, SheetFieldsViewComponent, SheetLayoutComponent, SheetPluginHostComponent, SheetRuleControlsComponent, SheetCollectionFieldComponent, SheetRollComponent, forwardRef(() => OverlayCardComponent), CharacterHistoryPanelComponent, CharacterInventoryComponent, CharacterAbilitiesComponent, CharacterSystemMigrationComponent], template: `
   <main class="page" [class.narrow]="!renderer()" [class.immersive-sheet-page]="renderer()" *ngIf="!loading() && !systemLoading() && !systemFailed() && character() as item"><a [routerLink]="['/campaigns', item.campaignId, 'characters']" class="back-link">← Personagens</a>
     <div *ngIf="!renderer()" class="page-heading"><div><span class="overline">FICHA / CENA</span><h1>{{ item.name }}</h1><p>Ficha da campanha e composição para OBS.</p></div></div>
     <button type="button" class="text-link character-favorite" [attr.aria-pressed]="favorite()" [disabled]="favoriteBusy()" (click)="toggleFavorite()">{{ favorite() ? 'Remover dos favoritos' : 'Adicionar aos favoritos' }}</button>
@@ -67,7 +68,9 @@ export class SheetFieldsViewComponent {
     <div *ngIf="remoteRevision()" class="form-error" role="alert">A ficha foi alterada em outra sessão. Seu rascunho foi preservado e o salvamento foi pausado. Copie ou exporte suas alterações antes de recarregar. <button type="button" class="button button-small secondary" (click)="reloadRemoteSheet()">Recarregar ficha</button></div>
     <details *ngIf="!renderer()" class="obs-actions"><summary>Dados estruturados</summary><p>Exporte ou importe os campos da ficha em JSON.</p><button type="button" class="button button-small secondary" (click)="exportCharacter()">Exportar JSON</button><label *ngIf="item.canEdit" class="button button-small secondary">Importar JSON<input type="file" accept="application/json,.json" (change)="importCharacter($event)" [disabled]="saving()" hidden></label></details>
     <div *ngIf="error()" class="notice error" role="alert">{{ error() }}</div>
-    <section *ngIf="system() && !renderer() && (canChangeSheetRenderer() || compatibleSheetTemplates().length)" class="sheet-renderer-choice" aria-label="Apresentação da ficha"><div><strong>Esta campanha usa a composição personalizada de {{ system()?.name }}.</strong><small>Escolha um modelo visual para este mesmo sistema. Ao vincular outro modelo, campos faltantes são acrescentados. Os dados e a composição atual são preservados.</small></div><div *ngIf="canChangeSheetRenderer()" class="sheet-renderer-choice-actions"><label>Modelo visual<select [(ngModel)]="selectedSheetTemplate"><option value="">Escolha o sistema</option><option *ngFor="let template of sheetTemplateOptions" [value]="template.id">{{ template.name }}</option></select></label><button type="button" class="button button-small" [disabled]="systemBusy() || !selectedSheetTemplate" (click)="enableSpecializedSheet()">{{ systemBusy() ? 'Aplicando...' : 'Usar ficha visual especializada' }}</button></div><a *ngIf="!canChangeSheetRenderer()" [routerLink]="['/systems', system()?.id]" class="text-link">Ver configuração do sistema</a></section>
+    <section *ngIf="system() && !item.systemVersionId && !renderer() && (canChangeSheetRenderer() || compatibleSheetTemplates().length)" class="sheet-renderer-choice" aria-label="Apresentação da ficha"><div><strong>Esta campanha usa a composição personalizada de {{ system()?.name }}.</strong><small>Escolha um modelo visual para este mesmo sistema. Ao vincular outro modelo, campos faltantes são acrescentados. Os dados e a composição atual são preservados.</small></div><div *ngIf="canChangeSheetRenderer()" class="sheet-renderer-choice-actions"><label>Modelo visual<select [(ngModel)]="selectedSheetTemplate"><option value="">Escolha o sistema</option><option *ngFor="let template of sheetTemplateOptions" [value]="template.id">{{ template.name }}</option></select></label><button type="button" class="button button-small" [disabled]="systemBusy() || !selectedSheetTemplate" (click)="enableSpecializedSheet()">{{ systemBusy() ? 'Aplicando...' : 'Usar ficha visual especializada' }}</button></div><a *ngIf="!canChangeSheetRenderer()" [routerLink]="['/systems', system()?.id]" class="text-link">Ver configuração do sistema</a></section>
+    <div *ngIf="system() as model" class="form-actions sheet-version-status"><small>{{ item.systemVersionId ? 'Modelo fixado' : 'Acompanha o modelo da campanha' }} · {{ model.name }} · revisão {{ model.revision }}</small><button *ngIf="master() && !item.systemVersionId && activeTab === 'sheet'" type="button" class="text-link" [disabled]="!canPinSystemVersion()" (click)="pinSystemVersion()">Fixar versão atual</button><small *ngIf="master() && !item.systemVersionId">Fixar mantém este modelo mesmo após mudanças na campanha; a troca posterior exige migração.</small></div>
+    <app-character-system-migration *ngIf="master() && item.systemVersionId && system() && activeTab === 'sheet'" [character]="item" [system]="system()!" [available]="canMigrateSystemVersion()" (migrated)="onSystemMigrated($event)" />
     <div *ngIf="!system()?.layout && !renderer()" class="sheet-summary"><span class="character-thumb"><img *ngIf="draft.portraitUrl" [src]="draft.portraitUrl" alt=""></span><div><span class="overline">{{ systemLoading() ? 'CARREGANDO SISTEMA' : system()?.name || 'FICHA LIVRE' }}</span><h2>{{ draft.name }}</h2></div><div class="sheet-resource-summary"><span *ngFor="let resource of visibleResources()"><small>{{ resource.label }}</small><strong>{{ draft[resource.key] }} / {{ draft[maxKey(resource.key)] }}</strong></span></div></div>
     <nav class="sheet-tabs" aria-label="Seções da ficha"><button type="button" [class.active]="activeTab === 'sheet'" (click)="activeTab = 'sheet'">Ficha</button><ng-container *ngIf="!system()?.layout"><button type="button" [class.active]="activeTab === 'inventory'" (click)="activeTab = 'inventory'">Inventário</button><button type="button" [class.active]="activeTab === 'abilities'" (click)="activeTab = 'abilities'">Habilidades</button><button type="button" [class.active]="activeTab === 'history'" (click)="activeTab = 'history'">Histórico</button></ng-container><button *ngIf="master()" type="button" [class.active]="activeTab === 'secret'" (click)="activeTab = 'secret'">Mestre</button></nav>
     <div *ngIf="activeTab === 'sheet' && !system()?.layout && !renderer()" class="character-editor"><form *ngIf="item.canEdit" class="editor-panel" (ngSubmit)="save()" #form="ngForm">
@@ -125,7 +128,7 @@ export class CharacterEditorPage implements OnDestroy {
   renderer = () => resolveSheetRenderer(this.system());
   sheetTemplateOptions = SHEET_TEMPLATES;
   compatibleSheetTemplates = () => SHEET_TEMPLATES.filter(template => canAssociateTemplate(template.id, this.system()?.fields || []));
-  canChangeSheetRenderer = () => !!this.system() && this.system()?.ownerId === this.api.user()?.id;
+  canChangeSheetRenderer = () => !this.character()?.systemVersionId && !!this.system() && this.system()?.ownerId === this.api.user()?.id;
   enableSpecializedSheet() {
     const system = this.system();
     const template = this.sheetTemplateOptions.find(item => item.id === this.selectedSheetTemplate);
@@ -167,8 +170,7 @@ export class CharacterEditorPage implements OnDestroy {
           next: campaign => {
             const master = ['owner', 'gm', 'co-gm'].includes(campaign.role); this.master.set(master);
             if (master) this.api.characterSecret(id).subscribe({ next: secret => { this.secret.set(secret); this.secretDraft = secret.notes; }, error: e => this.error.set(apiError(e)) });
-            if (campaign.systemId) this.api.system(campaign.systemId).pipe(finalize(() => this.systemLoading.set(false))).subscribe({ next: system => { this.system.set(system); const compatible = this.compatibleSheetTemplates(); this.selectedSheetTemplate = compatible.find(template => template.id === system.templateId)?.id || (compatible.length === 1 ? compatible[0].id : ''); this.recalculate(); }, error: e => { this.systemFailed.set(true); this.error.set(apiError(e)); } });
-            else this.systemLoading.set(false);
+            this.api.characterSystem(id).pipe(finalize(() => this.systemLoading.set(false))).subscribe({ next: system => { this.system.set(system); const compatible = this.compatibleSheetTemplates(); this.selectedSheetTemplate = compatible.find(template => template.id === system?.templateId)?.id || (compatible.length === 1 ? compatible[0].id : ''); this.recalculate(); }, error: e => { this.systemFailed.set(true); this.error.set(apiError(e)); } });
           }, error: e => { this.systemFailed.set(true); this.systemLoading.set(false); this.error.set(apiError(e)); }
         });
       }, error: error => { this.systemLoading.set(false); this.error.set(apiError(error)); }
@@ -178,14 +180,17 @@ export class CharacterEditorPage implements OnDestroy {
     const current = this.character(); if (!current || event && event.characterId !== current.id) return;
     this.realtimeOffline.set(false);
     if (event && event.type !== 'CharacterDeleted' && event.revision !== null && event.revision <= current.version) return;
-    if (this.saving() || this.ruleBusy() || this.editRevision > 0 && !this.saved()) {
+    const modelChanged = event?.type === 'CampaignSystemChanged';
+    if (this.pendingChanges() || this.secretBusy() || this.secret() && this.secretDraft.trim() !== this.secret()?.notes) {
       // Never merge a remote snapshot into a pending local edit. The server still enforces expectedVersion.
-      if (event) { clearTimeout(this.saveTimer); this.observedRemoteVersion = Math.max(this.observedRemoteVersion, event.type === 'CharacterDeleted' ? Infinity : event.revision ?? 0); this.remoteRevision.set(true); }
+      if (event) { clearTimeout(this.saveTimer); this.observedRemoteVersion = Math.max(this.observedRemoteVersion, event.type === 'CharacterDeleted' || modelChanged ? Infinity : event.revision ?? 0); this.remoteRevision.set(true); }
       return;
     }
+    if (modelChanged && !current.systemVersionId) { this.loadCharacter(current.id); return; }
     const revision = this.editRevision;
     this.api.character(current.id).subscribe({ next: item => {
       if (this.character()?.id !== current.id || this.editRevision !== revision || this.saving() || this.ruleBusy()) return;
+      if ((current.systemVersionId ?? null) !== (item.systemVersionId ?? null)) { this.loadCharacter(current.id); return; }
       this.character.set(item); this.draft = { ...item, fields: { ...item.fields } }; this.remoteRevision.set(false);
     }, error: error => this.error.set(apiError(error)) });
   }
@@ -220,7 +225,7 @@ export class CharacterEditorPage implements OnDestroy {
   exportCharacter() {
     const item = this.character(); if (!item) return;
     const { name, portraitUrl, backgroundUrl, health, maxHealth, sanity, maxSanity, mana, maxMana, fields } = this.draft;
-    const document = { format: 'cronicas-character', formatVersion: 1, systemId: this.system()?.id || null, templateId: this.system()?.templateId || null, templateVersion: this.system()?.templateVersion || 1, character: { name, portraitUrl, backgroundUrl, health, maxHealth, sanity, maxSanity, mana, maxMana, fields } };
+    const document = { format: 'cronicas-character', formatVersion: 1, systemId: this.system()?.id || null, systemVersionId: item.systemVersionId ?? null, systemDefinition: item.systemVersionId ? this.system() : null, templateId: this.system()?.templateId || null, templateVersion: this.system()?.templateVersion || 1, character: { name, portraitUrl, backgroundUrl, health, maxHealth, sanity, maxSanity, mana, maxMana, fields } };
     const blob = new Blob([JSON.stringify(document, null, 2)], { type: 'application/json' });
     const url = URL.createObjectURL(blob); const link = this.document.createElement('a'); link.href = url; link.download = `cronicas-${item.id}.json`; link.click(); setTimeout(() => URL.revokeObjectURL(url), 1000);
   }
@@ -244,8 +249,12 @@ export class CharacterEditorPage implements OnDestroy {
     } catch (error) { this.error.set(error instanceof Error ? error.message : 'Não foi possível importar a ficha.'); }
   }
   canDuplicate() { return !this.saving() && (this.editRevision === 0 || this.saved()); }
+  canPinSystemVersion() { return this.master() && !this.character()?.systemVersionId && !this.systemBusy() && this.canDuplicate() && (!this.secret() || this.secretDraft.trim() === this.secret()?.notes); }
+  canMigrateSystemVersion() { return this.master() && !this.systemBusy() && !this.ruleBusy() && !this.secretBusy() && this.canDuplicate() && (!this.secret() || this.secretDraft.trim() === this.secret()?.notes); }
+  onSystemMigrated(item: Character) { this.loadCharacter(item.id); }
+  pinSystemVersion() { const current = this.character(), model = this.system(); if (!current || !model || !this.canPinSystemVersion()) return; this.error.set(''); this.systemBusy.set(true); this.api.pinCharacterSystem(current.id, current.version, model.id, model.revision).pipe(finalize(() => this.systemBusy.set(false))).subscribe({ next: () => this.loadCharacter(current.id), error: e => this.error.set(apiError(e)) }); }
   duplicate() { const current = this.character(); if (!current) return; this.error.set(''); this.saving.set(true); this.api.duplicateCharacter(current.id).pipe(finalize(() => this.saving.set(false))).subscribe({ next: item => void this.router.navigate(['/characters', item.id]), error: e => this.error.set(apiError(e)) }); }
-  saveSecret() { const current = this.character(), secret = this.secret(); if (!current || !secret) return; this.error.set(''); this.secretSaved.set(false); this.secretBusy.set(true); this.api.updateCharacterSecret(current.id, this.secretDraft, secret.revision).pipe(finalize(() => this.secretBusy.set(false))).subscribe({ next: result => { this.secret.set(result); this.secretSaved.set(true); }, error: e => this.error.set(apiError(e)) }); }
+  saveSecret() { const current = this.character(), secret = this.secret(); if (!current || !secret) return; this.error.set(''); this.secretSaved.set(false); this.secretBusy.set(true); this.api.updateCharacterSecret(current.id, this.secretDraft, secret.revision, secret.updatedAt !== null).pipe(finalize(() => this.secretBusy.set(false))).subscribe({ next: result => { this.secret.set(result); this.secretSaved.set(true); }, error: e => this.error.set(apiError(e)) }); }
   toggleFavorite() { const current = this.character(); if (!current) return; this.error.set(''); this.favoriteBusy.set(true); const request = this.favorite() ? this.api.removeCharacterFavorite(current.id) : this.api.addCharacterFavorite(current.id); request.pipe(finalize(() => this.favoriteBusy.set(false))).subscribe({ next: () => this.favorite.update(value => !value), error: e => this.error.set(apiError(e)) }); }
   ngOnDestroy() { clearTimeout(this.saveTimer); this.updates?.stop(); this.routeSubscription.unsubscribe(); }
   private pendingChanges() { return this.saving() || this.ruleBusy() || this.editRevision > 0 && !this.saved(); }

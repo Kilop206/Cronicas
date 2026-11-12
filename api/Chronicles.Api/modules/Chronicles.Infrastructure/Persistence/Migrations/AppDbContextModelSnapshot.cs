@@ -198,6 +198,9 @@ namespace Chronicles.Api.Migrations
                     b.Property<int>("Sanity")
                         .HasColumnType("integer");
 
+                    b.Property<Guid?>("SystemVersionId")
+                        .HasColumnType("uuid");
+
                     b.Property<DateTime>("UpdatedAt")
                         .HasColumnType("timestamp with time zone");
 
@@ -211,6 +214,8 @@ namespace Chronicles.Api.Migrations
                         .IsUnique();
 
                     b.HasIndex("OwnerId");
+
+                    b.HasIndex("SystemVersionId");
 
                     b.HasIndex("CampaignId", "Name");
 
@@ -818,6 +823,48 @@ namespace Chronicles.Api.Migrations
                     b.ToTable("rpg_systems", (string)null);
                 });
 
+            modelBuilder.Entity("Chronicles.Api.Models.RpgSystemVersion", b =>
+                {
+                    b.Property<Guid>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("ContentHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp with time zone");
+
+                    b.Property<string>("DefinitionJson")
+                        .IsRequired()
+                        .HasColumnType("jsonb");
+
+                    b.Property<string>("Description")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(120)
+                        .HasColumnType("character varying(120)");
+
+                    b.Property<Guid>("RpgSystemId")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("SourceRevision")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("RpgSystemId", "ContentHash")
+                        .IsUnique();
+
+                    b.ToTable("rpg_system_versions", (string)null);
+                });
+
             modelBuilder.Entity("Chronicles.Api.Models.User", b =>
                 {
                     b.Property<Guid>("Id")
@@ -1127,9 +1174,16 @@ namespace Chronicles.Api.Migrations
                         .OnDelete(DeleteBehavior.Restrict)
                         .IsRequired();
 
+                    b.HasOne("Chronicles.Api.Models.RpgSystemVersion", "SystemVersion")
+                        .WithMany()
+                        .HasForeignKey("SystemVersionId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
                     b.Navigation("Campaign");
 
                     b.Navigation("Owner");
+
+                    b.Navigation("SystemVersion");
                 });
 
             modelBuilder.Entity("Chronicles.Api.Models.CharacterAbility", b =>
@@ -1326,6 +1380,17 @@ namespace Chronicles.Api.Migrations
                         .OnDelete(DeleteBehavior.Restrict);
 
                     b.Navigation("Owner");
+                });
+
+            modelBuilder.Entity("Chronicles.Api.Models.RpgSystemVersion", b =>
+                {
+                    b.HasOne("Chronicles.Api.Models.RpgSystem", "System")
+                        .WithMany()
+                        .HasForeignKey("RpgSystemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("System");
                 });
 
             modelBuilder.Entity("Chronicles.Api.Models.UserSession", b =>

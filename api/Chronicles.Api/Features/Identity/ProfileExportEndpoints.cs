@@ -24,12 +24,15 @@ public static class ProfileExportEndpoints
                 .Select(x => new { x.Id, x.Name, x.Description, x.Status, x.AccentColor, x.WorldId, x.SystemId, x.CreatedAt, x.UpdatedAt }).ToListAsync();
             var characters = await db.Characters.AsNoTracking().Where(x => x.OwnerId == userId)
                 .Select(x => new { x.Id, x.CampaignId, x.Name, x.PortraitUrl, x.BackgroundUrl, x.Health, x.MaxHealth,
-                    x.Sanity, x.MaxSanity, x.Mana, x.MaxMana, x.FieldsJson, x.Version, x.UpdatedAt }).ToListAsync();
+                    x.Sanity, x.MaxSanity, x.Mana, x.MaxMana, x.FieldsJson, x.Version, x.UpdatedAt, x.SystemVersionId }).ToListAsync();
             var npcs = await db.Npcs.AsNoTracking().Where(x => x.Campaign.OwnerId == userId)
                 .Select(x => new { x.Id, x.CampaignId, x.Name, x.PortraitUrl, x.Appearance, x.Personality, x.Motivation,
                     x.Relationships, x.Location, x.Secrets, x.Status, x.Visibility, x.Health, x.MaxHealth,
                       x.Version, x.SheetJson, x.HistoryJson, x.CreatedAt, x.UpdatedAt }).ToListAsync();
             var characterIds = characters.Select(x => x.Id).ToArray();
+            var versionIds = characters.Where(x => x.SystemVersionId != null).Select(x => x.SystemVersionId!.Value).Distinct().ToArray();
+            var systemVersions = await db.RpgSystemVersions.AsNoTracking().Where(v => versionIds.Contains(v.Id))
+                .Select(v => new { v.Id, v.RpgSystemId, v.Name, v.Description, v.DefinitionJson, v.ContentHash, v.SourceRevision, v.CreatedAt }).ToListAsync();
             var inventory = await db.CharacterInventoryItems.AsNoTracking().Where(x => characterIds.Contains(x.CharacterId))
                 .Select(x => new { x.Id, x.CharacterId, x.Name, x.Category, x.Quantity, x.Weight, x.Notes, x.Version, x.CreatedAt, x.UpdatedAt }).ToListAsync();
             var abilities = await db.CharacterAbilities.AsNoTracking().Where(x => characterIds.Contains(x.CharacterId))
@@ -55,7 +58,7 @@ public static class ProfileExportEndpoints
                 .Select(x => new { x.Id, x.CampaignId, x.Body, x.Kind, x.CreatedAt }).ToListAsync();
 
             var export = new { exportedAt = DateTime.UtcNow, profile, memberships, invites, campaigns, characters, npcs, inventory, abilities, favorites, revisions,
-                worlds, articles, entries, systems, rolls, messages };
+                worlds, articles, entries, systems, systemVersions, rolls, messages };
             http.Response.Headers.CacheControl = "no-store";
             return Results.File(JsonSerializer.SerializeToUtf8Bytes(export, new JsonSerializerOptions(JsonSerializerDefaults.Web)),
                 "application/json", $"cronicas-dados-{DateTime.UtcNow:yyyyMMdd}.json");

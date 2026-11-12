@@ -1,13 +1,13 @@
 # Arquitetura implementada e direção de evolução
 
-A base permanece um monólito modular Angular 21/.NET 10/PostgreSQL. A primeira fatia hexagonal em execução é a consulta/execução de regras de personagens; a modularização completa de todos os CRUDs ainda não terminou. Não há microsserviços, broker, gateway ou segunda stack introduzidos por esta mudança.
+A base permanece um monólito modular Angular 21/.NET 10/PostgreSQL. As fatias hexagonais em execução abrangem personagens, coleções, histórico, OBS, regras, modelos fixados/migração e fluxos básicos de campanhas/convites/participantes. A modularização completa dos demais CRUDs ainda não terminou. Não há microsserviços, broker, gateway ou segunda stack introduzidos por esta mudança.
 
 ```mermaid
 flowchart LR
   UI[Angular: features + host de renderizadores] --> HTTP[API: adaptadores REST /api e /api/v1]
-  HTTP --> App[Application: ReadCharacterRules / ExecuteCharacterRule]
+  HTTP --> App[Application: personagens, campanhas e regras]
   App --> Domain[Domain: schemas, invariantes, políticas, plugins, regras e dados]
-  Infra[Infrastructure: EF CharacterRuleStore] --> App
+  Infra[Infrastructure: adapters EF de personagens, campanhas e regras] --> App
   Infra --> Domain
   Infra --> PG[(PostgreSQL: estado, histórico e outbox)]
   PG --> Dispatcher[OutboxDispatcher]
@@ -23,16 +23,20 @@ Os projetos ficam em `api/Chronicles.Api/modules/` para preservar o contexto Doc
 
 - **Schema:** `SystemDefinition`, `SystemField`, coleções, fórmulas e migrações de campos são tipos puros em Domain.
 - **Rules:** motores existentes OP 1.3, D&D 2014, T20 JdA 2024 v1.3 e CoC 7e foram extraídos sem alterar suas fórmulas. Registry resolve ID estável + edição + versão de template; versões desconhecidas não executam regras.
-- **Application:** consulta e comando são separados, compartilham uma porta específica e retornam contratos neutros de transporte. O comando verifica acesso, revisão, privilégios de mestre e validação antes de persistir.
+- **Application:** `CreateCharacter`, `ReadCharacter`, `SaveCharacter`, `ReadCharacterLifecycle`, `DuplicateCharacter`, `RestoreCharacter`, `ReadCharacterRules` e `ExecuteCharacterRule` usam portas específicas, compartilhando `CharacterSheetSnapshot` e projeções de consulta. Comandos verificam acesso, revisão, privilégios de mestre e validação antes de persistir. Leitura de ficha não depende de executar/descrever regras. Duplicação conserva o estado persistido; restauração valida o arquivo e reutiliza o commit de escrita existente.
 - **Persistence:** modelos relacionais EF e todas as migrations estão em Infrastructure. Seus namespaces/nomes de CLR anteriores são mantidos deliberadamente, evitando renomear entidades no modelo existente.
+- **Version binding:** captura JSONB imutável e vínculo nullable por personagem, com fallback legado. `PinCharacterSystem` verifica mestre/identidade/revisões; `ReadCharacterSystem` fornece o modelo efetivo ao editor. Regras, OBS, cópia, exportação e encontros seguem esse vínculo. A atualização do template não migra fichas fixadas.
+- **Character assets:** casos de uso específicos de inventário/habilidades, valores validados em Domain e adapters EF transacionais. A capacidade é verificada sob lock do personagem, com revisão independente de cada filho. As rotas e componentes Angular existentes foram preservados.
+- **Companions/OBS:** portas de favoritos/segredos/capacidades, política explícita de membro/mestre/dono e geração criptográfica isolada. A projeção OBS está em Application e usa o registry versionado; endpoints não fazem cálculos nem consultam EF. O editor envia o indicador de existência das notas para resolver a ambiguidade da revisão inicial legada.
 - **Presentation:** host Angular cria componentes próprios OP/D&D/CoC/T20, reaproveita suas instâncias e conecta outputs de edição/restauração/ocupação. O editor de personagem não importa layouts concretos. Templates livres mantêm o editor visual.
-- **Events:** ponte de transição transforma alterações EF em envelopes versionados gravados na mesma transação. Consumidor autorizado invalida fichas por SignalR; cliente busca novamente o estado do servidor.
+- **Campaigns:** detalhes/status, convites, participantes e associações foram extraídos para casos de uso/portas. Registry/Worlds oferecem contratos públicos de referência própria, protegida na mesma transação da campanha. Autoridade e concorrência são revalidadas; eventos notificam fichas não fixadas sem regravar personagens. Conta e restante dos catálogos ainda têm adapters legados.
+- **Events:** ponte de transição transforma alterações EF em envelopes versionados gravados na mesma transação. Consumidor autorizado invalida fichas por SignalR; cliente busca novamente o estado do servidor. Papel/saída de campanha também geram eventos duráveis, reconciliados com a participação atual para tolerar replay.
 
 ## Limites atuais
 
 `Features/*` organiza os adaptadores por responsabilidade, mas organização em pastas não significa isolamento completo de bounded contexts. Endpoints legados ainda acessam o `AppDbContext` compartilhado. `Entities` EF foram divididas por contexto, mas mantêm navegações cruzadas. As regras puras compartilham um assembly/namespace; dependências entre classes internas de RPG ainda não são impedidas por assembly separado.
 
-Não há modelo de leitura separado nem banco CQRS; a separação comando/consulta é seletiva, no fluxo real de regras. Não há isolamento de plugins de terceiros em execução: somente código compilado/revisado é carregado. Não há ficha independente da versão corrente do sistema da campanha; veja DATA_ARCHITECTURE.
+Não há banco CQRS separado; a separação comando/consulta é seletiva. Não há isolamento de plugins de terceiros em execução: somente código compilado/revisado é carregado. Fichas podem fixar e migrar versões explicitamente, com prévia/digest/recibo. Conversores entre edições, data de criação histórica e recuperação completa do schema de fichas nunca capturadas continuam pendentes. Veja DATA_ARCHITECTURE e ADR 0005.
 
 ## Operação
 

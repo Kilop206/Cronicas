@@ -1,4 +1,5 @@
 import type { Accent, User, AccountSession, Campaign, Dashboard, Page, Character, CharacterInput, OverlayCharacter, CharacterRevision, CharacterSecret, Npc, NpcInput, InventoryItem, InventoryInput, CharacterAbility, AbilityInput, RpgSystem, CampaignMember, World, WorldDetail, WorldArticle, WorldArticleLink, ChatMessage, EncounterParticipant, Encounter, EncounterSummary, WorldArticleInput, InvitePreview, NarrativeKind, NarrativeEntry, NarrativeInput, DiceRoll, DamageEvent, WeaponContext, DamageResolution, SearchResults } from '../contracts/api-models';
+import type { SystemMigrationInput, SystemMigrationOptions, SystemMigrationPreview } from '../contracts/api-models';
 import { DOCUMENT } from '@angular/common';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
@@ -100,7 +101,12 @@ export class ApiService {
   characterRevisions(id: string) { return this.http.get<CharacterRevision[]>(`/api/characters/${id}/revisions`, { withCredentials: true }); }
   restoreCharacterRevision(id: string, revisionId: string, expectedVersion: number) { return this.http.post<Character>(`/api/characters/${id}/revisions/${revisionId}/restore`, { expectedVersion }, { withCredentials: true }); }
   characterSecret(id: string) { return this.http.get<CharacterSecret>(`/api/characters/${id}/secret`, { withCredentials: true }); }
-  updateCharacterSecret(id: string, notes: string, revision: number) { return this.http.put<CharacterSecret>(`/api/characters/${id}/secret`, { notes, revision }, { withCredentials: true }); }
+  characterSystem(id: string) { return this.http.get<RpgSystem | null>(`/api/characters/${id}/system`, { withCredentials: true }); }
+  pinCharacterSystem(id: string, expectedVersion: number, registrySystemId: string, templateRevision: number) { return this.http.post<Character>(`/api/v1/characters/${id}/system-version`, { expectedVersion, registrySystemId, templateRevision }, { withCredentials: true }); }
+  systemMigrationOptions(id: string) { return this.http.get<SystemMigrationOptions>(`/api/v1/characters/${id}/system-migrations/targets`, { withCredentials: true }); }
+  previewSystemMigration(id: string, input: SystemMigrationInput) { return this.http.post<SystemMigrationPreview>(`/api/v1/characters/${id}/system-migrations/preview`, input, { withCredentials: true }); }
+  applySystemMigration(id: string, plan: SystemMigrationInput, previewHash: string) { return this.http.post<Character>(`/api/v1/characters/${id}/system-migrations`, { plan, previewHash }, { withCredentials: true }); }
+  updateCharacterSecret(id: string, notes: string, revision: number, expectedExists?: boolean) { return this.http.put<CharacterSecret>(`/api/characters/${id}/secret`, { notes, revision, expectedExists }, { withCredentials: true }); }
   characterFavorite(id: string) { return this.http.get<{ favorite: boolean }>(`/api/characters/${id}/favorite`, { withCredentials: true }); }
   addCharacterFavorite(id: string) { return this.http.put<void>(`/api/characters/${id}/favorite`, {}, { withCredentials: true }); }
   removeCharacterFavorite(id: string) { return this.http.delete<void>(`/api/characters/${id}/favorite`, { withCredentials: true }); }

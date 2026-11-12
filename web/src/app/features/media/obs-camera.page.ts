@@ -2,13 +2,13 @@ import { CommonModule } from '@angular/common';
 import { AfterViewInit, Component, ElementRef, OnDestroy, ViewChild, inject, signal } from '@angular/core';
 import { ActivatedRoute } from '@angular/router';
 import { Subscription, timer } from 'rxjs';
-import { ApiService, Character, apiError } from '../../api';
+import { ApiService, Character, RpgSystem, apiError } from '../../api';
 import { MeshRoom, RoomPeer } from './mesh-room';
 import { OverlayCardComponent } from '../characters/studio-pages';
 
 @Component({ standalone: true, imports: [CommonModule, OverlayCardComponent], template: `
   <main class="obs-camera-page"><div class="obs-video-stage"><video #video autoplay playsinline muted></video><div *ngIf="!videoReady()" class="obs-video-empty">{{ waiting() }}</div></div>
-    <app-overlay-card *ngIf="character() as item" [character]="item" />
+    <ng-container *ngIf="systemReady()"><app-overlay-card *ngIf="character() as item" [character]="item" [system]="system()" /></ng-container>
     <p *ngIf="error()" class="obs-camera-error" role="alert">{{ error() }}</p>
   </main>` })
 export class ObsCameraPage implements AfterViewInit, OnDestroy {
@@ -18,15 +18,15 @@ export class ObsCameraPage implements AfterViewInit, OnDestroy {
   private characterId = this.route.snapshot.paramMap.get('characterId')!;
   private room?: MeshRoom; private destroyed = false; private polling?: Subscription;
   private peers: RoomPeer[] = []; private cameraStreams = new Map<string, MediaStream>();
-  character = signal<Character | null>(null); videoReady = signal(false);
+  character = signal<Character | null>(null); system = signal<RpgSystem | null>(null); systemReady = signal(false); videoReady = signal(false);
   waiting = signal('Aguardando a câmera do participante...'); error = signal('');
 
   constructor() {
     this.api.character(this.characterId).subscribe({
       next: character => {
         if (character.campaignId !== this.campaignId) { this.error.set('Personagem fora desta campanha.'); return; }
-        this.character.set(character);
-        this.polling = timer(3000, 3000).subscribe(() => this.api.character(this.characterId).subscribe({ next: item => this.character.set(item) }));
+        this.updateCharacter(character);
+        this.polling = timer(3000, 3000).subscribe(() => this.api.character(this.characterId).subscribe({ next: item => this.updateCharacter(item), error: e => { this.character.set(null); this.system.set(null); this.systemReady.set(false); this.error.set(apiError(e)); } }));
         this.room = new MeshRoom(this.campaignId, 'obs', {
           peers: peers => { this.peers = peers; this.pickCamera(); },
           track: (id, kind, stream) => { if (kind !== 'camera') return; if (stream) this.cameraStreams.set(id, stream); else this.cameraStreams.delete(id); this.pickCamera(); },
@@ -37,6 +37,13 @@ export class ObsCameraPage implements AfterViewInit, OnDestroy {
       },
       error: error => this.error.set(apiError(error))
     });
+  }
+
+  private updateCharacter(character: Character) {
+    const previous = this.character(); this.character.set(character);
+    if (!previous || previous.systemVersionId !== character.systemVersionId) this.systemReady.set(false);
+    if (!character.systemVersionId || previous?.systemVersionId !== character.systemVersionId || !this.systemReady())
+      this.api.characterSystem(character.id).subscribe({ next: system => { this.system.set(system); this.systemReady.set(true); }, error: e => { this.systemReady.set(false); this.error.set(apiError(e)); } });
   }
 
   private pickCamera() {

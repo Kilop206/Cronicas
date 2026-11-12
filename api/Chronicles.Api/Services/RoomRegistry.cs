@@ -7,10 +7,11 @@ public sealed class RoomRegistry
 {
     private readonly Dictionary<string, RoomPeer> peers = new(StringComparer.Ordinal);
     private readonly Dictionary<string, Guid> sessions = new(StringComparer.Ordinal);
+    private readonly Dictionary<string, DateTime?> memberships = new(StringComparer.Ordinal);
     private readonly Dictionary<string, (DateTime Started, int Count)> signalWindows = new(StringComparer.Ordinal);
     private readonly object gate = new();
 
-    public IReadOnlyList<RoomPeer> Join(RoomPeer peer, Guid sessionId)
+    public IReadOnlyList<RoomPeer> Join(RoomPeer peer, Guid sessionId, DateTime? joinedAt = null)
     {
         lock (gate)
         {
@@ -20,6 +21,7 @@ public sealed class RoomRegistry
             var existing = peers.Values.Where(x => CanConnect(x, peer)).ToArray();
             peers.Add(peer.ConnectionId, peer);
             sessions.Add(peer.ConnectionId, sessionId);
+            memberships[peer.ConnectionId] = joinedAt;
             return existing;
         }
     }
@@ -57,6 +59,7 @@ public sealed class RoomRegistry
         {
             signalWindows.Remove(connectionId);
             sessions.Remove(connectionId);
+            memberships.Remove(connectionId);
             return peers.Remove(connectionId, out var peer) ? peer : null;
         }
     }
@@ -80,6 +83,17 @@ public sealed class RoomRegistry
         lock (gate)
         {
             var removed = peers.Values.Where(x => x.CampaignId == campaignId && x.UserId == userId).ToArray();
+            foreach (var peer in removed) RemoveCore(peer.ConnectionId);
+            return removed;
+        }
+    }
+
+    public IReadOnlyList<RoomPeer> RemoveStaleUser(Guid campaignId, Guid userId, string? role, DateTime? joinedAt)
+    {
+        lock (gate)
+        {
+            var removed = peers.Values.Where(x => x.CampaignId == campaignId && x.UserId == userId &&
+                (role is null || x.Role != role || memberships.GetValueOrDefault(x.ConnectionId) != joinedAt)).ToArray();
             foreach (var peer in removed) RemoveCore(peer.ConnectionId);
             return removed;
         }
@@ -109,6 +123,7 @@ public sealed class RoomRegistry
     {
         peers.Remove(connectionId);
         sessions.Remove(connectionId);
+        memberships.Remove(connectionId);
         signalWindows.Remove(connectionId);
     }
 

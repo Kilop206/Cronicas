@@ -15,6 +15,12 @@
 
 Uma ponte de transição (`LegacyDomainEvents`) detecta alterações persistentes e adiciona eventos ao DbContext antes do SaveChanges. Escrita e outbox pertencem à mesma transação. Nenhum evento é publicado no hub antes do commit. Rollback/conflito também desfaz os eventos. A ponte existe porque há caminhos de escrita legados; casos de uso futuros podem produzir eventos de domínio explícitos sem depender de detecção EF.
 
+Inventário/habilidades têm casos de uso extraídos, mas ainda não emitem eventos próprios nem incrementam a revisão da ficha. Não reutilizar CharacterSheetUpdated com uma revisão antiga: o cliente descarta revisões já vistas. Uma evolução dessas coleções deverá definir seus eventos/revisões, invalidar o cache adequado e acrescentar histórico se necessário. A extração atual preserva o contrato existente, sem prometer sincronização simultânea dessas listas.
+
+Favoritos e notas privadas também não possuem eventos próprios. Rotacionar OBS altera o hash na entidade Character, portanto a ponte existente ainda gera seus metadados de atualização sem incrementar a revisão da ficha; não é um evento de domínio específico de capacidade. O payload nunca inclui chave, hash ou notas. A fonte OBS usa polling, e revogação de chave é observada na próxima leitura. Eventos explícitos dessas responsabilidades continuam como evolução futura, com consumidores e política de sigilo próprios.
+
+Fixar uma versão altera o vínculo e incrementa a revisão do personagem. A mesma transação grava captura, histórico e os eventos CharacterUpdated/CharacterSheetUpdated existentes. O cliente refaz a leitura e, se o vínculo mudou sem rascunho local, recarrega também o modelo efetivo. Com rascunho, preserva o protocolo anterior de conflito. Não enviar definição inteira ou ID escolhido pelo cliente no evento; o refetch continua autorizado. A tabela de capturas ainda não possui evento público de registro próprio.
+
 ```mermaid
 sequenceDiagram
   participant API
@@ -41,3 +47,19 @@ Entrega é **ao menos uma vez**: falha depois do envio e antes do commit pode re
 O envelope é seguro para uma integração futura, mas o transporte atual é interno, via `IGameEventHandler`. Não existe Kafka ou publicação externa habilitada. Um adaptador de broker deve confirmar publicação antes de marcar outbox; consumidor externo precisa de inbox, política de ordenação por agregado e DLQ/reprocessamento explícitos.
 
 Claims de outbox suportam concorrência no PostgreSQL. **Fanout SignalR atual é de uma instância:** watchers vivem em memória. Para múltiplas réplicas, usar backplane/serviço de realtime e transporte que distribua a invalidação para todos os processos com sockets, antes de habilitar escala horizontal. Não confundir múltiplos consumidores seguros com broadcast distribuído completo.
+
+Migração assistida atualiza a mesma entidade Character e utiliza a invalidação já existente; não cria outro evento redundante. Captura, estado, recibo e outbox confirmam na mesma transação. O cliente sem rascunho recarrega o modelo quando SystemVersionId muda. Recibos/mapeamentos/valores não entram no payload público de invalidação. O teste de falha após SaveChanges verifica rollback inclusive da outbox.
+
+## Eventos de participação
+
+`CampaignMemberRoleChanged` e `CampaignMemberLeft`, contrato 1, usam o envelope existente: AggregateId é o usuário, CampaignId é a campanha, Revision é null. Não carregam token, perfil ou campos de ficha. A ponte EF só emite mudança de papel quando Role realmente foi modificado. A criação/entrada mantém `CampaignCreated`/`PlayerJoinedCampaign`.
+
+O caso de uso pede reconciliação imediata após commit. A outbox garante uma tentativa durável pelo `CampaignAccessInvalidationHandler`, que lê a participação atual pela porta pública e compara papel/JoinedAt com a conexão. Duplicatas e eventos atrasados não removem uma conexão que já representa esses valores atuais. Conexões retiradas do registry mas cuja notificação falhou permanecem numa fila em memória até o retry concluir; a falha continua pendente na outbox. Reiniciar o processo encerra os próprios sockets, dispensando persistir IDs de conexão. Testes simulam erro no transporte, reentrega e reentrada válida. Isso não implementa fanout entre réplicas nem substitui autorização transacional.
+
+## Eventos de associação
+
+`CampaignSystemChanged`/`CampaignWorldChanged`, contrato 1, usam AggregateId/CampaignId iguais à campanha e Revision null. Não carregam o novo ID do catálogo, nomes, schemas ou valores de personagens. Confirmam na mesma transação da referência; o no-op não emite evento.
+
+O handler de fichas consome a troca de sistema consultando apenas os IDs atualmente observados que pertencem à campanha e não têm SystemVersionId. Cada envio ainda verifica sessão e participação. A mensagem existente `SheetInvalidated` leva o ID da ficha destinatária, tipo e revision null. O cliente limpo busca o modelo efetivo; rascunho de ficha/notas pausa o salvamento e exige revisão/recarga explícita. Fichas fixadas não recebem essa invalidação de campanha. O evento de universo registra a mudança; não cria acesso por mensagem e não ganhou uma UI realtime nesta etapa.
+
+O transporte continua single-instance/ao menos uma vez. Não há replay de toda configuração perdida offline ou backplane entre réplicas; refresh da página continua sendo a forma de reconstruir o modelo completo nesses cenários. Ver ADR 0007.

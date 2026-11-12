@@ -31,9 +31,7 @@ public static partial class CharacterEndpoints
                 _ => Results.ValidationProblem(response.Errors ?? new() { ["rules"] = [response.Message ?? "Ação inválida."] })
             };
             var c = response.Character!;
-            var s = c.State;
-            return Results.Ok(new { character = new { c.Id, c.CampaignId, c.OwnerId, s.Name, s.PortraitUrl, s.BackgroundUrl,
-                s.Health, s.MaxHealth, s.Sanity, s.MaxSanity, s.Mana, s.MaxMana, s.Fields, s.Version, c.UpdatedAt, canEdit = true },
+            return Results.Ok(new { character = CharacterSheetProjection.Document(c, actor),
                 response.Result!.Message, response.Result.Rolls, response.Result.Damage });
         }).RequireRateLimiting("rolls");
     }

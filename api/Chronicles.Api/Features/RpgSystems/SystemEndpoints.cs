@@ -43,7 +43,8 @@ public static class SystemEndpoints
         api.MapPut("/systems/{id:guid}", async Task<IResult> (Guid id, SystemInput input, HttpContext http, AppDbContext db) =>
         {
             if (UserId(http) is not { } userId) return Results.Unauthorized();
-            var system = await db.RpgSystems.SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == userId);
+            await using var transaction = await db.Database.BeginTransactionAsync(http.RequestAborted);
+            var system = await db.RpgSystems.FromSqlInterpolated($"SELECT * FROM rpg_systems WHERE \"Id\" = {id} AND \"OwnerId\" = {userId} FOR UPDATE").SingleOrDefaultAsync();
             if (system is null) return Results.NotFound();
             var previous = SystemDefinition.Read(system.SchemaJson);
             if (input.Revision is { } expected && expected != previous.Revision)
@@ -66,7 +67,7 @@ public static class SystemEndpoints
             var fieldsChanged = JsonSerializer.Serialize(previous.Fields) != JsonSerializer.Serialize(input.Fields);
             if (renames.Count > 0 || fieldsChanged)
             {
-                var characters = await db.Characters.Where(character => character.Campaign.SystemId == id).ToListAsync();
+                var characters = await db.Characters.Where(character => character.SystemVersionId == null && character.Campaign.SystemId == id).ToListAsync();
                 foreach (var character in characters)
                 {
                     var values = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(character.FieldsJson) ?? [];
@@ -82,19 +83,21 @@ public static class SystemEndpoints
             system.Name = input.Name.Trim(); system.Description = input.Description.Trim(); system.SchemaJson = JsonSerializer.Serialize(next); system.UpdatedAt = DateTime.UtcNow;
             try { await db.SaveChangesAsync(); }
             catch (DbUpdateConcurrencyException) { return Results.Conflict(new { message = "O modelo mudou. Recarregue antes de salvar." }); }
+            await transaction.CommitAsync(http.RequestAborted);
             return Results.Ok(View(system));
         });
 
         api.MapPost("/systems/{id:guid}/revisions/{revision:int}/restore", async Task<IResult> (Guid id, int revision, RestoreSystemInput input, HttpContext http, AppDbContext db) =>
         {
             if (UserId(http) is not { } userId) return Results.Unauthorized();
-            var system = await db.RpgSystems.SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == userId);
+            await using var transaction = await db.Database.BeginTransactionAsync(http.RequestAborted);
+            var system = await db.RpgSystems.FromSqlInterpolated($"SELECT * FROM rpg_systems WHERE \"Id\" = {id} AND \"OwnerId\" = {userId} FOR UPDATE").SingleOrDefaultAsync();
             if (system is null) return Results.NotFound();
             var current = SystemDefinition.Read(system.SchemaJson);
             if (input.ExpectedRevision != current.Revision) return Results.Conflict(new { message = "O modelo mudou. Recarregue antes de restaurar." });
             var target = current.History?.LastOrDefault(item => item.Revision == revision);
             if (target is null) return Results.NotFound();
-            var characters = await db.Characters.Where(character => character.Campaign.SystemId == id).ToListAsync();
+            var characters = await db.Characters.Where(character => character.SystemVersionId == null && character.Campaign.SystemId == id).ToListAsync();
             foreach (var character in characters)
             {
                 var values = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(character.FieldsJson) ?? [];
@@ -113,28 +116,20 @@ public static class SystemEndpoints
             system.UpdatedAt = DateTime.UtcNow;
             try { await db.SaveChangesAsync(); }
             catch (DbUpdateConcurrencyException) { return Results.Conflict(new { message = "O modelo mudou. Recarregue antes de restaurar." }); }
+            await transaction.CommitAsync(http.RequestAborted);
             return Results.Ok(View(system));
         });
 
         api.MapDelete("/systems/{id:guid}", async Task<IResult> (Guid id, HttpContext http, AppDbContext db) =>
         {
             if (UserId(http) is not { } userId) return Results.Unauthorized();
-            var system = await db.RpgSystems.SingleOrDefaultAsync(x => x.Id == id && x.OwnerId == userId);
+            await using var transaction = await db.Database.BeginTransactionAsync(http.RequestAborted);
+            var system = await db.RpgSystems.FromSqlInterpolated($"SELECT * FROM rpg_systems WHERE \"Id\" = {id} AND \"OwnerId\" = {userId} FOR UPDATE").SingleOrDefaultAsync(http.RequestAborted);
             if (system is null) return Results.NotFound();
             if (await db.Campaigns.AnyAsync(x => x.SystemId == id)) return Results.Conflict(new { message = "Remova este sistema das campanhas antes de excluí-lo." });
+            if (await db.RpgSystemVersions.AnyAsync(x => x.RpgSystemId == id)) return Results.Conflict(new { message = "Este sistema possui versões fixadas em fichas e precisa ser preservado." });
             db.RpgSystems.Remove(system); await db.SaveChangesAsync();
-            return Results.NoContent();
-        });
-
-        api.MapPatch("/campaigns/{campaignId:guid}/system", async Task<IResult> (Guid campaignId, SetSystemInput input, HttpContext http, AppDbContext db) =>
-        {
-            if (UserId(http) is not { } userId) return Results.Unauthorized();
-            var campaign = await db.Campaigns.SingleOrDefaultAsync(x => x.Id == campaignId && x.OwnerId == userId);
-            if (campaign is null) return Results.NotFound();
-            var allowed = input.SystemId is null || await db.RpgSystems.AnyAsync(x => x.Id == input.SystemId && x.OwnerId == userId);
-            if (!allowed) return Results.ValidationProblem(new Dictionary<string, string[]> { ["systemId"] = ["Sistema indisponível."] });
-            campaign.SystemId = input.SystemId; campaign.UpdatedAt = DateTime.UtcNow;
-            await db.SaveChangesAsync();
+            await transaction.CommitAsync(http.RequestAborted);
             return Results.NoContent();
         });
     }
@@ -221,5 +216,4 @@ public static class SystemEndpoints
         string? RendererMode = null, int? Revision = null, Dictionary<string, string>? FieldRenames = null,
         NpcTemplate[]? NpcTemplates = null, CthulhuOccupationDefinition? CthulhuOccupations = null);
     public sealed record RestoreSystemInput(int ExpectedRevision);
-    public sealed record SetSystemInput(Guid? SystemId);
 }

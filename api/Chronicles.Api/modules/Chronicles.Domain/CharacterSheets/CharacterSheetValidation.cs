@@ -32,6 +32,9 @@ public static class CharacterSheetValidation
         {
             if (fields.Length == 0)
             {
+                // A model may retire its last declared field. Keep archived structured values unchanged,
+                // while newly supplied free fields still obey the primitive-only contract below.
+                if (previous.TryGetValue(key, out var archived) && JsonElement.DeepEquals(value, archived)) continue;
                 if (!Regex.IsMatch(key, "^[a-z][a-z0-9_]{1,39}$", RegexOptions.CultureInvariant)
                     || value.ValueKind == JsonValueKind.String && value.GetString()?.Length > 10000
                     || value.ValueKind == JsonValueKind.Number && !value.TryGetInt32(out _)

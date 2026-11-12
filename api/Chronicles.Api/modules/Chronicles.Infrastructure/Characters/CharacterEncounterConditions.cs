@@ -7,9 +7,11 @@ namespace Chronicles.Api;
 
 public static class CharacterEncounterConditions
 {
-    public static async Task<SystemDefinition?> Definition(AppDbContext db,Guid campaignId)
+    public static async Task<SystemDefinition?> Definition(AppDbContext db,Guid campaignId,Guid? characterId=null)
     {
-        var schema=await db.Campaigns.Where(c=>c.Id==campaignId).Join(db.RpgSystems,c=>c.SystemId,s=>s.Id,(_,s)=>s.SchemaJson).SingleOrDefaultAsync();
+        var schema=characterId is {} character
+            ? await db.Characters.Where(c=>c.Id==character && c.CampaignId==campaignId).Select(c=>c.SystemVersion==null?c.Campaign.System==null?null:c.Campaign.System.SchemaJson:c.SystemVersion.DefinitionJson).SingleOrDefaultAsync()
+            : await db.Campaigns.Where(c=>c.Id==campaignId).Join(db.RpgSystems,c=>c.SystemId,s=>s.Id,(_,s)=>s.SchemaJson).SingleOrDefaultAsync();
         return schema is null?null:SystemDefinition.Read(schema);
     }
     public static string Project(Character character,SystemDefinition definition,string previous)

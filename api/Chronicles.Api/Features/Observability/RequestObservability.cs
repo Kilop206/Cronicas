@@ -16,7 +16,12 @@ public static partial class RequestObservability
         var correlation = CorrelationPattern().IsMatch(supplied) ? supplied : Activity.Current?.TraceId.ToString() ?? Guid.NewGuid().ToString("N");
         context.TraceIdentifier = correlation;
         Activity.Current?.SetTag("chronicles.correlation_id", correlation);
-        context.Response.Headers["X-Correlation-ID"] = correlation;
+        context.Response.OnStarting(() =>
+        {
+            // Exception handling may clear response headers after this middleware has run.
+            context.Response.Headers["X-Correlation-ID"] = correlation;
+            return Task.CompletedTask;
+        });
         using var scope = app.Logger.BeginScope(new Dictionary<string, object> { ["correlationId"] = correlation });
         var started = Stopwatch.GetTimestamp();
         try { await next(); }

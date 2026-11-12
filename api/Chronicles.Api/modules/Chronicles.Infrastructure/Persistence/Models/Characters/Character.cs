@@ -7,6 +7,8 @@ public sealed class Character
     public Campaign Campaign { get; set; } = null!;
     public Guid OwnerId { get; set; }
     public User Owner { get; set; } = null!;
+    public Guid? SystemVersionId { get; set; }
+    public RpgSystemVersion? SystemVersion { get; set; }
     public required string Name { get; set; }
     public string? PortraitUrl { get; set; }
     public string? BackgroundUrl { get; set; }
