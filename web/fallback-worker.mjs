@@ -1,4 +1,5 @@
 import { setProxyIdentity } from './proxy-identity.mjs';
+import { onRequest as servePages } from './functions/_middleware.ts';
 
 // Alternate host for networks that reset TLS connections to pages.dev.
 export default {
@@ -26,12 +27,6 @@ export default {
       }
     }
 
-    let response = await env.ASSETS.fetch(request);
-    if (response.status === 404 && request.headers.get('accept')?.includes('text/html') && !/\.[a-z0-9]{1,8}$/i.test(url.pathname)) {
-      response = await env.ASSETS.fetch(new URL('/', url));
-    }
-    const result = new Response(response.body, response);
-    result.headers.set('X-Robots-Tag', 'noindex, nofollow, noarchive');
-    return result;
+    return servePages({ request, env, next: () => env.ASSETS.fetch(request) });
   }
 };

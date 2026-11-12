@@ -43,6 +43,11 @@ try {
   const rejected = await stale; assert.equal(rejected.request().postDataJSON().expectedExists, false); assert.equal(rejected.status(), 409);
   await page.getByRole('alert').filter({ hasText: 'anotações mudaram' }).waitFor();
   assert.equal(await notes.inputValue(), 'Local initial draft', 'Initial revision conflict keeps private draft');
+  page.once('dialog', dialog => dialog.dismiss());
+  await page.locator('.side-nav').getByRole('link', { name: 'Campanhas', exact: true }).click();
+  assert.ok(page.url().endsWith(`/characters/${character.id}`), 'Private unsaved notes prevent accidental navigation');
+  assert.equal(await notes.inputValue(), 'Local initial draft');
+  page.once('dialog', dialog => dialog.accept());
   await page.reload({ waitUntil: 'networkidle' });
   await tabs.getByRole('button', { name: 'Mestre', exact: true }).click();
   await page.waitForFunction(() => document.querySelector('.character-secret textarea')?.value === 'Remote initial plan');
@@ -65,6 +70,7 @@ try {
   await publicPage.getByRole('heading', { name: character.name, exact: true }).waitFor();
   assert.equal(await publicPage.locator('.obs-resources > div').count(), 3);
   assert.ok(!(await publicPage.locator('body').innerText()).includes('Private browser plan'));
+  page.once('dialog', dialog => dialog.accept());
   const [rotated] = await Promise.all([
     page.waitForResponse(r => new URL(r.url()).pathname === `${route}/overlay-key` && r.request().method() === 'POST'),
     source.getByRole('button', { name: 'Gerar nova URL', exact: true }).click()

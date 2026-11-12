@@ -9,6 +9,10 @@
     <meta name="description" content="Organize campanhas de RPG de mesa, crie fichas e mundos personalizados, registre sessões e jogue com seus amigos em um só lugar.">
     <link rel="canonical" href="https://cronicas-bsy.pages.dev/">
     <link rel="icon" type="image/svg+xml" href="/favicon.svg">
+    <link rel="icon" href="/favicon.ico" sizes="any">
+    <link rel="icon" type="image/png" sizes="32x32" href="/favicon-32.png">
+    <link rel="icon" type="image/png" sizes="16x16" href="/favicon-16.png">
+    <link rel="apple-touch-icon" sizes="180x180" href="/apple-touch-icon.png">
     <meta property="og:type" content="website">
     <meta property="og:locale" content="pt_BR">
     <meta property="og:site_name" content="Crônicas">
@@ -23,12 +27,14 @@
     <meta name="twitter:title" content="Crônicas — Seu espaço para RPG de mesa">
     <meta name="twitter:description" content="Campanhas, fichas, mundos e sessões em um arquivo compartilhado para sua mesa de RPG.">
     <meta name="twitter:image" content="https://cronicas-bsy.pages.dev/social-card.png">
+    <meta name="twitter:image:alt" content="Crônicas — campanhas, fichas e mundos para RPG de mesa">
     <script type="application/ld+json">{"@context":"https://schema.org","@type":"WebSite","name":"Crônicas","url":"https://cronicas-bsy.pages.dev/","description":"Organize campanhas, fichas, mundos e sessões de RPG de mesa.","inLanguage":"pt-BR"}</script>
     <link rel="preconnect" href="https://fonts.googleapis.com">
     <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
     <link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@400;500;600;700&family=Newsreader:opsz,wght@6..72,400;6..72,500;6..72,600&display=swap" rel="stylesheet">
   </head>
   <body>
+    <noscript><p>O Crônicas precisa de JavaScript para acessar contas e campanhas. <a href="/privacy">Privacidade</a> · <a href="/terms">Termos de Uso</a></p></noscript>
     <app-root>
       <main class="landing">
         <header class="landing-header"><a href="/" class="brand"><span class="brand-mark">C</span><span>crônicas</span></a><nav><a href="/login">Entrar</a><a href="/register" class="button button-small">Criar conta</a></nav></header>
@@ -36,5 +42,7 @@
         <section class="landing-bottom"><span>UM LUGAR PARA CADA HISTÓRIA</span><div><b>01</b> Crie campanhas <b>02</b> Reúna sua mesa <b>03</b> Continue a aventura</div></section>
       </main>
     </app-root>
+    <div id="boot-failure" hidden role="alert"><p>Não foi possível iniciar o Crônicas. Verifique sua conexão e recarregue a página. Uma atualização pode estar disponível.</p><button type="button" id="boot-reload">Recarregar página</button></div>
+    <script src="/boot-recovery.js" defer></script>
   </body>
 </html>

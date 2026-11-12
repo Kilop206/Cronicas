@@ -2,6 +2,8 @@
   "name": "cronicas-deploy",
   "private": true,
   "scripts": {
+    "test:quality": "node --test scripts/quality.test.mjs",
+    "preview:quality": "node scripts/quality-preview.mjs",
     "test:architecture": "node --test scripts/architecture.test.mjs",
     "test:plugins": "node scripts/sync-rpg-plugins.mjs --check && node scripts/check-sheet-templates.mjs",
     "build:web": "npm --prefix web run build",

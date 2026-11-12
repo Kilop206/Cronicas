@@ -21,12 +21,12 @@ import { ApiService, SearchResults, apiError } from '../../api';
     </ng-container>
   </main>` })
 export class SearchPage implements OnInit, OnDestroy {
-  private api = inject(ApiService); private route = inject(ActivatedRoute); private router = inject(Router); private subscription?: Subscription;
+  private api = inject(ApiService); private route = inject(ActivatedRoute); private router = inject(Router); private subscription?: Subscription; private request?: Subscription;
   query = ''; searched = ''; results = signal<SearchResults | null>(null); loading = signal(false); error = signal('');
-  ngOnInit() { this.subscription = this.route.queryParamMap.subscribe(params => { this.query = params.get('q') || ''; if (this.query.trim().length >= 2) this.load(); else this.results.set(null); }); }
-  ngOnDestroy() { this.subscription?.unsubscribe(); }
+  ngOnInit() { this.subscription = this.route.queryParamMap.subscribe(params => { this.request?.unsubscribe(); this.query = (params.get('q') || '').slice(0, 120); if (this.query.trim().length >= 2) this.load(); else { this.results.set(null); this.error.set(''); } }); }
+  ngOnDestroy() { this.subscription?.unsubscribe(); this.request?.unsubscribe(); }
   submit() { const q = this.query.trim(); if (q.length < 2) return; void this.router.navigate(['/search'], { queryParams: { q } }); if (q === this.searched) this.load(); }
-  load() { this.loading.set(true); this.error.set(''); this.searched = this.query.trim(); this.api.search(this.searched).pipe(finalize(() => this.loading.set(false))).subscribe({ next: result => this.results.set(result), error: e => this.error.set(apiError(e)) }); }
+  load() { this.request?.unsubscribe(); this.loading.set(true); this.error.set(''); this.results.set(null); this.searched = this.query.trim(); this.request = this.api.search(this.searched).pipe(finalize(() => this.loading.set(false))).subscribe({ next: result => this.results.set(result), error: e => this.error.set(apiError(e)) }); }
   count(results: SearchResults) { return results.campaigns.length + results.characters.length + results.npcs.length + results.worlds.length + results.articles.length + results.entries.length; }
   label(kind: string) { return kind === 'sessions' ? 'Sessão' : kind === 'documents' ? 'Documento' : 'Wiki'; }
 }

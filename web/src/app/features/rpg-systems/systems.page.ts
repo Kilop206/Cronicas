@@ -1,6 +1,7 @@
+import { confirmDiscard, preventUnsavedUnload } from '../../core/unsaved-changes';
 import { CocOccupationEditorComponent, isOccupationDefinition } from './coc-occupation-editor.component';
 import { CommonModule, DOCUMENT } from '@angular/common';
-import { Component, OnInit, inject, signal } from '@angular/core';
+import { Component, HostListener, OnInit, inject, signal } from '@angular/core';
 import { FormsModule } from '@angular/forms';
 import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize } from 'rxjs';
@@ -129,6 +130,16 @@ export class SystemsPage implements OnInit {
     @media (max-width: 620px) { .mode-choice { grid-template-columns: 1fr; } }
   `] })
 export class SystemEditorPage implements OnInit {
+  private baseline: string | undefined; private departing = false;
+  private editorState() { return JSON.stringify({ name: this.name, description: this.description, mode: this.mode, fields: this.fields, layout: this.layout, templateId: this.templateId, templateVersion: this.templateVersion, rulesetVersion: this.rulesetVersion, rendererMode: this.rendererMode, npcTemplates: this.npcTemplates, cthulhuOccupations: this.cthulhuOccupations, fieldRenames: this.fieldRenames }); }
+  private pending() {
+    if (this.departing || this.baseline === undefined) return false;
+    if (this.busy() && !this.saved() || this.baseline !== this.editorState()) return true;
+    if (this.mode === 'structured' && this.editorMode === 'json') { try { return JSON.stringify(JSON.parse(this.jsonDraft)) !== JSON.stringify(this.fields); } catch { return true; } }
+    return false;
+  }
+  canLeave() { return confirmDiscard(this.pending()); }
+  @HostListener('window:beforeunload', ['$event']) beforeUnload(event: BeforeUnloadEvent) { preventUnsavedUnload(event, this.pending()); }
   private api = inject(ApiService); private route = inject(ActivatedRoute); private router = inject(Router); private document = inject(DOCUMENT);
   id = this.route.snapshot.paramMap.get('id') || 'new'; isNew = this.id === 'new'; ownerId: string | null = null;
   templates = SHEET_TEMPLATES;
@@ -142,8 +153,8 @@ export class SystemEditorPage implements OnInit {
   layout = newSheetLayout();
   selectedPreviewPage = 'principal';
   fields: SystemField[] = []; loading = signal(!this.isNew); busy = signal(false); saved = signal(false); error = signal('');
-  ngOnInit() { if (this.isNew) { const preset = this.route.snapshot.queryParamMap.get('preset'); if (preset) this.applyPreset(preset); return; } this.api.system(this.id).pipe(finalize(() => this.loading.set(false))).subscribe({ next: system => this.useSystem(system), error: e => this.error.set(apiError(e)) }); }
-  private useSystem(system: RpgSystem) { this.name = system.name; this.description = system.description; this.fields = system.fields.map(f => ({ ...f, span: f.span || 6, options: f.options?.slice() || null })); this.layout = system.layout || layoutFromFields(this.fields); this.selectedPreviewPage = this.layout.pages[0].id; this.mode = (system.layout || this.fields.length) ? 'structured' : 'free'; this.ownerId = system.ownerId; this.templateId = system.templateId; this.templateVersion = system.templateVersion || 1; this.rulesetVersion = system.rulesetVersion; this.rendererMode = system.rendererMode || 'specialized'; this.revision = system.revision || 1; this.revisions = system.revisions || []; this.npcTemplates = structuredClone(system.npcTemplates || []); this.cthulhuOccupations = structuredClone(system.cthulhuOccupations || null); this.originalFieldKeys = new Set(system.fields.map(field => field.key)); this.fieldRenames = {}; this.rulesUpgradeNotice = ''; }
+  ngOnInit() { if (this.isNew) { const preset = this.route.snapshot.queryParamMap.get('preset'); if (preset) this.applyPreset(preset); this.baseline = this.editorState(); return; } this.api.system(this.id).pipe(finalize(() => this.loading.set(false))).subscribe({ next: system => this.useSystem(system), error: e => this.error.set(apiError(e)) }); }
+  private useSystem(system: RpgSystem) { this.name = system.name; this.description = system.description; this.fields = system.fields.map(f => ({ ...f, span: f.span || 6, options: f.options?.slice() || null })); this.layout = system.layout || layoutFromFields(this.fields); this.selectedPreviewPage = this.layout.pages[0].id; this.mode = (system.layout || this.fields.length) ? 'structured' : 'free'; this.ownerId = system.ownerId; this.templateId = system.templateId; this.templateVersion = system.templateVersion || 1; this.rulesetVersion = system.rulesetVersion; this.rendererMode = system.rendererMode || 'specialized'; this.revision = system.revision || 1; this.revisions = system.revisions || []; this.npcTemplates = structuredClone(system.npcTemplates || []); this.cthulhuOccupations = structuredClone(system.cthulhuOccupations || null); this.originalFieldKeys = new Set(system.fields.map(field => field.key)); this.fieldRenames = {}; this.rulesUpgradeNotice = ''; this.jsonDraft = JSON.stringify(this.fields, null, 2); this.baseline = this.editorState(); }
   addNpcTemplate() { if (this.npcTemplates.length >= 12) return; let number = 1; while (this.npcTemplates.some(item => item.id === `npc_${number}`)) number++; this.npcTemplates.push({ id: `npc_${number}`, name: 'Novo modelo', appearance: '', personality: '', motivation: '', relationships: '', location: '', status: 'active', visibility: 'gm', health: 10, maxHealth: 10 }); }
   addThreatToTemplate(npc:NpcTemplate){npc.sheet=blankThreatSheet();this.saved.set(false);}
   removeNpcTemplate(index: number) { this.npcTemplates.splice(index, 1); }
@@ -259,6 +270,7 @@ export class SystemEditorPage implements OnInit {
     } catch { this.error.set('Definição JSON inválida. Informe um array de até 100 campos tipados.'); return false; }
   }
   save() {
+    if (this.busy()) return;
     this.error.set(''); this.saved.set(false);
     if (this.mode === 'structured' && this.editorMode === 'json' && !this.parseJson()) return;
     this.busy.set(true);
@@ -323,5 +335,5 @@ export class SystemEditorPage implements OnInit {
       next: system => { this.useSystem(system); this.saved.set(true); }, error: e => this.error.set(apiError(e))
     });
   }
-  remove() { if (!confirm('Excluir este sistema?')) return; this.busy.set(true); this.api.deleteSystem(this.id).pipe(finalize(() => this.busy.set(false))).subscribe({ next: () => void this.router.navigateByUrl('/systems'), error: e => this.error.set(apiError(e)) }); }
+  remove() { if (this.busy() || !confirm('Excluir este sistema?')) return; this.busy.set(true); this.api.deleteSystem(this.id).pipe(finalize(() => this.busy.set(false))).subscribe({ next: () => { this.departing = true; void this.router.navigateByUrl('/systems'); }, error: e => this.error.set(apiError(e)) }); }
 }

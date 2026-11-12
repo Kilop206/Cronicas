@@ -7,6 +7,7 @@
     "build": "ng build",
     "deploy:fallback": "npm run build && wrangler deploy --config wrangler.fallback.jsonc",
     "test:smoke": "node ../scripts/smoke.mjs",
+    "test:quality:browser": "node quality-browser.mjs",
     "visual:capture": "node visual-validation.mjs",
     "lint": "eslint .",
     "format": "prettier --write src"

@@ -26,6 +26,7 @@ jobs:
         working-directory: web
       - run: npm run test:pages-proxy
       - run: npm run test:spa-routes
+      - run: npm run test:quality
       - run: dotnet build api/Chronicles.Api/Chronicles.Api.csproj -c Release
       - run: dotnet run --project tests/Chronicles.Rules.Tests/Chronicles.Rules.Tests.csproj -c Release
       - run: dotnet run --project tests/Chronicles.Architecture.Tests -c Release

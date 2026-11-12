@@ -4,6 +4,7 @@
 .wrangler-dry-run/
 .wrangler-pages-check/
 .docker-local/
+.quality-local/
 **/node_modules/
 **/dist/
 **/bin/

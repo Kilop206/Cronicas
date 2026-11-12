@@ -1,15 +1,15 @@
 import { CommonModule } from '@angular/common';
-import { Component, Input, OnDestroy, inject, signal } from '@angular/core';
+import { Component, ElementRef, HostListener, Input, OnDestroy, ViewChild, inject, signal } from '@angular/core';
 import { NavigationEnd, Router, RouterLink, RouterLinkActive } from '@angular/router';
 import { filter, Subscription } from 'rxjs';
 
 @Component({
   selector: 'app-workspace-nav', standalone: true, imports: [CommonModule, RouterLink, RouterLinkActive],
-  template: `<button *ngIf="mobile && campaignId()" type="button" class="mobile-workspace-trigger" [attr.aria-expanded]="opened()" (click)="opened.set(!opened())">Campanha ▾</button><nav *ngIf="campaignId() as id" class="workspace-menu" [class.mobile-menu]="mobile" [class.mobile-open]="opened()" aria-label="Navegação da campanha">
-    <a class="workspace-home" [routerLink]="['/campaigns', id]" routerLinkActive="active" [routerLinkActiveOptions]="{ exact: true }">Campanha atual <span aria-hidden="true">↗</span></a>
-    <details [open]="activeGroup() === 'mesa'"><summary>Mesa</summary><a [routerLink]="['/campaigns', id, 'room']" routerLinkActive="active">Transmissão</a><a [routerLink]="['/campaigns', id, 'encounters']" routerLinkActive="active">Encontros</a></details>
-    <details [open]="activeGroup() === 'elenco'"><summary>Elenco</summary><a [routerLink]="['/campaigns', id, 'characters']" routerLinkActive="active">Personagens</a><a [routerLink]="['/campaigns', id, 'npcs']" routerLinkActive="active">NPCs</a></details>
-    <details [open]="activeGroup() === 'arquivo'"><summary>Arquivo</summary><a [routerLink]="['/campaigns', id, 'sessions']" routerLinkActive="active">Sessões</a><a [routerLink]="['/campaigns', id, 'wiki']" routerLinkActive="active">Mundo</a><a [routerLink]="['/campaigns', id, 'documents']" routerLinkActive="active">Documentos</a></details>
+  template: `<button #menuTrigger aria-controls="campaign-navigation-mobile" *ngIf="mobile && campaignId()" type="button" class="mobile-workspace-trigger" [attr.aria-expanded]="opened()" (click)="opened.set(!opened())">Campanha ▾</button><nav *ngIf="campaignId() as id" class="workspace-menu" [attr.id]="mobile ? 'campaign-navigation-mobile' : 'campaign-navigation-desktop'" [class.mobile-menu]="mobile" [class.mobile-open]="opened()" aria-label="Navegação da campanha">
+    <a class="workspace-home" [routerLink]="['/campaigns', id]" routerLinkActive="active" ariaCurrentWhenActive="page" [routerLinkActiveOptions]="{ exact: true }">Campanha atual <span aria-hidden="true">↗</span></a>
+    <details [open]="activeGroup() === 'mesa'"><summary>Mesa</summary><a [routerLink]="['/campaigns', id, 'room']" routerLinkActive="active" ariaCurrentWhenActive="page">Transmissão</a><a [routerLink]="['/campaigns', id, 'encounters']" routerLinkActive="active" ariaCurrentWhenActive="page">Encontros</a></details>
+    <details [open]="activeGroup() === 'elenco'"><summary>Elenco</summary><a [routerLink]="['/campaigns', id, 'characters']" routerLinkActive="active" ariaCurrentWhenActive="page">Personagens</a><a [routerLink]="['/campaigns', id, 'npcs']" routerLinkActive="active" ariaCurrentWhenActive="page">NPCs</a></details>
+    <details [open]="activeGroup() === 'arquivo'"><summary>Arquivo</summary><a [routerLink]="['/campaigns', id, 'sessions']" routerLinkActive="active" ariaCurrentWhenActive="page">Sessões</a><a [routerLink]="['/campaigns', id, 'wiki']" routerLinkActive="active" ariaCurrentWhenActive="page">Mundo</a><a [routerLink]="['/campaigns', id, 'documents']" routerLinkActive="active" ariaCurrentWhenActive="page">Documentos</a></details>
   </nav>`,
   styles: [`
     .workspace-menu { margin: 12px 10px; padding: 13px 8px 6px; border-top: 1px solid var(--border); }
@@ -24,11 +24,13 @@ import { filter, Subscription } from 'rxjs';
 })
 export class WorkspaceNavComponent implements OnDestroy {
   @Input() mobile = false;
+  @ViewChild('menuTrigger') private trigger?: ElementRef<HTMLButtonElement>;
   private router = inject(Router);
   private subscription: Subscription;
   campaignId = signal(this.fromUrl(this.router.url));
   opened = signal(false);
-  constructor() { this.subscription = this.router.events.pipe(filter(event => event instanceof NavigationEnd)).subscribe(event => this.campaignId.set(this.fromUrl(event.urlAfterRedirects))); }
+  constructor() { this.subscription = this.router.events.pipe(filter(event => event instanceof NavigationEnd)).subscribe(event => { this.campaignId.set(this.fromUrl(event.urlAfterRedirects)); this.opened.set(false); }); }
+  @HostListener('keydown.escape') close() { this.opened.set(false); this.trigger?.nativeElement.focus(); }
   private fromUrl(url: string) { return /^\/campaigns\/([0-9a-f-]{36})(?:\/|\?|$)/i.exec(url)?.[1] ?? null; }
   activeGroup() { const section = /^\/campaigns\/[0-9a-f-]{36}\/([^/?]+)/i.exec(this.router.url)?.[1]; return section === 'room' || section === 'encounters' ? 'mesa' : section === 'characters' || section === 'npcs' ? 'elenco' : section ? 'arquivo' : 'mesa'; }
   ngOnDestroy() { this.subscription.unsubscribe(); }

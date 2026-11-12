@@ -3,7 +3,7 @@ import type { SystemMigrationInput, SystemMigrationOptions, SystemMigrationPrevi
 import { DOCUMENT } from '@angular/common';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
 import { inject, Injectable, signal } from '@angular/core';
-import { catchError, map, Observable, of, tap } from 'rxjs';
+import { catchError, finalize, map, Observable, of, shareReplay, tap, throwError, TimeoutError } from 'rxjs';
 import type { ParanormalThreatSheet, ThreatManeuverRequest, ThreatManeuverOutcome, ThreatCommand } from '../models/paranormal-threat';
 
 @Injectable({ providedIn: 'root' })
@@ -11,16 +11,26 @@ export class ApiService {
   private http = inject(HttpClient);
   private document = inject(DOCUMENT);
   user = signal<User | null>(null);
+  sessionExpired = signal(false);
   private loaded = false;
+  private checking?: Observable<boolean>;
 
   ensure(): Observable<boolean> {
     if (this.loaded) return of(!!this.user());
-    return this.http.get<User>('/api/auth/me', { withCredentials: true }).pipe(
+    if (this.checking) return this.checking;
+    this.checking = this.http.get<User>('/api/auth/me', { withCredentials: true }).pipe(
       tap(user => { this.setUser(user); this.loaded = true; }),
       map(() => true),
-      catchError(() => { this.setUser(null); this.loaded = true; return of(false); })
+      catchError(error => {
+        if (error instanceof HttpErrorResponse && error.status === 401) { this.setUser(null); this.loaded = true; return of(false); }
+        return throwError(() => error);
+      }),
+      finalize(() => { this.checking = undefined; }),
+      shareReplay({ bufferSize: 1, refCount: true })
     );
+    return this.checking;
   }
+  expireSession() { this.sessionExpired.set(true); this.setUser(null); this.loaded = true; }
   login(email: string, password: string) { return this.http.post<User>('/api/auth/login', { email, password }, { withCredentials: true }).pipe(tap(user => { this.setUser(user); this.loaded = true; })); }
   register(displayName: string, email: string, password: string) { return this.http.post<User>('/api/auth/register', { displayName, email, password }, { withCredentials: true }).pipe(tap(user => { this.setUser(user); this.loaded = true; })); }
   logout() { return this.http.post<void>('/api/auth/logout', {}, { withCredentials: true }).pipe(tap(() => { this.setUser(null); this.loaded = true; })); }
@@ -125,14 +135,18 @@ export class ApiService {
   roll(campaignId: string, expression: string, visibility: DiceRoll['visibility'], requestId: string) { return this.http.post<DiceRoll>(`/api/campaigns/${campaignId}/rolls`, { expression, visibility, requestId }, { withCredentials: true }); }
   percentileRoll(campaignId: string, target: number, bonusDice: number, visibility: DiceRoll['visibility'], requestId: string) { return this.http.post<DiceRoll>(`/api/campaigns/${campaignId}/percentile-rolls`, { target, bonusDice, visibility, requestId }, { withCredentials: true }); }
   private setUser(user: User | null) {
+    if (user) this.sessionExpired.set(false);
     this.user.set(user);
     this.document.documentElement.dataset['accent'] = user?.accent || 'gold';
   }
 }
 
 export function apiError(error: unknown): string {
+  if (error instanceof TimeoutError) return 'O servidor demorou para responder. Se você estava salvando, confira se a alteração foi concluída antes de tentar novamente.';
   if (error instanceof HttpErrorResponse) {
-    if (error.status === 0) return 'Não foi possível conectar à API. Verifique se o servidor está em execução.';
+    if (error.status === 0) return 'Não foi possível conectar ao Crônicas. Verifique sua conexão e tente novamente.';
+    if (error.status >= 500) return 'O serviço está temporariamente indisponível. Tente novamente em instantes. Se estava salvando, confira o resultado antes de repetir a ação.';
+    if (error.status === 401 && !error.url?.includes('/api/auth/login')) return 'Sua sessão expirou ou não é válida. Entre novamente para continuar.';
     if (typeof error.error?.message === 'string') return error.error.message;
     if (typeof error.error?.detail === 'string') return error.error.detail;
     if (error.error?.errors && typeof error.error.errors === 'object') {
@@ -141,6 +155,7 @@ export function apiError(error: unknown): string {
     }
     if (error.status === 401) return 'Email ou senha incorretos.';
     if (error.status === 403) return 'Você não tem permissão para realizar esta ação.';
+    if (error.status === 404) return 'Este conteúdo não foi encontrado ou não está disponível para sua conta.';
     if (error.status === 429) {
       const seconds = Number(error.headers.get('Retry-After'));
       return Number.isFinite(seconds) && seconds > 0 && seconds <= 3600

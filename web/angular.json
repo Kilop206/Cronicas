@@ -21,7 +21,7 @@
             "styles": ["src/styles.scss"]
           },
           "configurations": {
-            "production": { "outputHashing": "all", "budgets": [{ "type": "initial", "maximumWarning": "750kb", "maximumError": "1mb" }] },
+            "production": { "outputHashing": "all", "optimization": { "scripts": true, "styles": { "minify": true, "inlineCritical": false }, "fonts": false }, "budgets": [{ "type": "initial", "maximumWarning": "750kb", "maximumError": "1mb" }] },
             "development": { "optimization": false, "sourceMap": true }
           },
           "defaultConfiguration": "production"
