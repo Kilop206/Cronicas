@@ -55,3 +55,18 @@ O novo release exige revisar/aplicar a migration aditiva de outbox antes de inic
 - `docs/architecture/`: diagnóstico, arquitetura resultante, fronteiras, dados, eventos, segurança, decisões e roadmap.
 
 Não inclua `.env` ou credenciais no repositório. Consulte `docs/architecture.md` para limites atuais e próximos passos.
+
+## Qualidade, privacidade e acabamento
+
+Consulte a [auditoria de qualidade](docs/quality-audit.md) para mudanças, comandos executados e pendências priorizadas, e as [capturas da validação](docs/visual-validation/quality/README.md). A interface oferece `/privacy`, `/terms` e `/cookies` sem login. Os textos descrevem o código atual e indicam informações do controlador/contato, retenção e condições jurídicas ainda pendentes; precisam de validação antes da abertura pública. Existe exportação/correção de perfil e encerramento de sessões; exclusão automática de conta ainda não foi implementada.
+
+Somente a home é indexável no host principal. Metadados/títulos por rota e 404/500 HTTP são servidos pelas Functions/Worker; os documentos legais em validação, previews e áreas privadas permanecem noindex. Fontes OBS não recebem rodapé ou avisos gerais sobrepostos. Não há rastreadores integrados, banner de consentimento nem PWA. Google Fonts e imagens HTTPS externas continuam fazendo requisições ao respectivo provedor, como informado na política.
+
+Verificações adicionais:
+
+- `npm run test:quality` após `npm --prefix web run build` valida o HTML real do build, políticas de indexação, headers, ícones e helpers.
+- `npm run preview:quality` serve esse build em `http://127.0.0.1:8082`, com a API local em 5099; configure `ALLOWED_ORIGINS` para a origem do preview. O helper é local, encaminha REST e não é um servidor de produção/WebSocket.
+- `npm --prefix web run test:quality:browser` executa os fluxos do Chrome contra esse ambiente. Use apenas banco local descartável: o script cria contas e campanhas de teste. O Chrome e as dependências Playwright existentes precisam estar instalados.
+- `node web/generate-brand-icons.mjs` regenera PNG/ICO a partir do SVG existente usando Chrome/Playwright.
+
+A CSP permite os recursos necessários à interface e à mídia, sem scripts inline/eval. O build mantém CSS minificado e desativa `inlineCritical` para não depender de handlers inline. Ao alterar fontes, origens, mídia ou a otimização do Angular, repetir o teste de navegador e conferir violações da CSP. Antes de publicar, validar backups/restauração, SMTP/DNS, privacidade e configuração dos hosts conforme o relatório; esta auditoria não realizou deploy.
