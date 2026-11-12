@@ -1,5 +1,6 @@
 using System.Net;
 using System.Net.Mail;
+using System.Net.Mime;
 using System.Security.Cryptography;
 using System.Text;
 using Chronicles.Api.Data;
@@ -17,11 +18,7 @@ public sealed class SmtpEmailSender(IConfiguration configuration)
     public async Task SendResetCodeAsync(string destination, string code)
     {
         if (!IsConfigured) throw new InvalidOperationException("SMTP não configurado.");
-        using var message = new MailMessage(configuration["SMTP_FROM"]!, destination)
-        {
-            Subject = "Seu código de recuperação — Crônicas",
-            Body = $"Seu código de recuperação é {code}. Ele expira em 15 minutos.\n\nSe você não solicitou a troca de senha, ignore esta mensagem."
-        };
+        using var message = RecoveryEmail.Create(configuration["SMTP_FROM"]!, destination, code);
         using var client = new SmtpClient(configuration["SMTP_HOST"]!, configuration.GetValue("SMTP_PORT", 587))
         {
             EnableSsl = configuration.GetValue("SMTP_TLS", true),
@@ -32,6 +29,27 @@ public sealed class SmtpEmailSender(IConfiguration configuration)
         if (!string.IsNullOrWhiteSpace(username))
             client.Credentials = new NetworkCredential(username, configuration["SMTP_PASSWORD"]);
         await client.SendMailAsync(message);
+    }
+}
+
+public static class RecoveryEmail
+{
+    public static MailMessage Create(string sender, string destination, string code)
+    {
+        var message = new MailMessage(sender, destination) { Subject = "Seu código de recuperação — Crônicas", SubjectEncoding = Encoding.UTF8 };
+        var text = $"Crônicas\n\nSeu código de recuperação é {code}. Ele expira em 15 minutos e pode ser usado uma vez.\n\nVolte à tela de recuperação do Crônicas e informe o código. Nunca compartilhe este código. Se você não solicitou a troca de senha, ignore esta mensagem.";
+        var html = $"""
+            <!doctype html><html lang="pt-BR"><head><meta charset="utf-8"></head>
+            <body style="margin:0;background:#101419;color:#eeeae0;font-family:Arial,sans-serif">
+            <table role="presentation" style="width:100%;border-collapse:collapse"><tr><td style="padding:32px 20px">
+            <h1 style="color:#d5bd91;font-family:Georgia,serif">Crônicas</h1><h2>Recuperação de acesso</h2>
+            <p>Seu código de recuperação é:</p><p style="font-size:24px;letter-spacing:2px;color:#d5bd91;overflow-wrap:anywhere">{WebUtility.HtmlEncode(code)}</p>
+            <p>Ele expira em 15 minutos e pode ser usado uma vez.</p><p>Volte à tela de recuperação do Crônicas e informe o código. Nunca compartilhe este código.</p>
+            <p>Se você não solicitou a troca de senha, ignore esta mensagem.</p></td></tr></table></body></html>
+            """;
+        message.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(text, Encoding.UTF8, MediaTypeNames.Text.Plain));
+        message.AlternateViews.Add(AlternateView.CreateAlternateViewFromString(html, Encoding.UTF8, MediaTypeNames.Text.Html));
+        return message;
     }
 }
 
@@ -77,6 +95,9 @@ public sealed class PasswordRecoveryService(
             .Where(x => x.UserId == user.Id && x.CodeHash == hash && x.UsedAt == null && x.ExpiresAt > DateTime.UtcNow)
             .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.UsedAt, DateTime.UtcNow));
         if (changed != 1) return false;
+        // A successful reset also invalidates any other outstanding code for this account.
+        await db.PasswordResetCodes.Where(x => x.UserId == user.Id && x.UsedAt == null)
+            .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.UsedAt, DateTime.UtcNow));
         user.PasswordHash = hasher.HashPassword(user, password);
         await db.UserSessions.Where(x => x.UserId == user.Id && x.RevokedAt == null)
             .ExecuteUpdateAsync(setters => setters.SetProperty(x => x.RevokedAt, DateTime.UtcNow));

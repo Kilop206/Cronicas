@@ -1,6 +1,7 @@
 using Chronicles.Api;
 using Chronicles.Api.Services;
 await RequestRateLimitTests.RunAsync();
+await HttpQualityTests.Run();
 await CampaignRoomAccessTests.Run();
 SheetRuleActionTests.Run();
 

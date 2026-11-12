@@ -92,6 +92,7 @@ var allowedOrigins = builder.Configuration["ALLOWED_ORIGINS"]?.Split(',', String
 builder.Services.AddCors(options => options.AddDefaultPolicy(policy => policy.WithOrigins(allowedOrigins).AllowAnyHeader().AllowAnyMethod().AllowCredentials()));
 
 var app = builder.Build();
+app.UseHttpResponseProtection(allowedOrigins);
 app.UseRequestObservability();
 if (app.Environment.IsDevelopment()) app.MapOpenApi();
 app.UseExceptionHandler(handler => handler.Run(async context =>
@@ -186,9 +187,15 @@ auth.MapPost("/register", async Task<IResult> (RegisterRequest input, AppDbConte
 auth.MapPost("/login", async Task<IResult> (LoginRequest input, AppDbContext db, IPasswordHasher<User> hasher, SessionService sessions, HttpContext http) =>
 {
     var email = input.Email?.Trim().ToLowerInvariant() ?? "";
-    var user = await db.Users.SingleOrDefaultAsync(x => x.Email == email);
-    if (user is null || input.Password is null || hasher.VerifyHashedPassword(user, user.PasswordHash, input.Password) == PasswordVerificationResult.Failed)
+    if (email.Length > 320 || input.Password is null || input.Password.Length is < 1 or > 128)
         return Results.Problem("Email ou senha incorretos.", statusCode: 401);
+    var user = await db.Users.SingleOrDefaultAsync(x => x.Email == email);
+    if (user is null)
+        return Results.Problem("Email ou senha incorretos.", statusCode: 401);
+    var verified = hasher.VerifyHashedPassword(user, user.PasswordHash, input.Password);
+    if (verified == PasswordVerificationResult.Failed) return Results.Problem("Email ou senha incorretos.", statusCode: 401);
+    if (verified == PasswordVerificationResult.SuccessRehashNeeded)
+        user.PasswordHash = hasher.HashPassword(user, input.Password);
     await sessions.StartAsync(http, user);
     return Results.Ok(ToUser(user));
 }).RequireRateLimiting("auth");

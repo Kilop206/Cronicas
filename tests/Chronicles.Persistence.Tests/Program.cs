@@ -139,6 +139,7 @@ try
     await CharacterCompanionPersistenceTests.Run(Context);
     await CharacterSystemMigrationPersistenceTests.Run(Context);
     await CharacterSystemPersistenceTests.Run(Context);
+    await IdentityRecoveryTests.Run(Context);
     Console.WriteLine("PostgreSQL: full migration chain, upgrade/rollback/re-upgrade, preserved data, exact EF snapshot, atomic events/history, stale writes, IDOR, retries/idempotency and concurrent claims passed.");
 }
 finally
