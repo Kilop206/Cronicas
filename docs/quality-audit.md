@@ -120,3 +120,5 @@ Houve falhas intermediárias reais: `dotnet` do PATH não tinha SDK; processos N
 Capturas novas em [visual-validation/quality/README.md](visual-validation/quality/README.md). A comparação visual foi feita sobre home, privacidade e campanha, preservando cores, tipografia e composição existentes. Não houve execução em produção, certificação de carga, teste externo de SMTP/DNS nem confirmação de CI remoto.
 
 Ao encerrar, a API e o preview locais foram interrompidos e o contêiner exclusivo `cronicas-quality-db` foi removido. As fixtures da auditoria não ficaram em um banco de produção. Não foram adicionadas dependências de runtime nem migrações de schema.
+
+Publicação posterior, solicitada separadamente pelo proprietário: [registro do deploy de 12/11/2026](architecture/releases/2026-11-12-quality-deployment.md). Os resultados de produção estão nesse registro e não alteram o escopo das verificações locais descritas acima.
