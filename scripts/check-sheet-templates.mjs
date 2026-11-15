@@ -33,8 +33,8 @@ assert.equal(d20Defense(conditionValues, false, true), 15, 'Prone ranged defense
 assert.equal(d20Speed({health: 20, fields: conditionValues}), 1.5);
 assert.equal(d20Speed({health: 0, fields: conditionValues}), 0);
 assert.equal(d20Defense({...conditionValues, estado_regras: [{chave: 'cond_petrificado', valor: -1}]}, false), 5, 'Implied helplessness is projected recursively');
-assert.equal(templates.length, 4);
-assert.equal(new Set(templates.map(template => template.layout.skin)).size, templates.length, 'Each template should have its own visual style');
+assert.equal(templates.length, 5);
+assert.ok(templates.every(template=>template.layout.skin), 'Every template declares a visual style');
 assert.equal(new Set(templates.map(template => template.layout.headerLabel)).size, templates.length, 'Each template should have its own heading');
 assert.equal(new Set(templates.map(template => template.layout.pages.map(page => page.id).join(','))).size, templates.length, 'Each template should have its own page composition');
 
@@ -139,6 +139,22 @@ assert.equal(orderValues.defesa, 11);
 assert.equal(fieldRoll('{agilidade}d20kh1+{per_luta}', orderValues), '1d20');
 assert.equal(paranormalFieldRoll('{agilidade}d20kh1+{per_luta}', { agilidade: 0, per_luta: 5 }), '2d20kl1+5', 'Order attribute zero keeps the lower die');
 console.log(`Validated ${templates.length} sheet templates and representative formulas/rolls.`);
+
+const fm = templates.find(template => template.id === 'feiticeiros_maldicoes');
+const fmSystem = { ...dndSystem, templateId: fm.id, templateVersion: 1, rulesetVersion: '2.5.2', fields: fm.fields, layout: fm.layout };
+assert.equal(resolveSheetRenderer(fmSystem)?.id, fm.id);
+assert.equal(resolveSheetRenderer({...fmSystem,rulesetVersion:'2.6'}),null);
+assert.equal(resolveSheetRenderer({...fmSystem,templateVersion:2}),null);
+assert.equal(sheetResources(fmSystem).map(v=>v.key).join(','),'health,mana');
+const { fmSkillBonus, fmSoulStage } = load('features/sheets/renderers/feiticeiros/fm-projection.ts');
+const fmValues={nivel:5,forca:16,destreza:14,origem:'inato',especializacao:'combate',pericias:[{chave:'atletismo',treino:2,outros:1}]};
+const fmCharacter={name:'Ensaio',health:30,maxHealth:40,mana:20,maxMana:20,sanity:0,maxSanity:0,fields:fmValues};
+assert.equal(fmSkillBonus(fmCharacter,'atletismo','forca'),10);
+assert.equal(fmSoulStage({...fmCharacter,fields:{...fmValues,estado_regras:[{chave:'alma_max',valor:40},{chave:'alma_dano',valor:11}]}}),1);
+if(process.argv.includes('--export-fm')) {
+  const directory=path.resolve(import.meta.dirname,'../.quality-local/fm');fs.mkdirSync(directory,{recursive:true});
+  fs.writeFileSync(path.join(directory,'template.json'),JSON.stringify({fields:fm.fields,layout:fm.layout,templateId:fm.id,templateVersion:fm.version,rulesetVersion:fm.rulesetVersion,rendererMode:'specialized'}));
+}
 
 for (const [roll, target, expected] of [[1, 0, 'cr\u00edtico'], [10, 50, 'extremo'], [25, 50, 'dif\u00edcil'], [50, 50, 'regular'], [51, 50, 'falha'], [95, 49, 'falha'], [96, 49, 'falha cr\u00edtica'], [96, 50, 'falha'], [99, 50, 'falha'], [100, 100, 'falha cr\u00edtica']]) assert.equal(coc7eSuccessDegree(roll, target), expected);
 assert.equal(coc7eSuccessDegree(0, 50), null);

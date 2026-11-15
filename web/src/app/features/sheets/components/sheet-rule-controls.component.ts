@@ -70,8 +70,8 @@ export class SheetRuleControlsComponent implements OnChanges, OnDestroy {
   }
   action() { return this.view()?.actions.find(action => action.id === this.actionId); }
   choose(id: string) { this.actionId = id; this.option = this.action()?.options?.[0]?.value || ''; this.amount = 1; this.message.set(''); }
-  minimum() { return this.actionId === 'configure' ? this.view()?.settings.find(item => item.key === this.option)?.min ?? 0 : 0; }
-  maximum() { return this.actionId === 'configure' ? this.view()?.settings.find(item => item.key === this.option)?.max ?? 9999 : 9999; }
+  minimum() { return this.actionId === 'configure' || this.actionId === 'fm-configure' ? this.view()?.settings.find(item => item.key === this.option)?.min ?? 0 : 0; }
+  maximum() { return this.actionId === 'configure' || this.actionId === 'fm-configure' ? this.view()?.settings.find(item => item.key === this.option)?.max ?? 9999 : 9999; }
   apply() {
     if (!this.ready || this.busy() || !this.character.canEdit || !this.action()) return;
     this.busy.set(true); this.working.emit(true); this.error.set(''); this.message.set(''); this.rolls.set([]);

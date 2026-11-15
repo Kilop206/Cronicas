@@ -56,7 +56,8 @@ public sealed class RpgPluginRegistry
             new CompiledRulesPlugin("ordem_paranormal:1.3"),
             new CompiledRulesPlugin("dnd_5e:2014"),
             new CompiledRulesPlugin("tormenta20:jogo-do-ano-2024-v1.3"),
-            new CompiledRulesPlugin("call_of_cthulhu_7e:7e")
+            new CompiledRulesPlugin("call_of_cthulhu_7e:7e"),
+            new FmRulesPlugin()
         ]);
     }
 }

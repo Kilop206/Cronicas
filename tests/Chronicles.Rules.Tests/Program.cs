@@ -4,6 +4,7 @@ await RequestRateLimitTests.RunAsync();
 await HttpQualityTests.Run();
 await CampaignRoomAccessTests.Run();
 SheetRuleActionTests.Run();
+if(args is ["--fm-template",var templatePath]) FeiticeirosRulesTests.ValidateTemplate(templatePath);
 
 static void Check(bool condition, string name)
 {

@@ -16,7 +16,7 @@ import { SheetCollectionFieldComponent } from '../components/sheet-collection-fi
     <ng-container *ngIf="canEdit(); else value">
       <input *ngIf="field.type === 'number' || field.type === 'text'" [attr.aria-label]="field.label" [type]="field.type === 'number' ? 'number' : 'text'" [ngModel]="fieldValue()" (ngModelChange)="set($event)" [ngModelOptions]="{standalone:true}" [min]="field.min" [max]="field.max" [attr.maxlength]="field.type === 'text' ? 300 : null">
       <textarea *ngIf="field.type === 'longtext'" [attr.aria-label]="field.label" [ngModel]="fieldValue()" (ngModelChange)="set($event)" [ngModelOptions]="{standalone:true}" maxlength="10000" rows="3"></textarea>
-      <select *ngIf="field.type === 'select'" [attr.aria-label]="field.label" [ngModel]="fieldValue()" (ngModelChange)="set($event)" [ngModelOptions]="{standalone:true}"><option value="">Selecione</option><option *ngFor="let option of field.options" [value]="option">{{ option }}</option></select>
+      <select *ngIf="field.type === 'select'" [attr.aria-label]="field.label" [ngModel]="fieldValue()" (ngModelChange)="set($event)" [ngModelOptions]="{standalone:true}"><option value="">Selecione</option><option *ngFor="let option of field.options" [value]="option">{{ optionLabels[option] || option }}</option></select>
       <input *ngIf="field.type === 'boolean'" type="checkbox" [attr.aria-label]="field.label" [ngModel]="draft.fields[field.key] === true" (ngModelChange)="set($event)" [ngModelOptions]="{standalone:true}">
     </ng-container>
     <ng-template #value><strong *ngIf="field.type !== 'list' && field.type !== 'table'" class="field-value">{{ display() }}</strong></ng-template>
@@ -39,12 +39,13 @@ export class SystemFieldComponent {
   @Input() campaignId = '';
   @Input() mode: 'read' | 'edit' | 'print' = 'read';
   @Input() isMaster = false;
+  @Input() optionLabels: Record<string,string> = {};
   @Input() style: 'score' | 'row' | 'default' = 'default';
   @Output() changed = new EventEmitter<void>();
   fieldValue() { return this.draft.fields[this.field?.key || ''] ?? ''; }
   canEdit() { return this.mode === 'edit' && !this.field?.formula && (this.field?.editRole !== 'gm' || this.isMaster); }
   fieldMode(): 'read' | 'edit' | 'print' { return this.mode === 'print' ? 'print' : this.canEdit() ? 'edit' : 'read'; }
-  display() { const value = this.draft.fields[this.field?.key || '']; return value === undefined || value === '' ? '—' : this.field?.type === 'boolean' ? value ? 'Sim' : 'Não' : String(value); }
+  display() { const value = this.draft.fields[this.field?.key || '']; return value === undefined || value === '' ? '—' : this.field?.type === 'boolean' ? value ? 'Sim' : 'Não' : this.field?.type === 'select' ? this.optionLabels[String(value)] || String(value) : String(value); }
   percentileTarget() { const value = this.draft.fields[this.field?.key || '']; return typeof value === 'number' ? value : null; }
   set(value: string | number | boolean) { if (!this.field || !this.canEdit()) return; if (value === '' || value === null) delete this.draft.fields[this.field.key]; else this.draft.fields[this.field.key] = this.field.type === 'number' ? Number(value) : value; this.changed.emit(); }
 }

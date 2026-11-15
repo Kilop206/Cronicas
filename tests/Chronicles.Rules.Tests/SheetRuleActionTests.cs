@@ -5,6 +5,9 @@ public static class SheetRuleActionTests
 {
     public static void Run()
     {
+        FeiticeirosRulesTests.Run();
+        FeiticeirosAdvancedTests.Run();
+        FeiticeirosMartialTests.Run();
         D20ConditionTestCases.Run();
         CthulhuCreationTests.Run();
         CthulhuOccupationTests.Run();

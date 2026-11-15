@@ -2,7 +2,7 @@ using System.Text.Json;
 
 namespace Chronicles.Domain;
 
-public sealed record RuleCommand(string Action, int Amount = 0, string? Option = null, string Visibility = "campaign", string? Expression = null, DamageEvent? Damage = null, WeaponContext? Weapon = null);
+public sealed record RuleCommand(string Action, int Amount = 0, string? Option = null, string Visibility = "campaign", string? Expression = null, DamageEvent? Damage = null, WeaponContext? Weapon = null, FmActionContext? Jujutsu = null);
 public sealed record RuleChoice(string Value, string Label);
 public sealed record RuleAction(string Id, string Label, string? AmountLabel = null, RuleChoice[]? Options = null, bool Hidden = false);
 public sealed record RuleStat(string Label, string Value);

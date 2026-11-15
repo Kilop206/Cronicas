@@ -5,6 +5,7 @@ import { ParanormalSheetComponent } from '../renderers/paranormal/paranormal-she
 import { DndSheetComponent } from '../renderers/dnd/dnd-sheet.component';
 import { CocSheetComponent } from '../renderers/cthulhu/coc-sheet.component';
 import { T20SheetComponent } from '../renderers/tormenta20/t20-sheet.component';
+import { FmSheetComponent } from '../renderers/feiticeiros/fm-sheet.component';
 import { resolveSheetRenderer } from './sheet-renderer-registry';
 
 interface SheetPresentation {
@@ -15,6 +16,7 @@ interface SheetPresentation {
 
 // Trusted presentation code, bundled at build time. Adding a renderer does not change the editor page.
 const PRESENTATIONS: Readonly<Record<string, Type<SheetPresentation>>> = {
+  feiticeiros_maldicoes: FmSheetComponent,
   ordem_paranormal: ParanormalSheetComponent,
   dnd_5e: DndSheetComponent,
   call_of_cthulhu_7e: CocSheetComponent,

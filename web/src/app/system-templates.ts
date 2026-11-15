@@ -1,4 +1,5 @@
-import type { CthulhuOccupationDefinition, CthulhuOccupationSlot, SheetBlock, SheetLayout, SheetPage, SystemField } from './api';
+import type { CthulhuOccupationDefinition, CthulhuOccupationSlot, SheetCellValue, SheetBlock, SheetLayout, SheetPage, SystemField } from './api';
+
 
 export interface SheetTemplate {
   id: string;
@@ -11,6 +12,91 @@ export interface SheetTemplate {
   layout: SheetLayout;
   cthulhuOccupations?: CthulhuOccupationDefinition;
 }
+
+export const FM_ATTRIBUTES = [['forca','Força'],['destreza','Destreza'],['constituicao','Constituição'],['inteligencia','Inteligência'],['sabedoria','Sabedoria'],['presenca','Presença']] as const;
+export const FM_CLASSES = [
+  {id:'lutador',label:'Lutador',hp:12,gain:6,die:10,energy:4,page:49},
+  {id:'combate',label:'Especialista em Combate',hp:12,gain:6,die:10,energy:4,page:63},
+  {id:'tecnica',label:'Especialista em Técnica',hp:10,gain:5,die:8,energy:6,page:78},
+  {id:'controlador',label:'Controlador',hp:10,gain:5,die:8,energy:5,page:90},
+  {id:'suporte',label:'Suporte',hp:10,gain:5,die:8,energy:5,page:102},
+  {id:'restringido',label:'Restringido',hp:16,gain:7,die:12,energy:4,page:114}
+];
+export const FM_ORIGINS = [{id:'inato',label:'Inato',page:27},{id:'herdado',label:'Herdado',page:28},{id:'derivado',label:'Derivado',page:32},{id:'restringido',label:'Restringido',page:33},{id:'hibrido',label:'Feto Amaldiçoado Híbrido',page:34},{id:'sem_tecnica',label:'Sem Técnica',page:37},{id:'corpo_mutante',label:'Corpo Amaldiçoado Mutante',page:39}];
+export const FM_SKILLS = [
+  ['acrobacia','Acrobacia','destreza'],['atletismo','Atletismo','forca'],['direcao','Direção †','sabedoria'],['enganacao','Enganação','presenca'],
+  ['feiticaria','Feitiçaria *','inteligencia'],['furtividade','Furtividade','destreza'],['historia','História','inteligencia'],['intimidacao','Intimidação','presenca'],
+  ['intuicao','Intuição','sabedoria'],['investigacao','Investigação','inteligencia'],['medicina','Medicina *','sabedoria'],['ocultismo','Ocultismo','sabedoria'],
+  ['oficio_1','Ofício I *','inteligencia'],['oficio_2','Ofício II *','inteligencia'],['percepcao','Percepção','sabedoria'],['performance','Performance','presenca'],
+  ['persuasao','Persuasão','presenca'],['prestidigitacao','Prestidigitação *','destreza'],['sobrevivencia','Sobrevivência †','sabedoria'],['tecnologia','Tecnologia','inteligencia'],['teologia','Teologia †','inteligencia']
+] as const;
+export const FM_SAVES = [['astucia','Astúcia','inteligencia'],['fortitude','Fortitude','constituicao'],['integridade','Integridade','constituicao'],['reflexos','Reflexos','destreza'],['vontade','Vontade','sabedoria']] as const;
+export const FM_APTITUDES = [['aura','Aura · AU'],['controle','Controle e Leitura · CL'],['barreira','Barreira · BAR'],['dominio','Domínio · DOM'],['reversa','Energia Reversa · ER']] as const;
+export const FM_DAMAGE = ['cortante','perfurante','impacto','acido','congelante','chocante','queimante','sonico','alma','reversa','energetico','psiquico','radiante','necrotico','venenoso'];
+export const FM_ABILITIES = [
+  ['energia_reversa','Energia Reversa'],['cura_amplificada','Cura Amplificada'],['tracado_alma','Compreende o traçado da alma'],['tecnicas_barreira','Técnicas de Barreira'],
+  ['expansao_incompleta','Expansão Incompleta'],['expansao_completa','Expansão Completa'],['acerto_garantido','Acerto Garantido'],['expansao_sem_barreiras','Expansão Sem Barreiras'],
+  ['canalizar_golpe','Canalizar em Golpe'],['canalizacao_avancada','Canalização Avançada'],['canalizacao_maxima','Canalização Máxima'],['cobrir_se','Cobrir-se'],['cobertura_avancada','Cobertura Avançada'],
+  ['paredes_resistentes','Paredes Resistentes'],['barreira_rapida','Barreira Rápida'],['dominio_simples','Domínio Simples'],['raio_negro','Raio Negro'],['faiscas_negras','Abençoado pelas Faíscas Negras'],['tecnica_maxima','Técnica Máxima']
+] as const;
+const number = (key:string,label:string,section:string,initial=0,min=0,max=9999,formula:string|null=null):SystemField => ({key,label,section,type:'number',span:3,min,max,options:null,defaultValue:formula?null:initial,formula});
+const text = (key:string,label:string,section:string,long=false):SystemField => ({key,label,section,type:long?'longtext':'text',span:long?12:6,min:null,max:null,options:null});
+const select = (key:string,label:string,section:string,options:string[],initial=options[0]):SystemField => ({key,label,section,type:'select',span:4,min:null,max:null,options,defaultValue:initial});
+type Column = [string,string,'text'|'number'|'boolean'];
+const table = (key:string,label:string,section:string,columns:Column[],defaultValue:Record<string,SheetCellValue>[]=[]):SystemField => ({key,label,section,type:'table',span:12,min:null,max:null,options:null,columns:columns.map(([key,label,type])=>({key,label,type})),defaultValue});
+const fields:SystemField[] = [
+  number('nivel','Nível','Identidade',1,1,20), select('origem','Origem','Identidade',FM_ORIGINS.map(v=>v.id)), select('especializacao','Especialização inicial','Identidade',FM_CLASSES.map(v=>v.id)),
+  text('cla','Clã / linhagem','Identidade'), text('grau','Grau','Identidade'), number('experiencia','Experiência','Identidade'),
+  select('heranca_cla','Herança mecânica de clã (Herdado)','Identidade',['nenhuma','gojo','inumaki','kamo','zenin']),
+  select('atributo_tecnica','Atributo da técnica','Identidade',FM_ATTRIBUTES.map(v=>v[0]),'sabedoria'), select('atributo_especializacao','Atributo da especialização','Identidade',FM_ATTRIBUTES.map(v=>v[0]),'forca'),
+  select('natureza','Natureza do corpo','Identidade',['humano','maldicao','construto']),
+  ...FM_ATTRIBUTES.flatMap(([key,label])=>[number(key,label,'Atributos',10,0,30),number('mod_'+key,'Modificador de '+label,'Modificadores',0,-5,10,`floordiv(${key} - 10, 2)`)]),
+  number('bonus_treinamento','Bônus de treinamento','Combate',2,2,6,'2 + floordiv(nivel - 1, 4)'),
+  number('bonus_defesa','Outros bônus de Defesa','Combate',0,-99,999), number('bonus_uniforme','Uniforme: bônus de Defesa','Combate',0,0,99),
+  number('penalidade_uniforme','Uniforme: penalidade de DES','Combate',0,0,99), number('penalidade_escudo','Escudo: penalidade de DES','Combate',0,0,99),
+  number('defesa','Defesa base','Combate',10,0,999,'10 + mod_destreza + floordiv(nivel, 2) + bonus_defesa + bonus_uniforme'),
+  number('deslocamento','Deslocamento base (m)','Combate',9,0,999), number('bonus_iniciativa','Outros bônus de Iniciativa','Combate',0,-99,999),
+  select('defesa_restrita','Restringido: atributo adicional na Defesa','Combate',['forca','constituicao']),
+  number('iniciativa','Iniciativa base','Combate',0,-99,999,'mod_destreza + bonus_iniciativa'),
+  number('bonus_atencao','Outros bônus de Atenção','Combate',0,-99,999),
+  number('bonus_cd','Outros bônus de CD','Combate',0,-99,999),
+  select('foco_tecnica','Foco Amaldiçoado (Técnica 10)','Perfil Amaldiçoado',['nenhum','destruicao','economia','refino']),
+  {key:'manobras_lutador',label:'Manobras de Empolgação aprendidas (2; +1 em 6/12/18)',section:'Progressão',type:'list',span:12,min:null,max:null,options:null,defaultValue:[]},
+  number('bonus_pv','PV adicionais (origem, talentos ou rolagens)','Combate',0,-999,999), number('bonus_pe','PE/Estamina adicionais (passivos e escolhas)','Combate',0,-999,999),
+  number('carga_meios','Carga em meios espaços (2 = 1 espaço)','Combate',0,0,999),
+  table('pericias','Perícias: 0 não treinado, 1 treinado, 2 mestre','Perícias',[['chave','Perícia','text'],['treino','Treino','number'],['outros','Outros bônus','number']],FM_SKILLS.map(([chave])=>({chave,treino:0,outros:0}))),
+  table('resistencias','Testes de resistência','Perícias',[['chave','Resistência','text'],['treino','Treino','number'],['outros','Outros bônus','number']],FM_SAVES.map(([chave])=>({chave,treino:0,outros:0}))),
+  text('oficios','Especialidades dos Ofícios I e II','Perícias'),
+  ...FM_APTITUDES.map(([key,label])=>number('apt_'+key,label,'Perfil Amaldiçoado',0,0,5)),
+  {key:'aptidoes',label:'Aptidões com suporte mecânico (identificadores)',section:'Perfil Amaldiçoado',type:'list',span:12,min:null,max:null,options:null,defaultValue:[]},
+  {key:'imunidades_condicao',label:'Imunidades a condições',section:'Combate',type:'list',span:12,min:null,max:null,options:null,defaultValue:[]},
+  text('tecnica','Técnica Amaldiçoada','Perfil Amaldiçoado'),text('funcionamento','Funcionamento básico','Perfil Amaldiçoado',true),
+  table('feiticos','Feitiços','Técnicas',[['nome','Nome','text'],['nivel','Nível','number'],['tipo','Tipo','text'],['acao','Ação','text'],['duracao','Duração','text'],['dados','Dados do efeito','text'],['reducao','Redução de custo','number']]),
+  table('armas','Armas e ataques','Combate',[['nome','Arma','text'],['atributo','Atributo','text'],['dados','Dano durante ataque','text'],['apos','Dano após ataque','text'],['treinado','Treinado','boolean'],['margem','Margem crítica','number'],['acao','Ação','text'],['municao','Munição (−1 livre)','number']]),
+  table('defesas','Defesas por tipo e fonte','Combate',[['tipo','Tipo','text'],['efeito','Efeito','text'],['valor','RD fixa','number'],['fonte','Fonte','text']]),
+  table('multiclasse','Níveis por especialização (vazio = classe única)','Progressão',[['classe','Especialização','text'],['nivel','Nível','number']]),
+  table('criacao_atributos','Criação guiada: valores base e bônus de origem','Progressão',[['chave','Atributo','text'],['base_valor','Valor base','number'],['bonus','Bônus de origem','number']]),
+  table('votos','Votos de Restrição','Progressão',[['nome','Voto','text'],['tipo','Tipo','text'],['peso','Peso','text'],['beneficio','Benefício','text'],['maleficio','Malefício','text'],['duracao','Duração','text']]),
+  table('treinamentos','Treinamentos em interlúdios','Progressão',[['linha','Linha','text'],['etapa','Etapa','number'],['focos','Focos usados','number'],['beneficios','Benefícios aplicados','text']]),
+  table('invocacoes','Invocações','Invocações',[['nome','Nome','text'],['grau','Grau','text'],['pv','PV atuais','number'],['pv_max','PV máximos','number'],['defesa','Defesa','number'],['ativa','Ativa','boolean'],['detalhes','Ações e traços','text']]),
+  text('dominio_perfil','Expansão: efeitos, barreiras e acerto garantido','Técnicas',true),text('nucleos','Corpo Mutante: três núcleos, atributos e recursos','Progressão',true),
+  text('aspectos','Personalidade, ideais, ligações e complicações','Crônica',true),text('ferimentos','Ferimentos Complexos, membros e cicatrização','Crônica',true),
+  table('estado_regras','Estado persistido das regras','Regras',[['chave','Indicador','text'],['valor','Valor','number']])
+];
+const fmResource=(key:string,title:string,maxKey?:string):SheetBlock=>({id:'recurso_'+key,kind:'resource',key,title,text:null,span:6,...(maxKey?{maxKey}:{}),style:'accent'});
+const fieldBlock=(field:SystemField):SheetBlock=>({id:'campo_'+field.key,kind:'field',key:field.key,title:field.label,text:null,span:field.span||6,style:field.section==='Atributos'?'score':field.section==='Perícias'?'compact':'panel'});
+const collection=(id:string,kind:SheetBlock['kind'],span=12):SheetBlock=>({id,kind,span,title:null,key:null,text:null,style:'plain'});
+const page=(id:string,title:string,sections:string[],extras:SheetBlock[]=[])=>({id,title,blocks:[...extras,...fields.filter(f=>sections.includes(f.section)).map(fieldBlock)]});
+export const FM_TEMPLATE:SheetTemplate = {
+  id:'feiticeiros_maldicoes',version:1,rulesetVersion:'2.5.2',name:'Feiticeiros & Maldições 2.5.2',
+  summary:'Ficha jujutsu com alma, PE/Estamina, testes, condições, feitiços e domínios. Referência ao Livro 2.5.2 e Grimório v1.',
+  sourceUrl:'',fields,
+  layout:{accentColor:'#a491e5',skin:'archive',headerLabel:'CRÔNICAS / ARQUIVO JUJUTSU',fontStyle:'modern',density:'compact',pages:[
+    page('feiticeiro','Feiticeiro',['Identidade','Atributos','Modificadores'],[collection('identidade','identity',8),collection('retrato','portrait',4),fmResource('health','PV'),fmResource('mana','PE / Estamina')]),
+    page('confronto','Confronto',['Combate']), page('pericias','Perícias e resistências',['Perícias']),page('perfil','Perfil Amaldiçoado',['Perfil Amaldiçoado','Técnicas']),
+    page('progresso','Progressão e invocações',['Progressão','Invocações']),page('arquivo','Arquivo',['Crônica','Regras'],[collection('inventario','inventory'),collection('habilidades','abilities'),collection('historico','history')])
+  ]}
+};
 
 const numberField = (key: string, label: string, section: string, initial = 0, rollExpression: string | null = null, formula: string | null = null, span = 3): SystemField =>
   ({ key, label, section, type: 'number', min: null, max: null, options: null, span, defaultValue: formula ? null : initial, formula, rollExpression });
@@ -216,6 +302,7 @@ const cocFields: SystemField[] = [
 ];
 
 export const SHEET_TEMPLATES: SheetTemplate[] = [
+  FM_TEMPLATE,
   { id: 'ordem_paranormal', version: 7, rulesetVersion: '1.3', name: 'Ordem Paranormal RPG', summary: 'Painel de agente com atributos, perícias detalhadas, recursos, defesa, ataques e rituais.', sourceUrl: 'https://jamboeditora.com.br/wp-content/uploads/woocommerce_uploads/2023/02/jamboeditora-ordem-paranormal-ficha-de-personagem-oeuvst.pdf', fields: orderFields,
     layout: makeLayout(orderFields, [
       { id: 'dossie', title: 'Dossiê do agente', items: [identity(), portrait(), ...sectionKeys(orderFields, 'Identidade'), 'nex', resource('health', 'PV', 4), resource('mana', 'PE', 4), resource('sanity', 'SAN', 4), highlight('defesa', 4), 'bloqueio', 'esquiva', 'iniciativa', 'deslocamento', 'equip_defesa', 'outros_defesa'] },

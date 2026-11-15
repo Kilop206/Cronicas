@@ -1,0 +1,3061 @@
+[
+  {
+    "id": "Lutador:aparar_ataque",
+    "title": "APARAR ATAQUE",
+    "category": "Lutador",
+    "page": 53,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Lutador:aparar_projeteis",
+    "title": "APARAR PROJÉTEIS",
+    "category": "Lutador",
+    "page": 53,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Lutador:ataque_inconsequente",
+    "title": "ATAQUE INCONSEQUENTE",
+    "category": "Lutador",
+    "page": 53,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Lutador:caminho_da_mao_vazia",
+    "title": "CAMINHO DA MÃO VAZIA",
+    "category": "Lutador",
+    "page": 53,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Lutador:complementacao_marcial",
+    "title": "COMPLEMENTAÇÃO MARCIAL",
+    "category": "Lutador",
+    "page": 53,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Lutador:deboche_desconcertante",
+    "title": "DEBOCHE DESCONCERTANTE",
+    "category": "Lutador",
+    "page": 53,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Lutador:dedicacao_em_arma",
+    "title": "DEDICAÇÃO EM ARMA",
+    "category": "Lutador",
+    "page": 53,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Lutador:esquiva_rapida",
+    "title": "ESQUIVA RÁPIDA",
+    "category": "Lutador",
+    "page": 53,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Lutador:finta_melhorada",
+    "title": "FINTA MELHORADA",
+    "category": "Lutador",
+    "page": 53,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Lutador:impacto_misto",
+    "title": "IMPACTO MISTO",
+    "category": "Lutador",
+    "page": 54,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Lutador:kiai_intimidador",
+    "title": "KIAI INTIMIDADOR",
+    "category": "Lutador",
+    "page": 54,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Lutador:maos_amaldicoadas",
+    "title": "MÃOS AMALDIÇOADAS",
+    "category": "Lutador",
+    "page": 54,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Lutador:puxar_um_ar",
+    "title": "PUXAR UM AR",
+    "category": "Lutador",
+    "page": 54,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Lutador:quebrando_tudo",
+    "title": "QUEBRANDO TUDO",
+    "category": "Lutador",
+    "page": 54,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Lutador:resistir",
+    "title": "RESISTIR",
+    "category": "Lutador",
+    "page": 54,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Lutador:acao_agil",
+    "title": "AÇÃO ÁGIL",
+    "category": "Lutador",
+    "page": 55,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Lutador:acrobata",
+    "title": "ACROBATA",
+    "category": "Lutador",
+    "page": 55,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Lutador:atacar_e_recuar",
+    "title": "ATACAR E RECUAR",
+    "category": "Lutador",
+    "page": 55,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Lutador:brutalidade",
+    "title": "BRUTALIDADE",
+    "category": "Lutador",
+    "page": 55,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Lutador:defesa_marcial",
+    "title": "DEFESA MARCIAL",
+    "category": "Lutador",
+    "page": 55,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Lutador:devolver_projeteis",
+    "title": "DEVOLVER PROJÉTEIS",
+    "category": "Lutador",
+    "page": 55,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Lutador:fluxo",
+    "title": "FLUXO",
+    "category": "Lutador",
+    "page": 55,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Lutador:furia_da_vinganca",
+    "title": "FÚRIA DA VINGANÇA",
+    "category": "Lutador",
+    "page": 55,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Lutador:imprudencia_motivadora",
+    "title": "IMPRUDÊNCIA MOTIVADORA",
+    "category": "Lutador",
+    "page": 55,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Lutador:musculos_desenvolvidos",
+    "title": "MÚSCULOS DESENVOLVIDOS",
+    "category": "Lutador",
+    "page": 56,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Lutador:redirecionar_forca",
+    "title": "REDIRECIONAR FORÇA",
+    "category": "Lutador",
+    "page": 56,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Lutador:segura_pra_mim",
+    "title": "SEGURA PRA MIM",
+    "category": "Lutador",
+    "page": 56,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Lutador:sobrevivente",
+    "title": "SOBREVIVENTE",
+    "category": "Lutador",
+    "page": 56,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Lutador:voadora",
+    "title": "VOADORA",
+    "category": "Lutador",
+    "page": 56,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Lutador:aprimoramento_marcial",
+    "title": "APRIMORAMENTO MARCIAL",
+    "category": "Lutador",
+    "page": 57,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Lutador:ataque_extra",
+    "title": "ATAQUE EXTRA",
+    "category": "Lutador",
+    "page": 57,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Lutador:brutalidade_sanguinaria",
+    "title": "BRUTALIDADE SANGUINÁRIA",
+    "category": "Lutador",
+    "page": 57,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Lutador:corpo_calejado",
+    "title": "CORPO CALEJADO",
+    "category": "Lutador",
+    "page": 57,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Lutador:eliminar_e_continuar",
+    "title": "ELIMINAR E CONTINUAR",
+    "category": "Lutador",
+    "page": 57,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Lutador:foguete_sem_re",
+    "title": "FOGUETE SEM RÉ",
+    "category": "Lutador",
+    "page": 57,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Lutador:golpe_da_mao_aberta",
+    "title": "GOLPE DA MÃO ABERTA",
+    "category": "Lutador",
+    "page": 57,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Lutador:ignorar_dor",
+    "title": "IGNORAR DOR",
+    "category": "Lutador",
+    "page": 57,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Lutador:manobras_finalizadoras",
+    "title": "MANOBRAS FINALIZADORAS",
+    "category": "Lutador",
+    "page": 57,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Lutador:poder_corporal",
+    "title": "PODER CORPORAL",
+    "category": "Lutador",
+    "page": 58,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Lutador:potencia_superior",
+    "title": "POTÊNCIA SUPERIOR",
+    "category": "Lutador",
+    "page": 58,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Lutador:sequencia_inconsequente",
+    "title": "SEQUÊNCIA INCONSEQUENTE",
+    "category": "Lutador",
+    "page": 58,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Lutador:um_com_a_arma",
+    "title": "UM COM A ARMA",
+    "category": "Lutador",
+    "page": 58,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Lutador:ataques_ressoantes",
+    "title": "ATAQUES RESSOANTES",
+    "category": "Lutador",
+    "page": 59,
+    "minimumLevel": 8
+  },
+  {
+    "id": "Lutador:brutalidade_aprimorada",
+    "title": "BRUTALIDADE APRIMORADA",
+    "category": "Lutador",
+    "page": 59,
+    "minimumLevel": 8
+  },
+  {
+    "id": "Lutador:feitico_e_punho",
+    "title": "FEITIÇO E PUNHO",
+    "category": "Lutador",
+    "page": 59,
+    "minimumLevel": 8
+  },
+  {
+    "id": "Lutador:golpear_brecha",
+    "title": "GOLPEAR BRECHA",
+    "category": "Lutador",
+    "page": 59,
+    "minimumLevel": 8
+  },
+  {
+    "id": "Lutador:oportunista",
+    "title": "OPORTUNISTA",
+    "category": "Lutador",
+    "page": 59,
+    "minimumLevel": 8
+  },
+  {
+    "id": "Lutador:pancada_desnorteante",
+    "title": "PANCADA DESNORTEANTE",
+    "category": "Lutador",
+    "page": 59,
+    "minimumLevel": 8
+  },
+  {
+    "id": "Lutador:punhos_letais",
+    "title": "PUNHOS LETAIS",
+    "category": "Lutador",
+    "page": 59,
+    "minimumLevel": 8
+  },
+  {
+    "id": "Lutador:alma_quieta",
+    "title": "ALMA QUIETA",
+    "category": "Lutador",
+    "page": 60,
+    "minimumLevel": 10
+  },
+  {
+    "id": "Lutador:corpo_sincronizado",
+    "title": "CORPO SINCRONIZADO",
+    "category": "Lutador",
+    "page": 60,
+    "minimumLevel": 10
+  },
+  {
+    "id": "Lutador:empolgar_se",
+    "title": "EMPOLGAR-SE",
+    "category": "Lutador",
+    "page": 60,
+    "minimumLevel": 10
+  },
+  {
+    "id": "Lutador:impacto_demolidor",
+    "title": "IMPACTO DEMOLIDOR",
+    "category": "Lutador",
+    "page": 60,
+    "minimumLevel": 10
+  },
+  {
+    "id": "Lutador:insistencia",
+    "title": "INSISTÊNCIA",
+    "category": "Lutador",
+    "page": 60,
+    "minimumLevel": 10
+  },
+  {
+    "id": "Lutador:mente_em_paz",
+    "title": "MENTE EM PAZ",
+    "category": "Lutador",
+    "page": 60,
+    "minimumLevel": 10
+  },
+  {
+    "id": "Lutador:armas_absolutas",
+    "title": "ARMAS ABSOLUTAS",
+    "category": "Lutador",
+    "page": 61,
+    "minimumLevel": 12
+  },
+  {
+    "id": "Lutador:corpo_arsenal",
+    "title": "CORPO ARSENAL",
+    "category": "Lutador",
+    "page": 61,
+    "minimumLevel": 12
+  },
+  {
+    "id": "Lutador:seja_agua",
+    "title": "SEJA ÁGUA",
+    "category": "Lutador",
+    "page": 61,
+    "minimumLevel": 12
+  },
+  {
+    "id": "Lutador:tempestade_sufocante",
+    "title": "TEMPESTADE SUFOCANTE",
+    "category": "Lutador",
+    "page": 61,
+    "minimumLevel": 12
+  },
+  {
+    "id": "Lutador:corpo_supremo",
+    "title": "CORPO SUPREMO",
+    "category": "Lutador",
+    "page": 61,
+    "minimumLevel": 16
+  },
+  {
+    "id": "Lutador:duro_na_queda",
+    "title": "DURO NA QUEDA",
+    "category": "Lutador",
+    "page": 61,
+    "minimumLevel": 16
+  },
+  {
+    "id": "Especialista em Combate:arremessos_potentes",
+    "title": "ARREMESSOS POTENTES",
+    "category": "Especialista em Combate",
+    "page": 67,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Especialista em Combate:arsenal_ciclico",
+    "title": "ARSENAL CÍCLICO",
+    "category": "Especialista em Combate",
+    "page": 67,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Especialista em Combate:assumir_postura",
+    "title": "ASSUMIR POSTURA",
+    "category": "Especialista em Combate",
+    "page": 67,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Especialista em Combate:disparos_sincronizados",
+    "title": "DISPAROS SINCRONIZADOS",
+    "category": "Especialista em Combate",
+    "page": 67,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Especialista em Combate:escudeiro_agressivo",
+    "title": "ESCUDEIRO AGRESSIVO",
+    "category": "Especialista em Combate",
+    "page": 67,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Especialista em Combate:extensao_do_corpo",
+    "title": "EXTENSÃO DO CORPO",
+    "category": "Especialista em Combate",
+    "page": 67,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Especialista em Combate:flanqueador_superior",
+    "title": "FLANQUEADOR SUPERIOR",
+    "category": "Especialista em Combate",
+    "page": 67,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Especialista em Combate:golpe_falso",
+    "title": "GOLPE FALSO",
+    "category": "Especialista em Combate",
+    "page": 67,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Especialista em Combate:golpes_potentes",
+    "title": "GOLPES POTENTES",
+    "category": "Especialista em Combate",
+    "page": 68,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Especialista em Combate:indomavel",
+    "title": "INDOMÁVEL",
+    "category": "Especialista em Combate",
+    "page": 68,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Especialista em Combate:pistoleiro_iniciado",
+    "title": "PISTOLEIRO INICIADO",
+    "category": "Especialista em Combate",
+    "page": 68,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Especialista em Combate:posicionamento_ameacador",
+    "title": "POSICIONAMENTO AMEAÇADOR",
+    "category": "Especialista em Combate",
+    "page": 68,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Especialista em Combate:precisao_definitiva",
+    "title": "PRECISÃO DEFINITIVA",
+    "category": "Especialista em Combate",
+    "page": 68,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Especialista em Combate:presenca_suprimida",
+    "title": "PRESENÇA SUPRIMIDA",
+    "category": "Especialista em Combate",
+    "page": 68,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Especialista em Combate:revigorar",
+    "title": "REVIGORAR",
+    "category": "Especialista em Combate",
+    "page": 68,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Especialista em Combate:tiro_falso",
+    "title": "TIRO FALSO",
+    "category": "Especialista em Combate",
+    "page": 68,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Especialista em Combate:zona_de_risco",
+    "title": "ZONA DE RISCO",
+    "category": "Especialista em Combate",
+    "page": 68,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Especialista em Combate:aprender_postura",
+    "title": "APRENDER POSTURA",
+    "category": "Especialista em Combate",
+    "page": 69,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Especialista em Combate:armas_escolhidas",
+    "title": "ARMAS ESCOLHIDAS",
+    "category": "Especialista em Combate",
+    "page": 69,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Especialista em Combate:arremesso_rapido",
+    "title": "ARREMESSO RÁPIDO",
+    "category": "Especialista em Combate",
+    "page": 69,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Especialista em Combate:tecnicas_de_avanco",
+    "title": "TÉCNICAS DE AVANÇO",
+    "category": "Especialista em Combate",
+    "page": 69,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Especialista em Combate:buscar_oportunidade",
+    "title": "BUSCAR OPORTUNIDADE",
+    "category": "Especialista em Combate",
+    "page": 69,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Especialista em Combate:compensar_erro",
+    "title": "COMPENSAR ERRO",
+    "category": "Especialista em Combate",
+    "page": 69,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Especialista em Combate:especialista_em_escudo",
+    "title": "ESPECIALISTA EM ESCUDO",
+    "category": "Especialista em Combate",
+    "page": 69,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Especialista em Combate:espirito_de_luta",
+    "title": "ESPÍRITO DE LUTA",
+    "category": "Especialista em Combate",
+    "page": 69,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Especialista em Combate:grupo_favorito",
+    "title": "GRUPO FAVORITO",
+    "category": "Especialista em Combate",
+    "page": 69,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Especialista em Combate:guarda_estudada",
+    "title": "GUARDA ESTUDADA",
+    "category": "Especialista em Combate",
+    "page": 69,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Especialista em Combate:mente_oculta",
+    "title": "MENTE OCULTA",
+    "category": "Especialista em Combate",
+    "page": 69,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Especialista em Combate:preparo_imediato",
+    "title": "PREPARO IMEDIATO",
+    "category": "Especialista em Combate",
+    "page": 70,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Especialista em Combate:recarga_rapida",
+    "title": "RECARGA RÁPIDA",
+    "category": "Especialista em Combate",
+    "page": 70,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Especialista em Combate:uso_rapido",
+    "title": "USO RÁPIDO",
+    "category": "Especialista em Combate",
+    "page": 70,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Especialista em Combate:acervo_amplo",
+    "title": "ACERVO AMPLO",
+    "category": "Especialista em Combate",
+    "page": 71,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Especialista em Combate:aprimoramento_especializado",
+    "title": "APRIMORAMENTO ESPECIALIZADO",
+    "category": "Especialista em Combate",
+    "page": 71,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Especialista em Combate:ataque_extra",
+    "title": "ATAQUE EXTRA",
+    "category": "Especialista em Combate",
+    "page": 71,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Especialista em Combate:critico_melhorado",
+    "title": "CRÍTICO MELHORADO",
+    "category": "Especialista em Combate",
+    "page": 71,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Especialista em Combate:critico_potente",
+    "title": "CRÍTICO POTENTE",
+    "category": "Especialista em Combate",
+    "page": 71,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Especialista em Combate:feiticaria_implementada",
+    "title": "FEITIÇARIA IMPLEMENTADA",
+    "category": "Especialista em Combate",
+    "page": 71,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Especialista em Combate:fluxo_perfeito",
+    "title": "FLUXO PERFEITO",
+    "category": "Especialista em Combate",
+    "page": 71,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Especialista em Combate:olhos_de_aguia",
+    "title": "OLHOS DE ÁGUIA",
+    "category": "Especialista em Combate",
+    "page": 71,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Especialista em Combate:manejo_especial",
+    "title": "MANEJO ESPECIAL",
+    "category": "Especialista em Combate",
+    "page": 71,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Especialista em Combate:marcar_inimigo",
+    "title": "MARCAR INIMIGO",
+    "category": "Especialista em Combate",
+    "page": 71,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Especialista em Combate:mira_destrutiva",
+    "title": "MIRA DESTRUTIVA",
+    "category": "Especialista em Combate",
+    "page": 72,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Especialista em Combate:preparacao_rapida",
+    "title": "PREPARAÇÃO RÁPIDA",
+    "category": "Especialista em Combate",
+    "page": 72,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Especialista em Combate:tecnicas_da_forca",
+    "title": "TÉCNICAS DA FORÇA",
+    "category": "Especialista em Combate",
+    "page": 73,
+    "minimumLevel": 8
+  },
+  {
+    "id": "Especialista em Combate:destruicao_dupla",
+    "title": "DESTRUIÇÃO DUPLA",
+    "category": "Especialista em Combate",
+    "page": 73,
+    "minimumLevel": 8
+  },
+  {
+    "id": "Especialista em Combate:espirito_incansavel",
+    "title": "ESPÍRITO INCANSÁVEL",
+    "category": "Especialista em Combate",
+    "page": 73,
+    "minimumLevel": 8
+  },
+  {
+    "id": "Especialista em Combate:pistoleiro_avancado",
+    "title": "PISTOLEIRO AVANÇADO",
+    "category": "Especialista em Combate",
+    "page": 73,
+    "minimumLevel": 8
+  },
+  {
+    "id": "Especialista em Combate:ricochete_constante",
+    "title": "RICOCHETE CONSTANTE",
+    "category": "Especialista em Combate",
+    "page": 73,
+    "minimumLevel": 8
+  },
+  {
+    "id": "Especialista em Combate:sombra_viva",
+    "title": "SOMBRA VIVA",
+    "category": "Especialista em Combate",
+    "page": 73,
+    "minimumLevel": 8
+  },
+  {
+    "id": "Especialista em Combate:surto_de_acao",
+    "title": "SURTO DE AÇÃO",
+    "category": "Especialista em Combate",
+    "page": 73,
+    "minimumLevel": 8
+  },
+  {
+    "id": "Especialista em Combate:analise_acelerada",
+    "title": "ANÁLISE ACELERADA",
+    "category": "Especialista em Combate",
+    "page": 74,
+    "minimumLevel": 10
+  },
+  {
+    "id": "Especialista em Combate:armas_perfeitas",
+    "title": "ARMAS PERFEITAS",
+    "category": "Especialista em Combate",
+    "page": 74,
+    "minimumLevel": 10
+  },
+  {
+    "id": "Especialista em Combate:assassinar",
+    "title": "ASSASSINAR",
+    "category": "Especialista em Combate",
+    "page": 74,
+    "minimumLevel": 10
+  },
+  {
+    "id": "Especialista em Combate:ataque_concentrado",
+    "title": "ATAQUE CONCENTRADO",
+    "category": "Especialista em Combate",
+    "page": 74,
+    "minimumLevel": 10
+  },
+  {
+    "id": "Especialista em Combate:chuva_de_arremessos",
+    "title": "CHUVA DE ARREMESSOS",
+    "category": "Especialista em Combate",
+    "page": 74,
+    "minimumLevel": 10
+  },
+  {
+    "id": "Especialista em Combate:potencia_antes_de_cair",
+    "title": "POTÊNCIA ANTES DE CAIR",
+    "category": "Especialista em Combate",
+    "page": 74,
+    "minimumLevel": 10
+  },
+  {
+    "id": "Especialista em Combate:tecnicas_de_saque",
+    "title": "TÉCNICAS DE SAQUE",
+    "category": "Especialista em Combate",
+    "page": 75,
+    "minimumLevel": 12
+  },
+  {
+    "id": "Especialista em Combate:ciclagem_absoluta",
+    "title": "CICLAGEM ABSOLUTA",
+    "category": "Especialista em Combate",
+    "page": 75,
+    "minimumLevel": 12
+  },
+  {
+    "id": "Especialista em Combate:manejo_unico",
+    "title": "MANEJO ÚNICO",
+    "category": "Especialista em Combate",
+    "page": 75,
+    "minimumLevel": 12
+  },
+  {
+    "id": "Especialista em Combate:mestre_pistoleiro",
+    "title": "MESTRE PISTOLEIRO",
+    "category": "Especialista em Combate",
+    "page": 75,
+    "minimumLevel": 12
+  },
+  {
+    "id": "Especialista em Combate:sincronia_perfeita",
+    "title": "SINCRONIA PERFEITA",
+    "category": "Especialista em Combate",
+    "page": 75,
+    "minimumLevel": 12
+  },
+  {
+    "id": "Especialista em Combate:critico_aperfeicoado",
+    "title": "CRÍTICO APERFEIÇOADO",
+    "category": "Especialista em Combate",
+    "page": 75,
+    "minimumLevel": 16
+  },
+  {
+    "id": "Especialista em Combate:mestre_da_postura",
+    "title": "MESTRE DA POSTURA",
+    "category": "Especialista em Combate",
+    "page": 75,
+    "minimumLevel": 16
+  },
+  {
+    "id": "Especialista em Combate:artes_do_combate",
+    "title": "ARTES DO COMBATE",
+    "category": "Especialista em Combate",
+    "page": 77,
+    "minimumLevel": 16
+  },
+  {
+    "id": "Especialista em Técnica:abastecido_pelo_sangue",
+    "title": "ABASTECIDO PELO SANGUE",
+    "category": "Especialista em Técnica",
+    "page": 82,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Especialista em Técnica:conhecimento_aplicado",
+    "title": "CONHECIMENTO APLICADO",
+    "category": "Especialista em Técnica",
+    "page": 82,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Especialista em Técnica:conjuracao_defensiva",
+    "title": "CONJURAÇÃO DEFENSIVA",
+    "category": "Especialista em Técnica",
+    "page": 82,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Especialista em Técnica:economia_de_energia",
+    "title": "ECONOMIA DE ENERGIA",
+    "category": "Especialista em Técnica",
+    "page": 82,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Especialista em Técnica:explosao_encadeada",
+    "title": "EXPLOSÃO ENCADEADA",
+    "category": "Especialista em Técnica",
+    "page": 82,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Especialista em Técnica:finta_amaldicoada",
+    "title": "FINTA AMALDIÇOADA",
+    "category": "Especialista em Técnica",
+    "page": 82,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Especialista em Técnica:mente_placida",
+    "title": "MENTE PLÁCIDA",
+    "category": "Especialista em Técnica",
+    "page": 82,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Especialista em Técnica:nova_habilidade",
+    "title": "NOVA HABILIDADE",
+    "category": "Especialista em Técnica",
+    "page": 82,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Especialista em Técnica:perturbacao_amaldicoada",
+    "title": "PERTURBAÇÃO AMALDIÇOADA",
+    "category": "Especialista em Técnica",
+    "page": 83,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Especialista em Técnica:reacao_rapida",
+    "title": "REAÇÃO RÁPIDA",
+    "category": "Especialista em Técnica",
+    "page": 83,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Especialista em Técnica:reforco_amaldicoado",
+    "title": "REFORÇO AMALDIÇOADO",
+    "category": "Especialista em Técnica",
+    "page": 83,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Especialista em Técnica:sobrecarregar",
+    "title": "SOBRECARREGAR",
+    "category": "Especialista em Técnica",
+    "page": 83,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Especialista em Técnica:tecnicas_de_combate",
+    "title": "TÉCNICAS DE COMBATE",
+    "category": "Especialista em Técnica",
+    "page": 83,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Especialista em Técnica:zelo_recompensador",
+    "title": "ZELO RECOMPENSADOR",
+    "category": "Especialista em Técnica",
+    "page": 83,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Especialista em Técnica:ate_a_ultima_gota",
+    "title": "ATÉ A ÚLTIMA GOTA",
+    "category": "Especialista em Técnica",
+    "page": 84,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Especialista em Técnica:ciclagem_maldita",
+    "title": "CICLAGEM MALDITA",
+    "category": "Especialista em Técnica",
+    "page": 84,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Especialista em Técnica:determinacao_energizada",
+    "title": "DETERMINAÇÃO ENERGIZADA",
+    "category": "Especialista em Técnica",
+    "page": 84,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Especialista em Técnica:energia_focalizada",
+    "title": "ENERGIA FOCALIZADA",
+    "category": "Especialista em Técnica",
+    "page": 84,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Especialista em Técnica:energia_inacabavel",
+    "title": "ENERGIA INACABÁVEL",
+    "category": "Especialista em Técnica",
+    "page": 84,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Especialista em Técnica:epifania_amaldicoada",
+    "title": "EPIFANIA AMALDIÇOADA",
+    "category": "Especialista em Técnica",
+    "page": 84,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Especialista em Técnica:explosao_defensiva",
+    "title": "EXPLOSÃO DEFENSIVA",
+    "category": "Especialista em Técnica",
+    "page": 84,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Especialista em Técnica:feitico_favorito",
+    "title": "FEITIÇO FAVORITO",
+    "category": "Especialista em Técnica",
+    "page": 84,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Especialista em Técnica:feiticos_refinados",
+    "title": "FEITIÇOS REFINADOS",
+    "category": "Especialista em Técnica",
+    "page": 84,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Especialista em Técnica:movimentos_imprevisiveis",
+    "title": "MOVIMENTOS IMPREVISÍVEIS",
+    "category": "Especialista em Técnica",
+    "page": 84,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Especialista em Técnica:naturalidade_com_rituais",
+    "title": "NATURALIDADE COM RITUAIS",
+    "category": "Especialista em Técnica",
+    "page": 84,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Especialista em Técnica:preparacao_de_tecnicas",
+    "title": "PREPARAÇÃO DE TÉCNICAS",
+    "category": "Especialista em Técnica",
+    "page": 85,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Especialista em Técnica:olhar_preciso",
+    "title": "OLHAR PRECISO",
+    "category": "Especialista em Técnica",
+    "page": 85,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Especialista em Técnica:sacrificio_pela_energia",
+    "title": "SACRIFÍCIO PELA ENERGIA",
+    "category": "Especialista em Técnica",
+    "page": 85,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Especialista em Técnica:versatilidade_em_fundamentos",
+    "title": "VERSATILIDADE EM FUNDAMENTOS",
+    "category": "Especialista em Técnica",
+    "page": 85,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Especialista em Técnica:bastiao_interior",
+    "title": "BASTIÃO INTERIOR",
+    "category": "Especialista em Técnica",
+    "page": 86,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Especialista em Técnica:combate_amaldicoado",
+    "title": "COMBATE AMALDIÇOADO",
+    "category": "Especialista em Técnica",
+    "page": 86,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Especialista em Técnica:correcao",
+    "title": "CORREÇÃO",
+    "category": "Especialista em Técnica",
+    "page": 86,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Especialista em Técnica:dominancia_em_feitico",
+    "title": "DOMINÂNCIA EM FEITIÇO",
+    "category": "Especialista em Técnica",
+    "page": 86,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Especialista em Técnica:elevar_aptidao",
+    "title": "ELEVAR APTIDÃO",
+    "category": "Especialista em Técnica",
+    "page": 86,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Especialista em Técnica:especializacao",
+    "title": "ESPECIALIZAÇÃO",
+    "category": "Especialista em Técnica",
+    "page": 86,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Especialista em Técnica:incapaz_de_falhar",
+    "title": "INCAPAZ DE FALHAR",
+    "category": "Especialista em Técnica",
+    "page": 86,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Especialista em Técnica:mente_repartida",
+    "title": "MENTE REPARTIDA",
+    "category": "Especialista em Técnica",
+    "page": 86,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Especialista em Técnica:passo_rapido",
+    "title": "PASSO RÁPIDO",
+    "category": "Especialista em Técnica",
+    "page": 86,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Especialista em Técnica:potencia_concentrada",
+    "title": "POTÊNCIA CONCENTRADA",
+    "category": "Especialista em Técnica",
+    "page": 86,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Especialista em Técnica:ritualista",
+    "title": "RITUALISTA",
+    "category": "Especialista em Técnica",
+    "page": 86,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Especialista em Técnica:expansao_dos_fundamentos",
+    "title": "EXPANSÃO DOS FUNDAMENTOS",
+    "category": "Especialista em Técnica",
+    "page": 87,
+    "minimumLevel": 8
+  },
+  {
+    "id": "Especialista em Técnica:fisico_amaldicoado_defensivo",
+    "title": "FÍSICO AMALDIÇOADO DEFENSIVO",
+    "category": "Especialista em Técnica",
+    "page": 87,
+    "minimumLevel": 8
+  },
+  {
+    "id": "Especialista em Técnica:imbuir_com_tecnica",
+    "title": "IMBUIR COM TÉCNICA",
+    "category": "Especialista em Técnica",
+    "page": 87,
+    "minimumLevel": 8
+  },
+  {
+    "id": "Especialista em Técnica:liberacoes_expandidas",
+    "title": "LIBERAÇÕES EXPANDIDAS",
+    "category": "Especialista em Técnica",
+    "page": 87,
+    "minimumLevel": 8
+  },
+  {
+    "id": "Especialista em Técnica:mira_aperfeicoada",
+    "title": "MIRA APERFEIÇOADA",
+    "category": "Especialista em Técnica",
+    "page": 87,
+    "minimumLevel": 8
+  },
+  {
+    "id": "Especialista em Técnica:primeiro_disparo",
+    "title": "PRIMEIRO DISPARO",
+    "category": "Especialista em Técnica",
+    "page": 87,
+    "minimumLevel": 8
+  },
+  {
+    "id": "Especialista em Técnica:revestimento_constante",
+    "title": "REVESTIMENTO CONSTANTE",
+    "category": "Especialista em Técnica",
+    "page": 87,
+    "minimumLevel": 8
+  },
+  {
+    "id": "Especialista em Técnica:sustentacao_avancada",
+    "title": "SUSTENTAÇÃO AVANÇADA",
+    "category": "Especialista em Técnica",
+    "page": 87,
+    "minimumLevel": 8
+  },
+  {
+    "id": "Especialista em Técnica:destruicao_ampla",
+    "title": "DESTRUIÇÃO AMPLA",
+    "category": "Especialista em Técnica",
+    "page": 88,
+    "minimumLevel": 10
+  },
+  {
+    "id": "Especialista em Técnica:destruicao_focada",
+    "title": "DESTRUIÇÃO FOCADA",
+    "category": "Especialista em Técnica",
+    "page": 88,
+    "minimumLevel": 10
+  },
+  {
+    "id": "Especialista em Técnica:economia_de_energia_avancada",
+    "title": "ECONOMIA DE ENERGIA AVANÇADA",
+    "category": "Especialista em Técnica",
+    "page": 88,
+    "minimumLevel": 10
+  },
+  {
+    "id": "Especialista em Técnica:sentidos_agucados",
+    "title": "SENTIDOS AGUÇADOS",
+    "category": "Especialista em Técnica",
+    "page": 88,
+    "minimumLevel": 10
+  },
+  {
+    "id": "Especialista em Técnica:esgrimista_jujutsu",
+    "title": "ESGRIMISTA JUJUTSU",
+    "category": "Especialista em Técnica",
+    "page": 88,
+    "minimumLevel": 12
+  },
+  {
+    "id": "Especialista em Técnica:expansao_maestral",
+    "title": "EXPANSÃO MAESTRAL",
+    "category": "Especialista em Técnica",
+    "page": 88,
+    "minimumLevel": 12
+  },
+  {
+    "id": "Especialista em Técnica:explosao_maxima",
+    "title": "EXPLOSÃO MÁXIMA",
+    "category": "Especialista em Técnica",
+    "page": 88,
+    "minimumLevel": 12
+  },
+  {
+    "id": "Especialista em Técnica:mestre_das_aptidoes",
+    "title": "MESTRE DAS APTIDÕES",
+    "category": "Especialista em Técnica",
+    "page": 88,
+    "minimumLevel": 12
+  },
+  {
+    "id": "Especialista em Técnica:versatilidade_ampliada",
+    "title": "VERSATILIDADE AMPLIADA",
+    "category": "Especialista em Técnica",
+    "page": 88,
+    "minimumLevel": 12
+  },
+  {
+    "id": "Especialista em Técnica:manipulacao_perfeita",
+    "title": "MANIPULAÇÃO PERFEITA",
+    "category": "Especialista em Técnica",
+    "page": 89,
+    "minimumLevel": 16
+  },
+  {
+    "id": "Especialista em Técnica:sustentacao_mestre",
+    "title": "SUSTENTAÇÃO MESTRE",
+    "category": "Especialista em Técnica",
+    "page": 89,
+    "minimumLevel": 16
+  },
+  {
+    "id": "Controlador:aceleracao",
+    "title": "ACELERAÇÃO",
+    "category": "Controlador",
+    "page": 93,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Controlador:camuflagem_aprimorada",
+    "title": "CAMUFLAGEM APRIMORADA",
+    "category": "Controlador",
+    "page": 93,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Controlador:chamado_destruidor",
+    "title": "CHAMADO DESTRUIDOR",
+    "category": "Controlador",
+    "page": 93,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Controlador:companheiro_amaldicoado",
+    "title": "COMPANHEIRO AMALDIÇOADO",
+    "category": "Controlador",
+    "page": 93,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Controlador:dor_partilhada",
+    "title": "DOR PARTILHADA",
+    "category": "Controlador",
+    "page": 93,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Controlador:frenesi_da_invocacao",
+    "title": "FRENESI DA INVOCAÇÃO",
+    "category": "Controlador",
+    "page": 93,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Controlador:guarda_viva",
+    "title": "GUARDA VIVA",
+    "category": "Controlador",
+    "page": 93,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Controlador:invocacoes_moveis",
+    "title": "INVOCAÇÕES MÓVEIS",
+    "category": "Controlador",
+    "page": 93,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Controlador:invocacoes_resistentes",
+    "title": "INVOCAÇÕES RESISTENTES",
+    "category": "Controlador",
+    "page": 93,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Controlador:invocacoes_treinadas",
+    "title": "INVOCAÇÕES TREINADAS",
+    "category": "Controlador",
+    "page": 94,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Controlador:melhoria_de_controlador",
+    "title": "MELHORIA DE CONTROLADOR",
+    "category": "Controlador",
+    "page": 94,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Controlador:otimizacao_de_energia",
+    "title": "OTIMIZAÇÃO DE ENERGIA",
+    "category": "Controlador",
+    "page": 94,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Controlador:proteger_invocacao",
+    "title": "PROTEGER INVOCAÇÃO",
+    "category": "Controlador",
+    "page": 94,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Controlador:rede_de_deteccao",
+    "title": "REDE DE DETECÇÃO",
+    "category": "Controlador",
+    "page": 94,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Controlador:tecnicas_de_combate",
+    "title": "TÉCNICAS DE COMBATE",
+    "category": "Controlador",
+    "page": 94,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Controlador:visionario",
+    "title": "VISIONÁRIO",
+    "category": "Controlador",
+    "page": 94,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Controlador:acao_corretiva",
+    "title": "AÇÃO CORRETIVA",
+    "category": "Controlador",
+    "page": 95,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Controlador:acompanhamento_amaldicoado",
+    "title": "ACOMPANHAMENTO AMALDIÇOADO",
+    "category": "Controlador",
+    "page": 95,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Controlador:ataque_em_conjunto",
+    "title": "ATAQUE EM CONJUNTO",
+    "category": "Controlador",
+    "page": 95,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Controlador:autonomia",
+    "title": "AUTONOMIA",
+    "category": "Controlador",
+    "page": 95,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Controlador:companheiro_avancado",
+    "title": "COMPANHEIRO AVANÇADO",
+    "category": "Controlador",
+    "page": 95,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Controlador:critico_brutal",
+    "title": "CRÍTICO BRUTAL",
+    "category": "Controlador",
+    "page": 96,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Controlador:domador_de_maldicoes",
+    "title": "DOMADOR DE MALDIÇÕES",
+    "category": "Controlador",
+    "page": 96,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Controlador:invocacao_as",
+    "title": "INVOCAÇÃO ÀS",
+    "category": "Controlador",
+    "page": 96,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Controlador:invocacao_parcial",
+    "title": "INVOCAÇÃO PARCIAL",
+    "category": "Controlador",
+    "page": 96,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Controlador:potencial_superior",
+    "title": "POTENCIAL SUPERIOR",
+    "category": "Controlador",
+    "page": 96,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Controlador:combate_em_alcateia",
+    "title": "COMBATE EM ALCATEIA",
+    "category": "Controlador",
+    "page": 97,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Controlador:concentrar_poder",
+    "title": "CONCENTRAR PODER",
+    "category": "Controlador",
+    "page": 97,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Controlador:hoste_amaldicoada",
+    "title": "HOSTE AMALDIÇOADA",
+    "category": "Controlador",
+    "page": 97,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Controlador:invocacoes_economicas",
+    "title": "INVOCAÇÕES ECONÔMICAS",
+    "category": "Controlador",
+    "page": 97,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Controlador:protecao_avancada_de_invocacao",
+    "title": "PROTEÇÃO AVANÇADA DE INVOCAÇÃO",
+    "category": "Controlador",
+    "page": 97,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Controlador:taticas_de_alcateia",
+    "title": "TÁTICAS DE ALCATEIA",
+    "category": "Controlador",
+    "page": 97,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Controlador:atacar_e_invocar",
+    "title": "ATACAR E INVOCAR",
+    "category": "Controlador",
+    "page": 98,
+    "minimumLevel": 8
+  },
+  {
+    "id": "Controlador:golpes_ageis",
+    "title": "GOLPES ÁGEIS",
+    "category": "Controlador",
+    "page": 98,
+    "minimumLevel": 8
+  },
+  {
+    "id": "Controlador:tecnicas_de_oportunidade",
+    "title": "TÉCNICAS DE OPORTUNIDADE",
+    "category": "Controlador",
+    "page": 98,
+    "minimumLevel": 8
+  },
+  {
+    "id": "Controlador:buchas_de_canhao",
+    "title": "BUCHAS DE CANHÃO",
+    "category": "Controlador",
+    "page": 98,
+    "minimumLevel": 10
+  },
+  {
+    "id": "Controlador:critico_aprimorado",
+    "title": "CRÍTICO APRIMORADO",
+    "category": "Controlador",
+    "page": 98,
+    "minimumLevel": 10
+  },
+  {
+    "id": "Controlador:flanco_avancado",
+    "title": "FLANCO AVANÇADO",
+    "category": "Controlador",
+    "page": 98,
+    "minimumLevel": 10
+  },
+  {
+    "id": "Controlador:resistencia_sobrecarregada",
+    "title": "RESISTÊNCIA SOBRECARREGADA",
+    "category": "Controlador",
+    "page": 98,
+    "minimumLevel": 10
+  },
+  {
+    "id": "Controlador:fantoche_supremo",
+    "title": "FANTOCHE SUPREMO",
+    "category": "Controlador",
+    "page": 99,
+    "minimumLevel": 16
+  },
+  {
+    "id": "Controlador:mestre_do_controle",
+    "title": "MESTRE DO CONTROLE",
+    "category": "Controlador",
+    "page": 99,
+    "minimumLevel": 16
+  },
+  {
+    "id": "Suporte:amizade_inquebravel",
+    "title": "AMIZADE INQUEBRÁVEL",
+    "category": "Suporte",
+    "page": 105,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Suporte:analise_profunda",
+    "title": "ANÁLISE PROFUNDA",
+    "category": "Suporte",
+    "page": 105,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Suporte:apoio_avancado",
+    "title": "APOIO AVANÇADO",
+    "category": "Suporte",
+    "page": 105,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Suporte:conceder_outra_chance",
+    "title": "CONCEDER OUTRA CHANCE",
+    "category": "Suporte",
+    "page": 105,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Suporte:comando_motivador",
+    "title": "COMANDO MOTIVADOR",
+    "category": "Suporte",
+    "page": 105,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Suporte:desvendar_terreno",
+    "title": "DESVENDAR TERRENO",
+    "category": "Suporte",
+    "page": 105,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Suporte:expandir_repertorio",
+    "title": "EXPANDIR REPERTÓRIO",
+    "category": "Suporte",
+    "page": 105,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Suporte:mobilidade_avancada",
+    "title": "MOBILIDADE AVANÇADA",
+    "category": "Suporte",
+    "page": 105,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Suporte:otimizacao_de_espaco",
+    "title": "OTIMIZAÇÃO DE ESPAÇO",
+    "category": "Suporte",
+    "page": 106,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Suporte:pronto_para_agir",
+    "title": "PRONTO PARA AGIR",
+    "category": "Suporte",
+    "page": 106,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Suporte:protetor",
+    "title": "PROTETOR",
+    "category": "Suporte",
+    "page": 106,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Suporte:tecnicas_de_combate",
+    "title": "TÉCNICAS DE COMBATE",
+    "category": "Suporte",
+    "page": 106,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Suporte:transmitir_conhecimento",
+    "title": "TRANSMITIR CONHECIMENTO",
+    "category": "Suporte",
+    "page": 106,
+    "minimumLevel": 2
+  },
+  {
+    "id": "Suporte:apoios_versateis",
+    "title": "APOIOS VERSÁTEIS",
+    "category": "Suporte",
+    "page": 107,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Suporte:guarda_sincronizada",
+    "title": "GUARDA SINCRONIZADA",
+    "category": "Suporte",
+    "page": 107,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Suporte:inspirar_aliados",
+    "title": "INSPIRAR ALIADOS",
+    "category": "Suporte",
+    "page": 107,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Suporte:intervencao",
+    "title": "INTERVENÇÃO",
+    "category": "Suporte",
+    "page": 107,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Suporte:negacao_critica",
+    "title": "NEGAÇÃO CRÍTICA",
+    "category": "Suporte",
+    "page": 107,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Suporte:no_ultimo_segundo",
+    "title": "NO ÚLTIMO SEGUNDO",
+    "category": "Suporte",
+    "page": 107,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Suporte:pre_analise",
+    "title": "PRÉ-ANÁLISE",
+    "category": "Suporte",
+    "page": 107,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Suporte:recompensa_pelo_sucesso",
+    "title": "RECOMPENSA PELO SUCESSO",
+    "category": "Suporte",
+    "page": 107,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Suporte:sintonizacao_vital",
+    "title": "SINTONIZAÇÃO VITAL",
+    "category": "Suporte",
+    "page": 107,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Suporte:contra_ataque",
+    "title": "CONTRA-ATAQUE",
+    "category": "Suporte",
+    "page": 108,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Suporte:cura_avancada_em_grupo",
+    "title": "CURA AVANÇADA EM GRUPO",
+    "category": "Suporte",
+    "page": 108,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Suporte:devolver_na_mesma_moeda",
+    "title": "DEVOLVER NA MESMA MOEDA",
+    "category": "Suporte",
+    "page": 108,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Suporte:disseminar_cura",
+    "title": "DISSEMINAR CURA",
+    "category": "Suporte",
+    "page": 108,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Suporte:incitar_vigor",
+    "title": "INCITAR VIGOR",
+    "category": "Suporte",
+    "page": 108,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Suporte:inimigo_comum",
+    "title": "INIMIGO COMUM",
+    "category": "Suporte",
+    "page": 108,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Suporte:posicionamento_estrategico",
+    "title": "POSICIONAMENTO ESTRATÉGICO",
+    "category": "Suporte",
+    "page": 108,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Suporte:contaminar_com_determinacao",
+    "title": "CONTAMINAR COM DETERMINAÇÃO",
+    "category": "Suporte",
+    "page": 109,
+    "minimumLevel": 8
+  },
+  {
+    "id": "Suporte:criar_medicina",
+    "title": "CRIAR MEDICINA",
+    "category": "Suporte",
+    "page": 109,
+    "minimumLevel": 8
+  },
+  {
+    "id": "Suporte:cura_aperfeicoada",
+    "title": "CURA APERFEIÇOADA",
+    "category": "Suporte",
+    "page": 109,
+    "minimumLevel": 8
+  },
+  {
+    "id": "Suporte:elevar_sucesso",
+    "title": "ELEVAR SUCESSO",
+    "category": "Suporte",
+    "page": 109,
+    "minimumLevel": 8
+  },
+  {
+    "id": "Suporte:fisico_controlado",
+    "title": "FÍSICO CONTROLADO",
+    "category": "Suporte",
+    "page": 109,
+    "minimumLevel": 8
+  },
+  {
+    "id": "Suporte:motivacao_pelo_triunfo",
+    "title": "MOTIVAÇÃO PELO TRIUNFO",
+    "category": "Suporte",
+    "page": 109,
+    "minimumLevel": 8
+  },
+  {
+    "id": "Suporte:pressao_do_medico",
+    "title": "PRESSÃO DO MÉDICO",
+    "category": "Suporte",
+    "page": 109,
+    "minimumLevel": 8
+  },
+  {
+    "id": "Suporte:sustentacao_avancada",
+    "title": "SUSTENTAÇÃO AVANÇADA",
+    "category": "Suporte",
+    "page": 109,
+    "minimumLevel": 8
+  },
+  {
+    "id": "Suporte:descarga_reanimadora",
+    "title": "DESCARGA REANIMADORA",
+    "category": "Suporte",
+    "page": 110,
+    "minimumLevel": 10
+  },
+  {
+    "id": "Suporte:necessidade_de_continuar",
+    "title": "NECESSIDADE DE CONTINUAR",
+    "category": "Suporte",
+    "page": 110,
+    "minimumLevel": 10
+  },
+  {
+    "id": "Suporte:olhar_agucado",
+    "title": "OLHAR AGUÇADO",
+    "category": "Suporte",
+    "page": 110,
+    "minimumLevel": 10
+  },
+  {
+    "id": "Suporte:taticas_defensivas",
+    "title": "TÁTICAS DEFENSIVAS",
+    "category": "Suporte",
+    "page": 110,
+    "minimumLevel": 10
+  },
+  {
+    "id": "Suporte:ajustes_em_equipamento",
+    "title": "AJUSTES EM EQUIPAMENTO",
+    "category": "Suporte",
+    "page": 111,
+    "minimumLevel": 12
+  },
+  {
+    "id": "Suporte:interferencia",
+    "title": "INTERFERÊNCIA",
+    "category": "Suporte",
+    "page": 111,
+    "minimumLevel": 12
+  },
+  {
+    "id": "Suporte:nao_desista",
+    "title": "NÃO DESISTA!",
+    "category": "Suporte",
+    "page": 111,
+    "minimumLevel": 12
+  },
+  {
+    "id": "Suporte:sobrecura",
+    "title": "SOBRECURA",
+    "category": "Suporte",
+    "page": 111,
+    "minimumLevel": 12
+  },
+  {
+    "id": "Suporte:reacao_necessaria",
+    "title": "REAÇÃO NECESSÁRIA",
+    "category": "Suporte",
+    "page": 111,
+    "minimumLevel": 12
+  },
+  {
+    "id": "Suporte:apoio_abrangente",
+    "title": "APOIO ABRANGENTE",
+    "category": "Suporte",
+    "page": 112,
+    "minimumLevel": 14
+  },
+  {
+    "id": "Suporte:purificacao_da_alma",
+    "title": "PURIFICAÇÃO DA ALMA",
+    "category": "Suporte",
+    "page": 112,
+    "minimumLevel": 16
+  },
+  {
+    "id": "Suporte:sustentacao_mestre",
+    "title": "SUSTENTAÇÃO MESTRE",
+    "category": "Suporte",
+    "page": 112,
+    "minimumLevel": 16
+  },
+  {
+    "id": "Suporte:apoios_avancados",
+    "title": "APOIOS AVANÇADOS",
+    "category": "Suporte",
+    "page": 113,
+    "minimumLevel": 16
+  },
+  {
+    "id": "Restringido:manejo_superior",
+    "title": "MANEJO SUPERIOR",
+    "category": "Restringido",
+    "page": 118,
+    "minimumLevel": null
+  },
+  {
+    "id": "Restringido:roubo_de_habilidade",
+    "title": "ROUBO DE HABILIDADE",
+    "category": "Restringido",
+    "page": 118,
+    "minimumLevel": null
+  },
+  {
+    "id": "Restringido:surto_de_adrenalina",
+    "title": "SURTO DE ADRENALINA",
+    "category": "Restringido",
+    "page": 118,
+    "minimumLevel": null
+  },
+  {
+    "id": "Restringido:valorizar_invocacao",
+    "title": "VALORIZAR INVOCAÇÃO",
+    "category": "Restringido",
+    "page": 118,
+    "minimumLevel": null
+  },
+  {
+    "id": "Restringido:acao_agil",
+    "title": "AÇÃO ÁGIL",
+    "category": "Restringido",
+    "page": 119,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Restringido:adrenalina_intensificadora",
+    "title": "ADRENALINA INTENSIFICADORA",
+    "category": "Restringido",
+    "page": 119,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Restringido:cacador_de_feiticeiros",
+    "title": "CAÇADOR DE FEITICEIROS",
+    "category": "Restringido",
+    "page": 119,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Restringido:desenvolver_ideias",
+    "title": "DESENVOLVER IDEIAS",
+    "category": "Restringido",
+    "page": 119,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Restringido:foco_no_inimigo",
+    "title": "FOCO NO INIMIGO",
+    "category": "Restringido",
+    "page": 119,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Restringido:ponto_cego",
+    "title": "PONTO CEGO",
+    "category": "Restringido",
+    "page": 119,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Restringido:resiliencia_pela_adrenalina",
+    "title": "RESILIÊNCIA PELA ADRENALINA",
+    "category": "Restringido",
+    "page": 119,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Restringido:tecnicas_de_memorizacao",
+    "title": "TÉCNICAS DE MEMORIZAÇÃO",
+    "category": "Restringido",
+    "page": 119,
+    "minimumLevel": 4
+  },
+  {
+    "id": "Restringido:aprimoramento_celeste",
+    "title": "APRIMORAMENTO CELESTE",
+    "category": "Restringido",
+    "page": 120,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Restringido:ataque_extra",
+    "title": "ATAQUE EXTRA",
+    "category": "Restringido",
+    "page": 120,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Restringido:ataque_inconsequente_aprimorado",
+    "title": "ATAQUE INCONSEQUENTE APRIMORADO",
+    "category": "Restringido",
+    "page": 120,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Restringido:corpo_de_aco",
+    "title": "CORPO DE AÇO",
+    "category": "Restringido",
+    "page": 120,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Restringido:corredor_fantasma",
+    "title": "CORREDOR FANTASMA",
+    "category": "Restringido",
+    "page": 120,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Restringido:disparada_trovejante",
+    "title": "DISPARADA TROVEJANTE",
+    "category": "Restringido",
+    "page": 120,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Restringido:frenesi",
+    "title": "FRENESI",
+    "category": "Restringido",
+    "page": 120,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Restringido:movimento_reativo",
+    "title": "MOVIMENTO REATIVO",
+    "category": "Restringido",
+    "page": 120,
+    "minimumLevel": 6
+  },
+  {
+    "id": "Restringido:ainda_de_pe",
+    "title": "AINDA DE PÉ",
+    "category": "Restringido",
+    "page": 121,
+    "minimumLevel": 8
+  },
+  {
+    "id": "Restringido:arremetida_encoberta",
+    "title": "ARREMETIDA ENCOBERTA",
+    "category": "Restringido",
+    "page": 121,
+    "minimumLevel": 8
+  },
+  {
+    "id": "Restringido:barreira_inamovivel",
+    "title": "BARREIRA INAMOVÍVEL",
+    "category": "Restringido",
+    "page": 121,
+    "minimumLevel": 8
+  },
+  {
+    "id": "Restringido:forca_imparavel",
+    "title": "FORÇA IMPARÁVEL",
+    "category": "Restringido",
+    "page": 121,
+    "minimumLevel": 8
+  },
+  {
+    "id": "Restringido:imitacao_perfeita",
+    "title": "IMITAÇÃO PERFEITA",
+    "category": "Restringido",
+    "page": 121,
+    "minimumLevel": 8
+  },
+  {
+    "id": "Restringido:presenca_ameacadora",
+    "title": "PRESENÇA AMEAÇADORA",
+    "category": "Restringido",
+    "page": 121,
+    "minimumLevel": 8
+  },
+  {
+    "id": "Restringido:reacao_rapida",
+    "title": "REAÇÃO RÁPIDA",
+    "category": "Restringido",
+    "page": 121,
+    "minimumLevel": 8
+  },
+  {
+    "id": "Restringido:respeito_celeste",
+    "title": "RESPEITO CELESTE",
+    "category": "Restringido",
+    "page": 121,
+    "minimumLevel": 8
+  },
+  {
+    "id": "Restringido:assassinar",
+    "title": "ASSASSINAR",
+    "category": "Restringido",
+    "page": 122,
+    "minimumLevel": 10
+  },
+  {
+    "id": "Restringido:mente_limpa",
+    "title": "MENTE LIMPA",
+    "category": "Restringido",
+    "page": 122,
+    "minimumLevel": 10
+  },
+  {
+    "id": "Restringido:perceber_o_ar",
+    "title": "PERCEBER O AR",
+    "category": "Restringido",
+    "page": 122,
+    "minimumLevel": 10
+  },
+  {
+    "id": "Restringido:precisao_forcada",
+    "title": "PRECISÃO FORÇADA",
+    "category": "Restringido",
+    "page": 122,
+    "minimumLevel": 10
+  },
+  {
+    "id": "Restringido:retaliacao",
+    "title": "RETALIAÇÃO",
+    "category": "Restringido",
+    "page": 122,
+    "minimumLevel": 10
+  },
+  {
+    "id": "Restringido:adrenalina_absoluta",
+    "title": "ADRENALINA ABSOLUTA",
+    "category": "Restringido",
+    "page": 123,
+    "minimumLevel": 12
+  },
+  {
+    "id": "Restringido:pinaculo_fisico",
+    "title": "PINÁCULO FÍSICO",
+    "category": "Restringido",
+    "page": 123,
+    "minimumLevel": 12
+  },
+  {
+    "id": "Restringido:rejeitar_a_morte",
+    "title": "REJEITAR A MORTE",
+    "category": "Restringido",
+    "page": 123,
+    "minimumLevel": 12
+  },
+  {
+    "id": "Restringido:entre_as_sombras",
+    "title": "ENTRE AS SOMBRAS",
+    "category": "Restringido",
+    "page": 123,
+    "minimumLevel": 16
+  },
+  {
+    "id": "Restringido:instintos_agucados",
+    "title": "INSTINTOS AGUÇADOS",
+    "category": "Restringido",
+    "page": 123,
+    "minimumLevel": 16
+  },
+  {
+    "id": "Restringido:mesmo_morto",
+    "title": "MESMO MORTO",
+    "category": "Restringido",
+    "page": 123,
+    "minimumLevel": 16
+  },
+  {
+    "id": "Restringido:estilo_marcial",
+    "title": "ESTILO MARCIAL",
+    "category": "Restringido",
+    "page": 124,
+    "minimumLevel": 16
+  },
+  {
+    "id": "Restringido:criando_tecnicas_marciais",
+    "title": "CRIANDO TÉCNICAS MARCIAIS",
+    "category": "Restringido",
+    "page": 124,
+    "minimumLevel": 16
+  },
+  {
+    "id": "Restringido:arsenal_amaldicoado",
+    "title": "ARSENAL AMALDIÇOADO",
+    "category": "Restringido",
+    "page": 125,
+    "minimumLevel": 16
+  },
+  {
+    "id": "Restringido:treinamento_arsenal_amaldicoado",
+    "title": "TREINAMENTO ARSENAL AMALDIÇOADO",
+    "category": "Restringido",
+    "page": 125,
+    "minimumLevel": 16
+  },
+  {
+    "id": "Talentos gerais:talentos",
+    "title": "TALENTOS",
+    "category": "Talentos gerais",
+    "page": 163,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:afinidade_com_tecnica",
+    "title": "AFINIDADE COM TÉCNICA",
+    "category": "Talentos gerais",
+    "page": 163,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:artesao_amaldicoado",
+    "title": "ARTESÃO AMALDIÇOADO",
+    "category": "Talentos gerais",
+    "page": 163,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:ataque_infalivel",
+    "title": "ATAQUE INFALÍVEL",
+    "category": "Talentos gerais",
+    "page": 163,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:atencao_infalivel",
+    "title": "ATENÇÃO INFALÍVEL",
+    "category": "Talentos gerais",
+    "page": 163,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:dedicacao_recompensadora",
+    "title": "DEDICAÇÃO RECOMPENSADORA",
+    "category": "Talentos gerais",
+    "page": 163,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:favorecido_pela_sorte",
+    "title": "FAVORECIDO PELA SORTE",
+    "category": "Talentos gerais",
+    "page": 163,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:guarda_infalivel",
+    "title": "GUARDA INFALÍVEL",
+    "category": "Talentos gerais",
+    "page": 164,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:incremento_de_atributo",
+    "title": "INCREMENTO DE ATRIBUTO",
+    "category": "Talentos gerais",
+    "page": 164,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:investida_aprimorada",
+    "title": "INVESTIDA APRIMORADA",
+    "category": "Talentos gerais",
+    "page": 164,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:mestre_das_armas",
+    "title": "MESTRE DAS ARMAS",
+    "category": "Talentos gerais",
+    "page": 164,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:mestre_defensivo",
+    "title": "MESTRE DEFENSIVO",
+    "category": "Talentos gerais",
+    "page": 164,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:perceber_oportunidade",
+    "title": "PERCEBER OPORTUNIDADE",
+    "category": "Talentos gerais",
+    "page": 164,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:provocacao_desafiadora",
+    "title": "PROVOCAÇÃO DESAFIADORA",
+    "category": "Talentos gerais",
+    "page": 164,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:resiliencia_melhorada",
+    "title": "RESILIÊNCIA MELHORADA",
+    "category": "Talentos gerais",
+    "page": 164,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:saltador_constante",
+    "title": "SALTADOR CONSTANTE",
+    "category": "Talentos gerais",
+    "page": 164,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:tecnicas_agressivas_de_escudo",
+    "title": "TÉCNICAS AGRESSIVAS DE ESCUDO",
+    "category": "Talentos gerais",
+    "page": 165,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:tecnicas_de_arremesso",
+    "title": "TÉCNICAS DE ARREMESSO",
+    "category": "Talentos gerais",
+    "page": 165,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:tecnicas_de_reacao_rapida",
+    "title": "TÉCNICAS DE REAÇÃO RÁPIDA",
+    "category": "Talentos gerais",
+    "page": 165,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:tecnicas_defensivas_de_escudo",
+    "title": "TÉCNICAS DEFENSIVAS DE ESCUDO",
+    "category": "Talentos gerais",
+    "page": 165,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:tempestade_de_ideias",
+    "title": "TEMPESTADE DE IDEIAS",
+    "category": "Talentos gerais",
+    "page": 165,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:adepto_de_medicina",
+    "title": "ADEPTO DE MEDICINA",
+    "category": "Talentos gerais",
+    "page": 165,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:adepto_de_briga",
+    "title": "ADEPTO DE BRIGA",
+    "category": "Talentos gerais",
+    "page": 165,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:adepto_de_combate",
+    "title": "ADEPTO DE COMBATE",
+    "category": "Talentos gerais",
+    "page": 166,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:adepto_de_feiticaria",
+    "title": "ADEPTO DE FEITIÇARIA",
+    "category": "Talentos gerais",
+    "page": 166,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:alma_inquebravel",
+    "title": "ALMA INQUEBRÁVEL",
+    "category": "Talentos gerais",
+    "page": 166,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:apaziguador_de_tecnica",
+    "title": "APAZIGUADOR DE TÉCNICA",
+    "category": "Talentos gerais",
+    "page": 166,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:aptidao_desenvolvida",
+    "title": "APTIDÃO DESENVOLVIDA",
+    "category": "Talentos gerais",
+    "page": 166,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:determinado_a_viver",
+    "title": "DETERMINADO A VIVER",
+    "category": "Talentos gerais",
+    "page": 166,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:discurso_motivador",
+    "title": "DISCURSO MOTIVADOR",
+    "category": "Talentos gerais",
+    "page": 167,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:especialista_em_concussao",
+    "title": "ESPECIALISTA EM CONCUSSÃO",
+    "category": "Talentos gerais",
+    "page": 167,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:especialista_em_cortes",
+    "title": "ESPECIALISTA EM CORTES",
+    "category": "Talentos gerais",
+    "page": 167,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:especialista_em_perfuracao",
+    "title": "ESPECIALISTA EM PERFURAÇÃO",
+    "category": "Talentos gerais",
+    "page": 167,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:mestre_da_criacao",
+    "title": "MESTRE DA CRIAÇÃO",
+    "category": "Talentos gerais",
+    "page": 167,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:mestre_do_arremesso",
+    "title": "MESTRE DO ARREMESSO",
+    "category": "Talentos gerais",
+    "page": 167,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:mestre_dos_chicotes",
+    "title": "MESTRE DOS CHICOTES",
+    "category": "Talentos gerais",
+    "page": 167,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:movimentos_acrobaticos",
+    "title": "MOVIMENTOS ACROBÁTICOS",
+    "category": "Talentos gerais",
+    "page": 168,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:robustez_aprimorada",
+    "title": "ROBUSTEZ APRIMORADA",
+    "category": "Talentos gerais",
+    "page": 168,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:tecnicas_de_empunhadura_dupla",
+    "title": "TÉCNICAS DE EMPUNHADURA DUPLA",
+    "category": "Talentos gerais",
+    "page": 168,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:tecnicas_de_mobilidade",
+    "title": "TÉCNICAS DE MOBILIDADE",
+    "category": "Talentos gerais",
+    "page": 168,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:tecnicas_de_ocultamento",
+    "title": "TÉCNICAS DE OCULTAMENTO",
+    "category": "Talentos gerais",
+    "page": 168,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:tecnicas_do_sentinela",
+    "title": "TÉCNICAS DO SENTINELA",
+    "category": "Talentos gerais",
+    "page": 168,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:wrestling",
+    "title": "WRESTLING",
+    "category": "Talentos gerais",
+    "page": 168,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos gerais:voto_malevolente",
+    "title": "VOTO MALEVOLENTE",
+    "category": "Talentos gerais",
+    "page": 168,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos de origem:familiaridade_com_tecnica",
+    "title": "FAMILIARIDADE COM TÉCNICA",
+    "category": "Talentos de origem",
+    "page": 169,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos de origem:manual_de_tecnica",
+    "title": "MANUAL DE TÉCNICA",
+    "category": "Talentos de origem",
+    "page": 169,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos de origem:expansao_de_reserva",
+    "title": "EXPANSÃO DE RESERVA",
+    "category": "Talentos de origem",
+    "page": 169,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos de origem:quebra_de_limites",
+    "title": "QUEBRA DE LIMITES",
+    "category": "Talentos de origem",
+    "page": 169,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos de origem:fisico_aperfeicoado",
+    "title": "FÍSICO APERFEIÇOADO",
+    "category": "Talentos de origem",
+    "page": 169,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos de origem:reposicao_sanguinea",
+    "title": "REPOSIÇÃO SANGUÍNEA",
+    "category": "Talentos de origem",
+    "page": 170,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos de origem:estudo_amaldicoado",
+    "title": "ESTUDO AMALDIÇOADO",
+    "category": "Talentos de origem",
+    "page": 170,
+    "minimumLevel": null
+  },
+  {
+    "id": "Talentos de origem:nocao_e_preparacao",
+    "title": "NOÇÃO E PREPARAÇÃO",
+    "category": "Talentos de origem",
+    "page": 170,
+    "minimumLevel": null
+  },
+  {
+    "id": "Aura:afinidade_ampliada",
+    "title": "AFINIDADE AMPLIADA",
+    "category": "Aura",
+    "page": 174,
+    "minimumLevel": null
+  },
+  {
+    "id": "Aura:aura_anuladora",
+    "title": "AURA ANULADORA",
+    "category": "Aura",
+    "page": 174,
+    "minimumLevel": null
+  },
+  {
+    "id": "Aura:aura_chamativa",
+    "title": "AURA CHAMATIVA",
+    "category": "Aura",
+    "page": 174,
+    "minimumLevel": null
+  },
+  {
+    "id": "Aura:aura_controlada",
+    "title": "AURA CONTROLADA",
+    "category": "Aura",
+    "page": 174,
+    "minimumLevel": null
+  },
+  {
+    "id": "Aura:aura_de_contencao",
+    "title": "AURA DE CONTENÇÃO",
+    "category": "Aura",
+    "page": 174,
+    "minimumLevel": null
+  },
+  {
+    "id": "Aura:aura_do_bastiao",
+    "title": "AURA DO BASTIÃO",
+    "category": "Aura",
+    "page": 174,
+    "minimumLevel": null
+  },
+  {
+    "id": "Aura:aura_do_comandante",
+    "title": "AURA DO COMANDANTE",
+    "category": "Aura",
+    "page": 174,
+    "minimumLevel": null
+  },
+  {
+    "id": "Aura:aura_do_comandante_evoluida",
+    "title": "AURA DO COMANDANTE EVOLUÍDA",
+    "category": "Aura",
+    "page": 175,
+    "minimumLevel": null
+  },
+  {
+    "id": "Aura:aura_drenadora",
+    "title": "AURA DRENADORA",
+    "category": "Aura",
+    "page": 175,
+    "minimumLevel": null
+  },
+  {
+    "id": "Aura:aura_elemental",
+    "title": "AURA ELEMENTAL",
+    "category": "Aura",
+    "page": 175,
+    "minimumLevel": null
+  },
+  {
+    "id": "Aura:aura_elemental_reforcada",
+    "title": "AURA ELEMENTAL REFORÇADA",
+    "category": "Aura",
+    "page": 175,
+    "minimumLevel": null
+  },
+  {
+    "id": "Aura:absorcao_elemental",
+    "title": "ABSORÇÃO ELEMENTAL",
+    "category": "Aura",
+    "page": 175,
+    "minimumLevel": null
+  },
+  {
+    "id": "Aura:aura_embacada",
+    "title": "AURA EMBAÇADA",
+    "category": "Aura",
+    "page": 175,
+    "minimumLevel": null
+  },
+  {
+    "id": "Aura:aura_inofensiva",
+    "title": "AURA INOFENSIVA",
+    "category": "Aura",
+    "page": 175,
+    "minimumLevel": null
+  },
+  {
+    "id": "Aura:casulo_de_energia",
+    "title": "CASULO DE ENERGIA",
+    "category": "Aura",
+    "page": 176,
+    "minimumLevel": null
+  },
+  {
+    "id": "Aura:aura_excessiva",
+    "title": "AURA EXCESSIVA",
+    "category": "Aura",
+    "page": 176,
+    "minimumLevel": null
+  },
+  {
+    "id": "Aura:concentrar_aura",
+    "title": "CONCENTRAR AURA",
+    "category": "Aura",
+    "page": 176,
+    "minimumLevel": null
+  },
+  {
+    "id": "Aura:enganacao_projetada",
+    "title": "ENGANAÇÃO PROJETADA",
+    "category": "Aura",
+    "page": 176,
+    "minimumLevel": null
+  },
+  {
+    "id": "Aura:golpe_com_aura",
+    "title": "GOLPE COM AURA",
+    "category": "Aura",
+    "page": 176,
+    "minimumLevel": null
+  },
+  {
+    "id": "Aura:transferencia_de_aura",
+    "title": "TRANSFERÊNCIA DE AURA",
+    "category": "Aura",
+    "page": 176,
+    "minimumLevel": null
+  },
+  {
+    "id": "Aura:aura_lacerante",
+    "title": "AURA LACERANTE",
+    "category": "Aura",
+    "page": 177,
+    "minimumLevel": null
+  },
+  {
+    "id": "Aura:aura_macabra",
+    "title": "AURA MACABRA",
+    "category": "Aura",
+    "page": 177,
+    "minimumLevel": null
+  },
+  {
+    "id": "Aura:aura_macica",
+    "title": "AURA MACIÇA",
+    "category": "Aura",
+    "page": 177,
+    "minimumLevel": null
+  },
+  {
+    "id": "Aura:aura_movedica",
+    "title": "AURA MOVEDIÇA",
+    "category": "Aura",
+    "page": 177,
+    "minimumLevel": null
+  },
+  {
+    "id": "Aura:aura_redirecionadora",
+    "title": "AURA REDIRECIONADORA",
+    "category": "Aura",
+    "page": 177,
+    "minimumLevel": null
+  },
+  {
+    "id": "Aura:aura_reforcada",
+    "title": "AURA REFORÇADA",
+    "category": "Aura",
+    "page": 177,
+    "minimumLevel": null
+  },
+  {
+    "id": "Aura:aura_impenetravel",
+    "title": "AURA IMPENETRÁVEL",
+    "category": "Aura",
+    "page": 177,
+    "minimumLevel": null
+  },
+  {
+    "id": "Controle e Leitura:canalizar_em_golpe",
+    "title": "CANALIZAR EM GOLPE",
+    "category": "Controle e Leitura",
+    "page": 178,
+    "minimumLevel": null
+  },
+  {
+    "id": "Controle e Leitura:canalizacao_avancada",
+    "title": "CANALIZAÇÃO AVANÇADA",
+    "category": "Controle e Leitura",
+    "page": 178,
+    "minimumLevel": null
+  },
+  {
+    "id": "Controle e Leitura:canalizacao_maxima",
+    "title": "CANALIZAÇÃO MÁXIMA",
+    "category": "Controle e Leitura",
+    "page": 178,
+    "minimumLevel": null
+  },
+  {
+    "id": "Controle e Leitura:cobrir_se",
+    "title": "COBRIR-SE",
+    "category": "Controle e Leitura",
+    "page": 178,
+    "minimumLevel": null
+  },
+  {
+    "id": "Controle e Leitura:cobertura_avancada",
+    "title": "COBERTURA AVANÇADA",
+    "category": "Controle e Leitura",
+    "page": 178,
+    "minimumLevel": null
+  },
+  {
+    "id": "Controle e Leitura:estimulo_muscular",
+    "title": "ESTÍMULO MUSCULAR",
+    "category": "Controle e Leitura",
+    "page": 179,
+    "minimumLevel": null
+  },
+  {
+    "id": "Controle e Leitura:estimulo_muscular_avancado",
+    "title": "ESTÍMULO MUSCULAR AVANÇADO",
+    "category": "Controle e Leitura",
+    "page": 179,
+    "minimumLevel": null
+  },
+  {
+    "id": "Controle e Leitura:expandir_aura",
+    "title": "EXPANDIR AURA",
+    "category": "Controle e Leitura",
+    "page": 179,
+    "minimumLevel": null
+  },
+  {
+    "id": "Controle e Leitura:leitura_de_aura",
+    "title": "LEITURA DE AURA",
+    "category": "Controle e Leitura",
+    "page": 179,
+    "minimumLevel": null
+  },
+  {
+    "id": "Controle e Leitura:leitura_rapida_de_energia",
+    "title": "LEITURA RÁPIDA DE ENERGIA",
+    "category": "Controle e Leitura",
+    "page": 180,
+    "minimumLevel": null
+  },
+  {
+    "id": "Controle e Leitura:projetar_energia",
+    "title": "PROJETAR ENERGIA",
+    "category": "Controle e Leitura",
+    "page": 180,
+    "minimumLevel": null
+  },
+  {
+    "id": "Controle e Leitura:projecao_avancada",
+    "title": "PROJEÇÃO AVANÇADA",
+    "category": "Controle e Leitura",
+    "page": 180,
+    "minimumLevel": null
+  },
+  {
+    "id": "Controle e Leitura:projecao_maxima",
+    "title": "PROJEÇÃO MÁXIMA",
+    "category": "Controle e Leitura",
+    "page": 180,
+    "minimumLevel": null
+  },
+  {
+    "id": "Controle e Leitura:projecao_dividida",
+    "title": "PROJEÇÃO DIVIDIDA",
+    "category": "Controle e Leitura",
+    "page": 180,
+    "minimumLevel": null
+  },
+  {
+    "id": "Controle e Leitura:punho_divergente",
+    "title": "PUNHO DIVERGENTE",
+    "category": "Controle e Leitura",
+    "page": 181,
+    "minimumLevel": null
+  },
+  {
+    "id": "Controle e Leitura:emocao_da_petala_decadente",
+    "title": "EMOÇÃO DA PÉTALA DECADENTE",
+    "category": "Controle e Leitura",
+    "page": 181,
+    "minimumLevel": null
+  },
+  {
+    "id": "Controle e Leitura:rastreio_avancado",
+    "title": "RASTREIO AVANÇADO",
+    "category": "Controle e Leitura",
+    "page": 181,
+    "minimumLevel": null
+  },
+  {
+    "id": "Domínio:revestimento_de_dominio",
+    "title": "REVESTIMENTO DE DOMÍNIO",
+    "category": "Domínio",
+    "page": 182,
+    "minimumLevel": null
+  },
+  {
+    "id": "Domínio:anular_tecnica",
+    "title": "ANULAR TÉCNICA",
+    "category": "Domínio",
+    "page": 182,
+    "minimumLevel": null
+  },
+  {
+    "id": "Domínio:expansao_de_dominio_incompleta",
+    "title": "EXPANSÃO DE DOMÍNIO INCOMPLETA",
+    "category": "Domínio",
+    "page": 183,
+    "minimumLevel": null
+  },
+  {
+    "id": "Domínio:expansao_de_dominio_completa",
+    "title": "EXPANSÃO DE DOMÍNIO COMPLETA",
+    "category": "Domínio",
+    "page": 183,
+    "minimumLevel": null
+  },
+  {
+    "id": "Domínio:acerto_garantido",
+    "title": "ACERTO GARANTIDO",
+    "category": "Domínio",
+    "page": 184,
+    "minimumLevel": null
+  },
+  {
+    "id": "Domínio:expansao_de_dominio_sem_barreiras",
+    "title": "EXPANSÃO DE DOMÍNIO SEM BARREIRAS",
+    "category": "Domínio",
+    "page": 184,
+    "minimumLevel": null
+  },
+  {
+    "id": "Barreira:tecnicas_de_barreira",
+    "title": "TÉCNICAS DE BARREIRA",
+    "category": "Barreira",
+    "page": 188,
+    "minimumLevel": null
+  },
+  {
+    "id": "Barreira:paredes_resistentes",
+    "title": "PAREDES RESISTENTES",
+    "category": "Barreira",
+    "page": 188,
+    "minimumLevel": null
+  },
+  {
+    "id": "Barreira:barreira_rapida",
+    "title": "BARREIRA RÁPIDA",
+    "category": "Barreira",
+    "page": 188,
+    "minimumLevel": null
+  },
+  {
+    "id": "Barreira:cesta_oca_de_vime",
+    "title": "CESTA OCA DE VIME",
+    "category": "Barreira",
+    "page": 188,
+    "minimumLevel": null
+  },
+  {
+    "id": "Barreira:cortina",
+    "title": "CORTINA",
+    "category": "Barreira",
+    "page": 188,
+    "minimumLevel": null
+  },
+  {
+    "id": "Energia Reversa:energia_reversa",
+    "title": "ENERGIA REVERSA",
+    "category": "Energia Reversa",
+    "page": 190,
+    "minimumLevel": null
+  },
+  {
+    "id": "Energia Reversa:cura_amplificada",
+    "title": "CURA AMPLIFICADA",
+    "category": "Energia Reversa",
+    "page": 190,
+    "minimumLevel": null
+  },
+  {
+    "id": "Energia Reversa:fluxo_constante",
+    "title": "FLUXO CONSTANTE",
+    "category": "Energia Reversa",
+    "page": 190,
+    "minimumLevel": null
+  },
+  {
+    "id": "Energia Reversa:regeneracao_aprimorada",
+    "title": "REGENERAÇÃO APRIMORADA",
+    "category": "Energia Reversa",
+    "page": 190,
+    "minimumLevel": null
+  },
+  {
+    "id": "Energia Reversa:liberacao_de_energia_reversa",
+    "title": "LIBERAÇÃO DE ENERGIA REVERSA",
+    "category": "Energia Reversa",
+    "page": 191,
+    "minimumLevel": null
+  },
+  {
+    "id": "Energia Reversa:canalizar_energia_reversa",
+    "title": "CANALIZAR ENERGIA REVERSA",
+    "category": "Energia Reversa",
+    "page": 191,
+    "minimumLevel": null
+  },
+  {
+    "id": "Energia Reversa:cura_em_grupo",
+    "title": "CURA EM GRUPO",
+    "category": "Energia Reversa",
+    "page": 191,
+    "minimumLevel": null
+  },
+  {
+    "id": "Aptidões especiais:raio_negro",
+    "title": "RAIO NEGRO",
+    "category": "Aptidões especiais",
+    "page": 192,
+    "minimumLevel": null
+  },
+  {
+    "id": "Aptidões especiais:abencoado_pelas_faiscas_negras",
+    "title": "ABENÇOADO PELAS FAÍSCAS NEGRAS",
+    "category": "Aptidões especiais",
+    "page": 192,
+    "minimumLevel": null
+  },
+  {
+    "id": "Aptidões especiais:dominio_simples",
+    "title": "DOMÍNIO SIMPLES",
+    "category": "Aptidões especiais",
+    "page": 193,
+    "minimumLevel": null
+  },
+  {
+    "id": "Aptidões especiais:reversao_de_tecnica",
+    "title": "REVERSÃO DE TÉCNICA",
+    "category": "Aptidões especiais",
+    "page": 194,
+    "minimumLevel": null
+  },
+  {
+    "id": "Aptidões especiais:tecnica_maxima",
+    "title": "TÉCNICA MÁXIMA",
+    "category": "Aptidões especiais",
+    "page": 194,
+    "minimumLevel": null
+  }
+]

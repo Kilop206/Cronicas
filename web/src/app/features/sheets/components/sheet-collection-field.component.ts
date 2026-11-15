@@ -49,6 +49,7 @@ export class SheetCollectionFieldComponent {
   @Input() campaignId = '';
   @Input() mode: 'read' | 'edit' | 'print' = 'read';
   @Input() columnOptions: ColumnOptions = {};
+  @Input() rowDefaults: SheetRow = {};
   @Output() changed = new EventEmitter<void>();
   items(): string[] { const value = this.draft.fields[this.field.key]; return Array.isArray(value) && value.every(item => typeof item === 'string') ? value as string[] : []; }
   rowLimit() { return this.field.key === 'estado_regras' ? 100 : 30; }
@@ -61,5 +62,5 @@ export class SheetCollectionFieldComponent {
   setCell(index: number, column: SystemColumn, value: SheetCellValue) { const rows = this.rows().map(row => ({ ...row })); rows[index][column.key] = column.type === 'number' ? Number(value) : value; this.set(rows); }
   removeRow(index: number) { this.set(this.rows().filter((_, position) => position !== index)); }
   add() { if (this.field.type === 'list' && this.items().length < 30) this.set([...this.items(), '']);
-    if (this.field.type === 'table' && this.rows().length < this.rowLimit()) this.set([...this.rows(), Object.fromEntries((this.field.columns || []).map(column => [column.key, this.field.key === 'ataques_regras' ? ({ margem: 20, multiplicador: 2, municao: -1, falha: 100, dano: '1', dano_extra: this.field.columns?.some(item => item.key === 'empala') ? '' : '0' } as Record<string, SheetCellValue>)[column.key] ?? this.cell({}, column) : this.cell({}, column)]))]); }
+    if (this.field.type === 'table' && this.rows().length < this.rowLimit()) this.set([...this.rows(), Object.fromEntries((this.field.columns || []).map(column => [column.key, this.rowDefaults[column.key] ?? (this.field.key === 'ataques_regras' ? ({ margem: 20, multiplicador: 2, municao: -1, falha: 100, dano: '1', dano_extra: this.field.columns?.some(item => item.key === 'empala') ? '' : '0' } as Record<string, SheetCellValue>)[column.key] ?? this.cell({}, column) : this.cell({}, column))]))]); }
 }

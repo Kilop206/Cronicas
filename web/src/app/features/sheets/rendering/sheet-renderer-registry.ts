@@ -2,7 +2,7 @@ import type { CharacterInput, OverlayResource, RpgSystem, SheetFieldValue } from
 import { d20Defense, hasD20Conditions } from '../rules/d20-condition-display';
 import { RPG_PLUGINS, resolveRpgPlugin } from '../../rpg-systems/plugins/rpg-plugin-contract';
 
-export type SheetRendererId = 'ordem_paranormal' | 'dnd_5e' | 'tormenta20' | 'call_of_cthulhu_7e' | 'custom';
+export type SheetRendererId = 'ordem_paranormal' | 'dnd_5e' | 'tormenta20' | 'call_of_cthulhu_7e' | 'feiticeiros_maldicoes' | 'custom';
 
 interface SheetRendererDefinition {
   id: Exclude<SheetRendererId, 'custom'>;
@@ -12,6 +12,7 @@ interface SheetRendererDefinition {
 }
 
 const resources: Record<Exclude<SheetRendererId, 'custom'>, SheetRendererDefinition['resources']> = {
+  feiticeiros_maldicoes: [{ key: 'health', label: 'PV' }, { key: 'mana', label: 'PE / Estamina' }],
   ordem_paranormal: [{ key: 'health', label: 'PV' }, { key: 'mana', label: 'PE' }, { key: 'sanity', label: 'SAN' }],
   dnd_5e: [{ key: 'health', label: 'HP' }],
   tormenta20: [{ key: 'health', label: 'PV' }, { key: 'mana', label: 'PM' }],
@@ -78,6 +79,7 @@ function overlayMax(character: CharacterInput, key: string): number {
 }
 
 const indicatorKeys: Record<string, { key: string; label: string }[]> = {
+  feiticeiros_maldicoes: [{ key: 'nivel', label: 'Nível' }, { key: 'defesa', label: 'Defesa base' }],
   ordem_paranormal: [{ key: 'nex', label: 'NEX' }, { key: 'defesa', label: 'Defesa' }],
   dnd_5e: [{ key: 'nivel', label: 'Nível' }, { key: 'classe_armadura', label: 'AC' }, { key: 'iniciativa', label: 'Iniciativa' }],
   tormenta20: [{ key: 'nivel', label: 'Nível' }, { key: 'defesa', label: 'Defesa' }],

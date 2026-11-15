@@ -10,9 +10,10 @@ public static class CharacterOverlayProjection
     {
         var s = source.State; var definition = source.System; var values = s.Fields ?? [];
         var renderer = definition is null || definition.RendererMode == "layout" ? null : plugins.Resolve(definition)?.RendererId;
-        var custom = renderer is not ("ordem_paranormal" or "dnd_5e" or "tormenta20" or "call_of_cthulhu_7e");
+        var custom = renderer is not ("ordem_paranormal" or "dnd_5e" or "tormenta20" or "call_of_cthulhu_7e" or "feiticeiros_maldicoes");
         var resourceKeys = renderer switch
         {
+            "feiticeiros_maldicoes" => new[] { (Key: "health", Label: "PV"), (Key: "mana", Label: values.TryGetValue("origem", out var origin) && origin.ValueKind==JsonValueKind.String && origin.GetString()=="restringido" ? "Estamina" : "PE") },
             "ordem_paranormal" => new[] { (Key: "health", Label: "PV"), (Key: "mana", Label: "PE"), (Key: "sanity", Label: "SAN") },
             "dnd_5e" => [("health", "HP")],
             "tormenta20" => [("health", "PV"), ("mana", "PM")],
@@ -24,6 +25,7 @@ public static class CharacterOverlayProjection
         };
         var indicatorKeys = renderer switch
         {
+            "feiticeiros_maldicoes" => new[] { (Key: "nivel", Label: "Nível"), (Key: "defesa", Label: "Defesa") },
             "ordem_paranormal" => new[] { (Key: "nex", Label: "NEX"), (Key: "defesa", Label: "Defesa") },
             "dnd_5e" => [("nivel", "Nível"), ("classe_armadura", "AC"), ("iniciativa", "Iniciativa")],
             "tormenta20" => [("nivel", "Nível"), ("defesa", "Defesa")],
@@ -42,7 +44,9 @@ public static class CharacterOverlayProjection
         var conditions = definition is not null && plugins.RulesFor(definition) is CompiledRulesPlugin &&
             definition.TemplateId is "ordem_paranormal" or "tormenta20" ? new RuleState(s) : null;
         var indicators = indicatorKeys.Where(i => values.ContainsKey(i.Key)).Select(i => new CharacterOverlayIndicator(i.Label,
-            i.Key == "defesa" && conditions is not null
+            i.Key == "defesa" && renderer == "feiticeiros_maldicoes"
+                ? FmConditions.Defense(new RuleState(s)).ToString(CultureInfo.InvariantCulture)
+                : i.Key == "defesa" && conditions is not null
                 ? D20Conditions.Defense(conditions, false, definition!.TemplateId == "ordem_paranormal").ToString(CultureInfo.InvariantCulture)
                 : values[i.Key].ToString())).ToArray();
         return new(s.Name, s.PortraitUrl, s.BackgroundUrl, s.Health, s.MaxHealth, s.Sanity, s.MaxSanity, s.Mana, s.MaxMana,

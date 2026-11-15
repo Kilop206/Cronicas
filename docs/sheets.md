@@ -1,5 +1,7 @@
 # Fichas por sistema
 
+O novo template `feiticeiros_maldicoes` v1 usa a edição 2.5.2, com renderizador e plugin independentes. Consulte [Feiticeiros & Maldições](feiticeiros-maldicoes.md) para a cobertura executável, fontes, validação e regras pendentes; o índice de referências não equivale à implementação integral dos livros.
+
 ## Contrato e fluxo
 
 Uma campanha aponta para um `RpgSystem`; seus personagens pertencem à campanha. O sistema guarda o esquema em `SchemaJson`, lido por `SystemDefinition.Read`. O documento contém campos, layout, `templateId` estável, `templateVersion`, `rulesetVersion`, `rendererMode`, revisão e até dez revisões anteriores. Esquemas antigos salvos apenas como array de campos continuam legíveis. O identificador do template é independente do nome editável do sistema.

@@ -1,5 +1,7 @@
 # Crônicas
 
+Feiticeiros & Maldições 2.5.2 agora tem um modelo, ficha e motor próprios. Consulte [a cobertura e as pendências](docs/feiticeiros-maldicoes.md): criação guiada, testes, recursos, combate, alma, rituais, domínios e algumas aptidões possuem ações automáticas; o catálogo completo de efeitos individuais e o executor do Grimório ainda não estão concluídos.
+
 O módulo de fichas agora usa definições versionadas por sistema, renderizadores especializados e um editor universal de layouts. Consulte [a arquitetura de fichas](docs/sheets.md) para adicionar sistemas, templates, regras e componentes.
 
 Workspace de campanhas de RPG de mesa com contas e controle de sessões, convites, fichas, NPCs, sistemas editáveis, universos, wiki, documentos, sessões, dados, chat e encontros. A sala usa WebRTC direto entre navegadores para câmeras e múltiplas telas; portraits e recursos têm fontes para OBS.

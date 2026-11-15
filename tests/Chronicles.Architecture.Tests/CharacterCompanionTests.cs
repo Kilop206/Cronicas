@@ -38,7 +38,7 @@ public static class CharacterCompanionTests
           ["sorte"] = JsonSerializer.SerializeToElement(50), ["secret_text"] = JsonSerializer.SerializeToElement("must not leak") }, 2);
         foreach (var (id, version, edition, labels) in new[] {
             ("ordem_paranormal", 7, "1.3", "PV,PE,SAN"), ("dnd_5e", 5, "2014", "HP"),
-            ("tormenta20", 4, "jogo-do-ano-2024-v1.3", "PV,PM"), ("call_of_cthulhu_7e", 6, "7e", "HP,SAN,Magic Points"), ("dnd_5e", 1, "2024", "HP") })
+            ("tormenta20", 4, "jogo-do-ano-2024-v1.3", "PV,PM"), ("call_of_cthulhu_7e", 6, "7e", "HP,SAN,Magic Points"), ("dnd_5e", 1, "2024", "HP"), ("feiticeiros_maldicoes",1,"2.5.2","PV,PE") })
         {
             var result = CharacterOverlayProjection.Document(new(state, new([], null, id, version, edition), DateTime.UtcNow), RpgPluginRegistry.Default);
             Check(string.Join(',', result.Resources.Select(r => r.Label)) == labels, "edition profile " + id + edition);
@@ -55,7 +55,7 @@ public static class CharacterCompanionTests
         var defended = CharacterOverlayProjection.Document(new(conditioned, new([ruleField], null, "ordem_paranormal", 7, "1.3"), DateTime.UtcNow), RpgPluginRegistry.Default);
         Check(defended.Indicators.Single(i => i.Label == "Defesa").Value == "16", "OBS derives defense from the configured edition's conditions");
         Check(conditioned.Fields!["defesa"].GetInt32() == 18, "projection does not change persisted state");
-        Console.WriteLine("Companion application: role policies, private notes, hash-only capability, four RPG profiles, custom/unknown editions and condition-aware safe projection passed.");
+        Console.WriteLine("Companion application: role policies, private notes, hash-only capability, five RPG profiles, custom/unknown editions and condition-aware safe projection passed.");
     }
 
     private sealed class FixedKey : IOverlayKeyGenerator { public string Key = new('a', 64); public string Generate() => Key; }

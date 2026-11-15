@@ -1,5 +1,14 @@
 [
   {
+    "manifest": { "id": "feiticeiros_maldicoes", "name": "Feiticeiros & Maldições", "version": "2.5.2", "schemaVersion": "1" },
+    "rulesetId": "feiticeiros_maldicoes:2.5.2",
+    "rendererId": "feiticeiros_maldicoes",
+    "schemaVersions": [1],
+    "executableSchemaVersions": [1],
+    "requiredFields": ["nivel", "origem", "especializacao", "forca", "destreza", "constituicao", "inteligencia", "sabedoria", "presenca", "defesa"],
+    "ruleRequiredFields": ["estado_regras"]
+  },
+  {
     "manifest": {
       "id": "ordem_paranormal",
       "name": "Ordem Paranormal",
