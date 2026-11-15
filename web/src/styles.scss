@@ -110,7 +110,7 @@ input::placeholder, textarea::placeholder { color: var(--muted); }
 textarea { resize: vertical; min-height: 90px; line-height: 1.6; }
 .auth-switch { margin-top: 25px; color: var(--muted); font-size: 13px; text-align: center; }
 .auth-switch a { color: var(--gold-bright); font-weight: 700; }
-.forgot-link { display: block; margin: -5px 0 24px; text-align: right; color: var(--gold-bright); font-size: 12px; }
+.forgot-link { display: flex; align-items: center; justify-content: flex-end; min-height: 32px; margin: 12px 0 24px; color: var(--gold-bright); font-size: 12px; }
 .form-error { padding: 11px 13px; border: 1px solid #a8565655; border-radius: 5px; background: #873d3d22; color: var(--danger); font-size: 12px; }
 .form-success { color: #a9cfb0; font-size: 12px; }
 .app-shell { display: flex; min-height: 100vh; }
@@ -731,7 +731,7 @@ html:has(.character-delete-dialog[open]) { overflow:hidden; }
   main.page.page .t20-training { width: 32px; }
 }
 @media screen and (max-width: 700px), screen and (pointer: coarse) {
-  .button, .page :is(button,summary) { min-height: 44px !important; }
+  .button, .text-link, .forgot-link, .page :is(button,summary) { min-height: 44px !important; }
   .auth-main :is(input,select,textarea) { min-height: 44px; font-size: 16px; }
   main.page.page :is(input:not([type=checkbox]):not([type=radio]):not([type=color]):not([type=hidden]), select, textarea) { min-height: 44px; font-size: 16px; }
   main.page.page :is(app-dnd-roll,app-t20-roll,app-coc-roll,app-paranormal-roll,app-sheet-roll) button { min-width: 44px; }
