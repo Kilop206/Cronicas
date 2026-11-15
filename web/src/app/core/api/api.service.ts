@@ -12,6 +12,7 @@ export class ApiService {
   private document = inject(DOCUMENT);
   user = signal<User | null>(null);
   sessionExpired = signal(false);
+  sessionCheckError = signal('');
   private loaded = false;
   private checking?: Observable<boolean>;
 
@@ -23,6 +24,7 @@ export class ApiService {
       map(() => true),
       catchError(error => {
         if (error instanceof HttpErrorResponse && error.status === 401) { this.setUser(null); this.loaded = true; return of(false); }
+        this.sessionCheckError.set(apiError(error));
         return throwError(() => error);
       }),
       finalize(() => { this.checking = undefined; }),
@@ -135,6 +137,7 @@ export class ApiService {
   roll(campaignId: string, expression: string, visibility: DiceRoll['visibility'], requestId: string) { return this.http.post<DiceRoll>(`/api/campaigns/${campaignId}/rolls`, { expression, visibility, requestId }, { withCredentials: true }); }
   percentileRoll(campaignId: string, target: number, bonusDice: number, visibility: DiceRoll['visibility'], requestId: string) { return this.http.post<DiceRoll>(`/api/campaigns/${campaignId}/percentile-rolls`, { target, bonusDice, visibility, requestId }, { withCredentials: true }); }
   private setUser(user: User | null) {
+    this.sessionCheckError.set('');
     if (user) this.sessionExpired.set(false);
     this.user.set(user);
     this.document.documentElement.dataset['accent'] = user?.accent || 'gold';
@@ -145,6 +148,8 @@ export function apiError(error: unknown): string {
   if (error instanceof TimeoutError) return 'O servidor demorou para responder. Se você estava salvando, confira se a alteração foi concluída antes de tentar novamente.';
   if (error instanceof HttpErrorResponse) {
     if (error.status === 0) return 'Não foi possível conectar ao Crônicas. Verifique sua conexão e tente novamente.';
+    if ([403, 429].includes(error.status) && (error.headers.get('cf-mitigated') === 'challenge' || /text\/(?:html|plain)/i.test(error.headers.get('Content-Type') || '')))
+      return 'O serviço de acesso está temporariamente indisponível na proteção do servidor. Tente novamente em instantes.';
     if (error.status >= 500) return 'O serviço está temporariamente indisponível. Tente novamente em instantes. Se estava salvando, confira o resultado antes de repetir a ação.';
     if (error.status === 401 && !error.url?.includes('/api/auth/login')) return 'Sua sessão expirou ou não é válida. Entre novamente para continuar.';
     if (typeof error.error?.message === 'string') return error.error.message;

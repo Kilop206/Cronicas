@@ -1,8 +1,8 @@
 import { inject } from '@angular/core';
 import { safeReturnUrl } from '../core/return-url';
 import { CanActivateFn, Router, RouterStateSnapshot, Routes } from '@angular/router';
-import { map } from 'rxjs';
-import { ApiService } from '../api';
+import { catchError, map, of, timeout } from 'rxjs';
+import { ApiService, apiError } from '../api';
 import { ForgotPasswordPage, PreferencesPage, ResetPasswordPage } from '../features/auth/account-pages';
 import { AuthPage, CampaignDetailPage, CampaignFormPage, CampaignsPage, DashboardPage, LandingPage, NotFoundPage, ProfilePage, ShellComponent } from '../views';
 import { InvitePage } from '../features/campaigns/invite.page';
@@ -16,11 +16,16 @@ import type { CharacterEditorPage } from '../features/characters/studio-pages';
 
 const protectedRoute: CanActivateFn = (_route, state: RouterStateSnapshot) => {
   const api = inject(ApiService), router = inject(Router);
-  return api.ensure().pipe(map(ok => ok || router.createUrlTree(['/login'], { queryParams: { returnUrl: state.url } })));
+  const login = () => router.createUrlTree(['/login'], { queryParams: { returnUrl: state.url } });
+  return api.ensure().pipe(map(ok => ok || login()), catchError(() => of(login())));
 };
 const guestRoute: CanActivateFn = route => {
   const api = inject(ApiService), router = inject(Router);
-  return api.ensure().pipe(map(ok => ok ? router.parseUrl(safeReturnUrl(route.queryParamMap.get('returnUrl'))) : true));
+  // An unavailable session probe must never prevent the user from opening the sign-in form.
+  // Cancel a slow probe before showing the form so an old response cannot overwrite a subsequent login.
+  if (api.sessionCheckError()) return true;
+  return api.ensure().pipe(timeout(5000), catchError(error => { api.sessionCheckError.set(apiError(error)); return of(false); }),
+    map(ok => ok ? router.parseUrl(safeReturnUrl(route.queryParamMap.get('returnUrl'))) : true));
 };
 
 export const routes: Routes = [
