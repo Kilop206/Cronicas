@@ -11,6 +11,7 @@
     "test:fm:browser": "node fm-browser.mjs",
     "test:auth:browser": "node auth-browser.mjs",
     "test:characters:browser": "node character-management-browser.mjs",
+    "test:visual:browser": "node visual-audit.mjs --strict",
     "visual:capture": "node visual-validation.mjs",
     "lint": "eslint .",
     "format": "prettier --write src"

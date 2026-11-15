@@ -24,13 +24,14 @@ jobs:
         working-directory: web
       - run: npm run build
         working-directory: web
-      - name: Authentication, F&M and character management browser regressions
+      - name: Authentication, F&M, characters and responsive UI regressions
         working-directory: web
         run: |
           npx playwright install --with-deps chromium
           npm run test:auth:browser
           npm run test:fm:browser
           npm run test:characters:browser
+          AUDIT_SCREENSHOTS=0 npm run test:visual:browser
       - run: npm run test:pages-proxy
       - run: npm run test:spa-routes
       - run: npm run test:quality
