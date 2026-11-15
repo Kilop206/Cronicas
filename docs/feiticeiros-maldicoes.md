@@ -97,3 +97,5 @@ O navegador foi validado com fixtures, incluindo contexto de artes, sugestão da
 O índice pode ser regenerado com `python scripts/index-fm-rulebook.py`, tendo `pypdf` e o PDF local correspondente. Ele extrai nomes, categorias e páginas; não infere efeitos de habilidades. Créditos: Setsugiri, Parker e colaboradores de Feiticeiros & Maldições; Gege Akutami por Jujutsu Kaisen.
 
 A continuação com estilos, Golpe Especial, Fundamentos e Adeptos foi publicada e verificada em 15/11/2026; veja o [registro da entrega e do CI](architecture/releases/2026-11-15-feiticeiros-class-options.md).
+
+A continuação com PV individuais de barreiras/Cortinas, Cesta Oca de Vime e reação/exposição de anti-domínios também foi publicada; veja o [registro de barreiras e gestão de fichas](architecture/releases/2026-11-15-barriers-character-management.md).
