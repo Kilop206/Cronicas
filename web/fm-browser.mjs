@@ -45,7 +45,16 @@ try{
     else if(pathname.endsWith('/rules')){
       const command=route.request().postDataJSON();commands.push(command);
       if(rejectCommand){status=400;body={errors:{rules:['Recurso insuficiente no teste de contrato.']}};}
-      else{character={...character,version:character.version+1};body={character,message:'Ação recebida pela fixture de interface.',rolls:[{expression:'1d20+9',rolls:[15],keptIndexes:[0],modifier:9,total:24}]};}
+      else{
+        // UI fixtures expose returned state; the C# and HTTP suites verify the actual mechanics.
+        const state=Object.fromEntries(character.fields.estado_regras.map(r=>[r.chave,r.valor]));const action=command.command.action;
+        if(action==='fm-barrier')for(let i=1;i<=command.command.amount;i++)state['parede_'+i]=17;
+        if(action==='fm-barrier-damage')state[command.command.option]=Math.max(0,state[command.command.option]-command.command.amount);
+        if(action==='fm-curtain')state.cortina_1=51;
+        if(action==='fm-basket'){state.cesta_durabilidade=4;state.concentrando=1;}
+        if(action==='fm-turn-start')state.cesta_selo=command.command.jujutsu?.maintainBasketSeal?1:0;
+        character={...character,fields:{...character.fields,estado_regras:Object.entries(state).filter(([,valor])=>valor!==0).map(([chave,valor])=>({chave,valor}))},version:character.version+1};body={character,message:'Ação recebida pela fixture de interface.',rolls:[{expression:'1d20+9',rolls:[15],keptIndexes:[0],modifier:9,total:24}]};
+      }
     }
     else if(pathname.includes('negotiate')){status=503;body={};}
     await route.fulfill({status,contentType:'application/json',body:JSON.stringify(body)});
@@ -155,7 +164,34 @@ try{
   const revokeSave=page.waitForResponse(r=>r.url().endsWith('/api/characters/fm-test')&&r.request().method()==='PUT');
   await page.locator('.custom-sheet-main .fm-choice-grid').getByRole('checkbox',{name:/^Adepto de Feitiçaria/}).uncheck();await revokeSave;
   assert.equal(character.fields.aptidoes.some(v=>v.startsWith('adepto_fundamento_')),false,'unlearning a grant clears its dependent choice');
+  character={...character,fields:{...character.fields,apt_barreira:3,apt_dominio:2,pericias:[...character.fields.pericias.filter(r=>r.chave!=='historia'),{chave:'historia',treino:2,outros:0}]}};
+  await page.reload();await page.locator('.custom-sheet-main .fm-sheet').waitFor();await page.getByRole('button',{name:'Editar ficha',exact:true}).click();
+  await page.locator('.fm-tabs').getByRole('button',{name:'Perfil Amaldiçoado',exact:true}).click();
+  for(const name of ['Técnicas de Barreira','Cortina','Cesta Oca de Vime','Domínio Simples']){
+    const save=page.waitForResponse(r=>r.url().endsWith('/api/characters/fm-test')&&r.request().method()==='PUT');await page.locator('.custom-sheet-main').getByRole('checkbox',{name,exact:true}).check();await save;
+  }
+  await page.getByRole('button',{name:'Concluir edição',exact:true}).click();
+  const barriers=page.locator('.custom-sheet-main .fm-barriers');await barriers.getByLabel('Paredes a erguer',{exact:true}).fill('2');
+  let received=page.waitForResponse(r=>r.url().endsWith('/rules')&&r.request().method()==='POST');await barriers.getByRole('button',{name:'Erguer paredes',exact:true}).click();await received;
+  assert.equal(commands.at(-1).command.amount,2);await barriers.getByRole('list',{name:'Barreiras ativas'}).getByText('Parede 1 · 17 PV',{exact:true}).waitFor();
+  await barriers.locator('.fm-barrier-health summary').click();await barriers.getByLabel('Barreira',{exact:true}).selectOption('parede_1');await barriers.getByLabel('Dano final na barreira',{exact:true}).fill('5');
+  received=page.waitForResponse(r=>r.url().endsWith('/rules')&&r.request().method()==='POST');await barriers.getByRole('button',{name:'Aplicar dano na barreira',exact:true}).click();await received;
+  assert.equal(commands.at(-1).command.option,'parede_1');assert.equal(commands.at(-1).command.amount,5);await barriers.getByRole('list',{name:'Barreiras ativas'}).getByText('Parede 1 · 12 PV',{exact:true}).waitFor();
+  await barriers.locator('.fm-curtain summary').click();assert.equal(await barriers.getByRole('button',{name:'Criar Cortina com ação acordada',exact:true}).isDisabled(),true);
+  await barriers.getByLabel('Trechos de 9 m de cobertura',{exact:true}).fill('3');await barriers.getByLabel('Ação acordada com o narrador',{exact:true}).selectOption('completa');
+  received=page.waitForResponse(r=>r.url().endsWith('/rules')&&r.request().method()==='POST');await barriers.getByRole('button',{name:'Criar Cortina com ação acordada',exact:true}).click();await received;
+  assert.equal(commands.at(-1).command.option,'completa');assert.equal(commands.at(-1).command.amount,3);
+  await barriers.getByLabel('Ação do anti-domínio',{exact:true}).selectOption('reacao');
+  received=page.waitForResponse(r=>r.url().endsWith('/rules')&&r.request().method()==='POST');await barriers.getByRole('button',{name:'Ativar Cesta Oca de Vime · 3 PE',exact:true}).click();await received;assert.equal(commands.at(-1).command.option,'reacao');
+  await page.locator('.fm-tabs').getByRole('button',{name:'Combate',exact:true}).click();
+  await page.locator('.custom-sheet-main').getByRole('checkbox',{name:'Eu deveria ter sido atingido por acerto garantido',exact:true}).check();await page.locator('.custom-sheet-main').getByRole('checkbox',{name:'Manter selo da Cesta com as duas mãos',exact:true}).check();
+  received=page.waitForResponse(r=>r.url().endsWith('/rules')&&r.request().method()==='POST');await page.getByRole('button',{name:'Iniciar meu turno',exact:true}).click();await received;
+  assert.deepEqual(commands.at(-1).command.jujutsu,{guaranteedHitExposure:true,maintainBasketSeal:true});await page.locator('.custom-sheet-main').getByRole('checkbox',{name:'Eu deveria ter sido atingido por acerto garantido',exact:true}).waitFor();assert.equal(await page.locator('.custom-sheet-main').getByRole('checkbox',{name:'Eu deveria ter sido atingido por acerto garantido',exact:true}).isChecked(),false);
+  await page.locator('.fm-tabs').getByRole('button',{name:'Perfil Amaldiçoado',exact:true}).click();await barriers.getByText(/selo mantido, duas mãos ocupadas/).waitFor();
+  await barriers.screenshot({path:path.join(output,'feiticeiros_maldicoes-barreiras-desktop.png')});await page.setViewportSize({width:390,height:844});assert.ok(await page.evaluate(()=>document.documentElement.scrollWidth<=innerWidth+1),'barrier controls mobile overflow');
+  await barriers.screenshot({path:path.join(output,'feiticeiros_maldicoes-barreiras-mobile.png')});await page.setViewportSize({width:1440,height:900});
   character={...character,canEdit:false};campaign.role='spectator';await page.reload();await page.locator('.custom-sheet-main .fm-sheet').waitFor();
   assert.equal(await page.getByRole('button',{name:'Editar ficha',exact:true}).count(),0);assert.equal(await page.getByRole('button',{name:'Rolar Atletismo',exact:true}).count(),0);
-  assert.deepEqual(errors,[]);console.log('F&M browser fixtures: four viewports, autosave, style budget, special strikes, typed incoming damage, fundamentals, rituals, versioned command, error recovery, search, print and readonly passed.');
+  await page.locator('.fm-tabs').getByRole('button',{name:'Perfil Amaldiçoado',exact:true}).click();assert.equal(await page.getByRole('button',{name:'Erguer paredes',exact:true}).count(),0);await page.locator('.custom-sheet-main .fm-barriers').getByText('Parede 1 · 12 PV',{exact:true}).waitFor();
+  assert.deepEqual(errors,[]);console.log('F&M browser fixtures: four viewports, autosave, style budget, special strikes, typed incoming damage, fundamentals, rituals, wall/curtain HP, anti-domain reaction and seal, versioned command, error recovery, search, print and readonly passed.');
 }finally{await browser.close();await new Promise(resolve=>server.close(resolve));}

@@ -21,7 +21,7 @@ const campaign=expect(await request('/api/campaigns','POST',{name:'F&M integrati
 expect(await request(`/api/campaigns/${campaign.id}/system`,'PATCH',{systemId:system.id},cookie),204);
 const fields=Object.fromEntries(template.fields.filter(f=>f.defaultValue!==null&&f.defaultValue!==undefined).map(f=>[f.key,structuredClone(f.defaultValue)]));
 Object.assign(fields,{nivel:8,especializacao:'combate',origem:'inato',atributo_especializacao:'forca',atributo_tecnica:'sabedoria',forca:16,constituicao:14,sabedoria:14,
-  aptidoes:['estilo_defensivo','estilo_duelista'],
+  aptidoes:['estilo_defensivo','estilo_duelista','tecnicas_barreira','cortina','cesta_oca_vime'],apt_barreira:3,apt_dominio:2,pericias:[{chave:'historia',treino:2,outros:0}],
   armas:[{nome:'Ensaio',atributo:'forca',dados:'1d6',apos:'',treinado:true,margem:20,acao:'comum',municao:-1}]});
 let character=expect(await request(`/api/campaigns/${campaign.id}/characters`,'POST',{name:'F&M fixture',health:1,maxHealth:1,mana:0,maxMana:0,sanity:0,maxSanity:0,fields},cookie),201);
 const path=`/api/characters/${character.id}`;
@@ -47,6 +47,17 @@ const revision=character.version;
 const race=await Promise.all([1,2].map(amount=>request(path+'/rules','POST',{expectedVersion:revision,command:{action:'fm-damage',amount,option:'impacto'}},cookie)));
 assert.deepEqual(race.map(r=>r.status).sort(),[200,409]);
 character=expect(await request(path,'GET',null,cookie),200);assert.equal(character.version,revision+1);assert.ok([68,69].includes(character.health));
+await command('fm-turn-end');await command('fm-turn-start');
+await command('fm-barrier',{amount:2});assert.equal(state().parede_1,17);assert.equal(state().parede_2,17);
+await command('fm-barrier-damage',{amount:5,option:'parede_1'});assert.equal(state().parede_1,12);assert.ok([68,69].includes(character.health));
+await command('fm-curtain',{amount:2,option:'bonus'});assert.equal(state().cortina_1,51);
+await command('fm-basket',{option:'reacao'});assert.equal(state().cesta_durabilidade,4);
+await command('fm-turn-end');await command('fm-turn-start',{jujutsu:{guaranteedHitExposure:true}});assert.equal(state().cesta_durabilidade,3);
+await command('fm-turn-end');await command('fm-turn-start',{jujutsu:{guaranteedHitExposure:true,maintainBasketSeal:true}});
+assert.equal(state().cesta_durabilidade,3);assert.equal(state().cesta_selo,1);
+const barrierState=expect(await request(path,'GET',null,cookie),200);assert.deepEqual(barrierState.fields.estado_regras,character.fields.estado_regras);
+expect(await request(path,'PUT',{...character,fields:{...character.fields,estado_regras:character.fields.estado_regras.map(r=>r.chave==='parede_1'?{...r,valor:999}:r)}},cookie),400);
+await command('fm-concentration',{option:'encerrar'});assert.equal(state().cesta_durabilidade??0,0);assert.equal(state().cesta_selo??0,0);assert.equal(state().parede_1,12);
 await command('fm-combat-end');await command('fm-short-rest');assert.equal(state().preparo_gasto??0,0);
 expect(await request(path+'/rules','GET'),401);
-console.log('F&M HTTP/PostgreSQL: real frontend schema, catalog, system/campaign/character creation, resources, martial context, ledger persistence, tamper rejection and atomic revision conflicts passed.');
+console.log('F&M HTTP/PostgreSQL: real frontend schema, creation, resources, martial context, individual barriers/curtains, basket exposure/seal, ledger persistence, tamper rejection and atomic revision conflicts passed.');

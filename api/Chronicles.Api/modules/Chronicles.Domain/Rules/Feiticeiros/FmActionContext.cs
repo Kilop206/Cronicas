@@ -10,4 +10,5 @@ public sealed record FmActionContext(string AttackKind = "unspecified", bool Adv
     bool WeaponTwoHanded = false, bool WeaponHeavy = false, string[]? SpecialStrike = null, bool SacrificeDamageConfirmed = false,
     bool BoostSelfSufficient = false, string[]? Fundamentals = null, string SpellPowerAttribute = "inteligencia",
     bool SpellSingleTarget = false, bool SpellMelee = false, bool SpellForcesSave = false,
-    int IgnoreReduction = 0, bool IgnoreResistance = false, bool TargetEnemy = false, bool UseAdeptDiscount = false);
+    int IgnoreReduction = 0, bool IgnoreResistance = false, bool TargetEnemy = false, bool UseAdeptDiscount = false,
+    bool GuaranteedHitExposure = false, bool MaintainBasketSeal = false);

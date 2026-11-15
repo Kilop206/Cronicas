@@ -110,6 +110,7 @@ export class ApiService {
   applyCharacterRule(id: string, expectedVersion: number, command: { action: string; amount: number; option: string | null; visibility: DiceRoll['visibility']; expression?: string; damage?: DamageEvent; weapon?: WeaponContext; jujutsu?:import('../contracts/api-models').FmActionContext }) { return this.http.post<{ character: Character; message: string; rolls: { expression: string; rolls: number[]; keptIndexes: number[]; modifier: number; total: number }[]; damage?: DamageResolution | null }>(`/api/characters/${id}/rules`, { expectedVersion, command }, { withCredentials: true }); }
   updateCharacter(id: string, data: CharacterInput) { return this.http.put<Character>(`/api/characters/${id}`, data, { withCredentials: true }); }
   duplicateCharacter(id: string) { return this.http.post<Character>(`/api/characters/${id}/duplicate`, {}, { withCredentials: true }); }
+  deleteCharacter(id: string, version: number) { return this.http.delete<void>(`/api/characters/${id}`, { params: { version }, withCredentials: true }); }
   characterRevisions(id: string) { return this.http.get<CharacterRevision[]>(`/api/characters/${id}/revisions`, { withCredentials: true }); }
   restoreCharacterRevision(id: string, revisionId: string, expectedVersion: number) { return this.http.post<Character>(`/api/characters/${id}/revisions/${revisionId}/restore`, { expectedVersion }, { withCredentials: true }); }
   characterSecret(id: string) { return this.http.get<CharacterSecret>(`/api/characters/${id}/secret`, { withCredentials: true }); }

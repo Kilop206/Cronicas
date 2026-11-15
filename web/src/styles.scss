@@ -455,6 +455,31 @@ html:has(.obs-page), body:has(.obs-page), html:has(.obs-camera-page), body:has(.
 .revision-row small { color: var(--muted); }
 .print-action { margin-top: 16px; }
 .character-actions { display: flex; flex-wrap: wrap; gap: 10px; }
+.character-management { display:flex;flex-wrap:wrap;align-items:center;gap:12px 24px;margin:8px 0 16px; }
+.character-management .text-link { min-height:40px;padding:8px 12px; }
+.text-link.danger { color:#f0a8a8; }
+.character-list-tools { display:flex;flex-wrap:wrap;align-items:end;gap:16px;margin:20px 0; }
+.character-list-tools label { flex:1 1 220px;min-width:0; }
+.character-list-tools small { flex-basis:100%;color:var(--muted); }
+.character-delete-dialog { width:min(560px,calc(100% - 32px));max-height:calc(100dvh - 32px);overflow:auto;padding:28px;border:1px solid var(--border);border-radius:12px;background:var(--surface);color:var(--text); }
+.character-delete-dialog::backdrop { background:rgb(0 0 0 / 72%); }
+.character-delete-dialog h2 { font-size:28px;overflow-wrap:anywhere; }
+.character-delete-dialog p { font-size:14px;line-height:1.7;color:var(--muted); }
+.character-delete-dialog .form-error { color:#f0a8a8; }
+.character-delete-dialog .form-actions { flex-wrap:wrap;gap:12px; }
+.button.danger-button { background:#8b303a;border-color:#c26770;color:#fff; }
+.button.danger-button:hover:not(:disabled) { background:#a03a45;border-color:#e0939b; }
+.obs-actions > :is(button,.button) { margin:6px 12px 6px 0; }
+.navigation-error button + button,.notice button + button { margin-inline-start:12px; }
+@media(max-width:700px),(pointer:coarse) {
+  .page :is(button,.button,.text-link),.navigation-error button { min-height:44px; }
+  .page .sheet-tabs { gap:8px; }
+  .page .sheet-tabs button { padding:10px 16px; }
+  .character-management { gap:12px; }
+  .character-delete-dialog { padding:20px; }
+  .character-delete-dialog .form-actions > button { flex:1 1 180px; }
+}
+@media print { .character-management,.character-list-tools,app-character-delete { display:none!important; } }
 .character-actions .button { margin-top: 16px; }
 .print-sheet { display: none; }
 .profile-export { margin-top: 24px; }
@@ -669,3 +694,6 @@ app-sheet-fields-view { display: block; }
 @media (max-width: 620px) { .system-field-grid { grid-template-columns: 1fr; } }
 @media (max-width: 900px) { .narrative-layout { grid-template-columns: 1fr; } .narrative-list { max-height: 420px; overflow: auto; } }
 @media (max-width: 620px) { .resource-fields { grid-template-columns: 1fr; } .obs-card { min-height: 280px; gap: 12px; padding: 14px; } .obs-info h2 { font-size: 24px; } .obs-portrait { flex-basis: 35%; } .invite-controls { flex-direction: column; align-items: stretch; } }
+
+html:has(.character-delete-dialog[open]) { overflow:hidden; }
+.editor-panel > :is(button,.button) { margin-top:16px; }

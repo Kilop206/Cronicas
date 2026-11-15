@@ -47,6 +47,8 @@ builder.Services.AddScoped<ManageCampaignAssociations>();
 builder.Services.AddScoped<ICharacterRuleStore, EfCharacterRuleStore>();
 builder.Services.AddScoped<ICharacterWriteStore, EfCharacterWriteStore>();
 builder.Services.AddScoped<ICharacterLifecycleStore, EfCharacterLifecycleStore>();
+builder.Services.AddScoped<ICharacterDeletionStore, EfCharacterDeletionStore>();
+builder.Services.AddScoped<DeleteCharacter>();
 builder.Services.AddScoped<ICharacterSystemStore, EfCharacterSystemStore>();
 builder.Services.AddScoped<ReadCharacterSystem>();
 builder.Services.AddScoped<PinCharacterSystem>();

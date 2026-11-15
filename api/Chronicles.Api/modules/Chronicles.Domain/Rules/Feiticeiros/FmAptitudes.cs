@@ -31,21 +31,18 @@ public sealed partial class FmRulesPlugin
     {
         RuleState.Require(FmCatalog.Has(s,"tecnicas_barreira")&&s.N("apt_barreira")>=1,"Técnicas de Barreira exige BAR 1.");
         RuleState.Require(walls is >=1 and <=6,"Erga de uma a seis paredes; elas precisam ocupar espaços desocupados dentro de 3 m.");
-        var enhanced=FmCatalog.Has(s,"paredes_resistentes");var quick=FmCatalog.Has(s,"barreira_rapida");
-        if(enhanced)RuleState.Require(s.N("apt_barreira")>=2&&FmCatalog.Level(s)>=4,"Paredes Resistentes exige BAR 2 e nível 4.");
-        if(quick)RuleState.Require(s.N("apt_barreira")>=3&&FmCatalog.Level(s)>=6,"Barreira Rápida exige BAR 3 e nível 6.");
-        UseAction(s,quick?"bonus":"comum");Spend(s,walls);
-        var health=enhanced?10+s.N("apt_barreira")*FmCatalog.Level(s):5+s.N("apt_barreira")*(FmCatalog.Level(s)/2);
-        return $"{walls} paredes de 1,5 m erguidas, {health} PV por parede. Resolva a posição e o dano nas paredes com o narrador; não empilhe barreiras no mesmo espaço.";
+        var health=BarrierHealth(s);UseAction(s,BarrierAction(s));Spend(s,walls);
+        var slots=Enumerable.Range(0,walls).Select(_=>CreateBarrier(s,"parede",health)).ToArray();
+        return $"{walls} paredes de 1,5 m erguidas, {health} PV por parede ({string.Join(", ",slots)}). Resolva a posição com o narrador dentro de 3 m, sem sobreposição; registre o dano final em cada parede.";
     }
-    private static string SimpleDomain(RuleState s)
+    private static string SimpleDomain(RuleState s,string action)
     {
         var granted=s.Text("origem")=="sem_tecnica"&&FmCatalog.Level(s)>=4;
         RuleState.Require(FmCatalog.Has(s,"dominio_simples")&&(granted||s.N("apt_barreira")>=1&&FmCatalog.Level(s)>=5),"Domínio Simples exige BAR 1 e nível 5, salvo a concessão do Novo Estilo da Sombra no nível 4.");
         RuleState.Require(s.Get("simples_durabilidade")==0,"Seu Domínio Simples já está ativo.");
-        UseAction(s,"bonus");Spend(s,5);StopSustainedConcentration(s);s.Set("concentrando",1);
+        UseAction(s,action);Spend(s,5);StopSustainedConcentration(s);s.Set("concentrando",1);
         s.Set("simples_durabilidade",s.N("apt_barreira")+1);s.Set("simples_raio_meios",1+s.N("apt_dominio"));
-        return $"Domínio Simples: {s.Get("simples_raio_meios")*1.5m} m de raio, {s.Get("simples_durabilidade")} de durabilidade. Protege de acerto garantido e efeitos ambientais na sua área.";
+        return $"Domínio Simples: {s.Get("simples_raio_meios")*1.5m} m de raio, {s.Get("simples_durabilidade")} de durabilidade. Protege de acerto garantido e efeitos ambientais na sua área."+(action=="reacao"?" Reação à expansão confirmada pela mesa.":"");
     }
     private static string AntiDomainLoss(RuleState s)
     {
@@ -58,6 +55,7 @@ public sealed partial class FmRulesPlugin
     private static void LoseConcentration(RuleState s)
     {
         if(s.Get("simples_durabilidade")>0){AntiDomainLoss(s);return;}
+        if(s.Get("cesta_durabilidade")>0){BasketLoss(s);return;}
         s.Set("concentrando",0);StopSustainedConcentration(s);
     }
 }

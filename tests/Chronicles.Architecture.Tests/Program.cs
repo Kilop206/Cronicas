@@ -74,6 +74,7 @@ Check((await new ExecuteCharacterRule(store, invalidPlugin, random).Execute(init
     store.Commits == beforeInvalid, "Plugin-specific invariants run before commit.");
 await CharacterWriteTests.Run();
 await CharacterLifecycleTests.Run();
+await CharacterDeletionTests.Run();
 await CharacterAssetTests.Run();
 await CharacterCompanionTests.Run();
 await CharacterSystemTests.Run();

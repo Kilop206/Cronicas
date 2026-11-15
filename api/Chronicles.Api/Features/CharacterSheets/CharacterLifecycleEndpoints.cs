@@ -6,6 +6,12 @@ public static partial class CharacterEndpoints
 {
     private static void MapCharacterLifecycle(RouteGroupBuilder api)
     {
+        api.MapDelete("/characters/{id:guid}",async Task<IResult> (Guid id,int? version,HttpContext http,DeleteCharacter command)=>
+        {
+            if(UserId(http) is not {} actor)return Results.Unauthorized();
+            return CharacterWriteHttpResult.Error(await command.Execute(id,version,actor,http.RequestAborted))??Results.NoContent();
+        }).Produces(204).Produces(401).Produces(403).Produces(404).Produces(409).ProducesValidationProblem();
+
         api.MapGet("/campaigns/{campaignId:guid}/characters", async Task<IResult> (Guid campaignId, HttpContext http, ReadCharacterLifecycle query) =>
         {
             if (UserId(http) is not { } actor) return Results.Unauthorized();

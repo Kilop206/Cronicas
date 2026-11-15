@@ -93,4 +93,20 @@ for (const account of [player, gm]) {
   assert.equal(expect(await request(route, player.cookie), 200).health, character.health, 'Copies are independent');
 }
 assert.equal(expect(await request(`/api/overlay/${overlay.key}`, null), 200).health, character.health, 'Original OBS capability still belongs to the original');
-console.log('Character lifecycle HTTP: list ownership, private history, revision conflicts, master fields, historical restore, independent inventory/ability copies and secret/favorite/OBS isolation passed.');
+expect(await request(`${route}?version=${character.version}`,null,'DELETE'),401);
+expect(await request(`${route}?version=${character.version}`,spectator.cookie,'DELETE'),404);
+expect(await request(`/api/characters/${other.id}?version=2`,player.cookie,'DELETE'),403);
+expect(await request(route,player.cookie,'DELETE'),400);
+expect(await request(`${route}?version=${character.version-1}`,player.cookie,'DELETE'),409);
+expect(await request(route,player.cookie),200);
+const encounter=expect(await request(`/api/campaigns/${campaign.id}/encounters`,gm.cookie,'POST',{title:'Deletion link fixture'}),201);
+const participant=expect(await request(`/api/encounters/${encounter.id}/participants`,gm.cookie,'POST',{characterId:character.id,npcId:null,initiative:10}),201);
+const blocked=await request(`${route}?version=${character.version}`,player.cookie,'DELETE');expect(blocked,409);assert.match(blocked.body.message,/encontros/);
+expect(await request(`/api/encounter-participants/${participant.id}`,gm.cookie,'DELETE'),204);
+const deletionRace=await Promise.all([1,2].map(()=>request(`${route}?version=${character.version}`,player.cookie,'DELETE')));
+assert.equal(deletionRace.filter(r=>r.status===204).length,1,'only one deletion commits');
+assert.ok(deletionRace.every(r=>[204,404,409].includes(r.status)),JSON.stringify(deletionRace));
+for(const suffix of ['', '/revisions','/inventory','/abilities','/secret','/favorite'])expect(await request(route+suffix,gm.cookie),404);
+expect(await request(`/api/overlay/${overlay.key}`,null),404);
+assert.equal(expect(await request(listing,player.cookie),200).some(c=>c.id===character.id),false);
+console.log('Character lifecycle HTTP: list ownership, private history, revision conflicts, master fields, historical restore, independent inventory/ability copies secret/favorite/OBS isolation, reviewed deletion, encounter links and concurrent deletion passed.');

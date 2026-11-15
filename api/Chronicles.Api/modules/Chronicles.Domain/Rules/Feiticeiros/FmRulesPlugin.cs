@@ -51,7 +51,14 @@ public sealed partial class FmRulesPlugin : IRpgRulesPlugin
         if(FmCatalog.Has(s,"canalizar_golpe")) actions.Add(new("fm-channel","Canalizar em Golpe","PE a canalizar",Choices(FmCatalog.Has(s,"canalizacao_avancada")?["movimento","reacao"]:["movimento"])));
         if(FmCatalog.Has(s,"cobrir_se")) { actions.Add(new("fm-cover","Cobrir-se","PE a gastar")); actions.Add(new("fm-cover-end","Encerrar Cobrir-se (fim do turno da fonte)")); }
         if(FmCatalog.Has(s,"tecnicas_barreira")) actions.Add(new("fm-barrier","Erguer barreiras","Quantidade de paredes (1–6)"));
-        if(FmCatalog.Has(s,"dominio_simples")) { actions.Add(new("fm-simple-domain","Ativar Domínio Simples")); actions.Add(new("fm-antidomain-loss","Aplicar desgaste do Domínio Simples")); }
+        var barriers=ActiveBarriers(s);
+        if(barriers.Length>0){actions.Add(new("fm-barrier-damage","Aplicar dano final na barreira","Dano após efeitos da fonte",barriers));actions.Add(new("fm-barrier-dismiss","Confirmar fim de barreira (mesa)",Options:barriers));}
+        var walls=barriers.Where(v=>v.Value.StartsWith("parede_",StringComparison.Ordinal)).ToArray();
+        if(walls.Length>0)actions.Add(new("fm-barrier-move","Manipular parede",Options:walls));
+        if(FmCatalog.Has(s,"cortina"))actions.Add(new("fm-curtain","Criar Cortina (ação acordada com a mesa)","Trechos de 9 m de cobertura",Choices(["comum","bonus","movimento","completa","livre"])));
+        if(FmCatalog.Has(s,"dominio_simples")) { actions.Add(new("fm-simple-domain","Ativar Domínio Simples",Options:Choices(["bonus","reacao"]))); if(s.Get("simples_durabilidade")>0)actions.Add(new("fm-antidomain-loss","Desgaste de Domínio Simples confirmado pela mesa")); }
+        if(FmCatalog.Has(s,"cesta_oca_vime"))actions.Add(new("fm-basket","Ativar Cesta Oca de Vime",Options:Choices(["bonus","reacao"])));
+        if(s.Get("cesta_durabilidade")>0)actions.Add(new("fm-basket-loss","Confirmar falha externa de concentração da Cesta"));
         if (FmCatalog.Has(s, "energia_reversa")) actions.Add(new("fm-reverse", "Autocura com Energia Reversa", "PER (cada PER custa 2 PE)"));
         if (s.Text("origem") == "derivado") actions.Add(new("fm-unnatural", "Energia Antinatural (uma vez por dia)"));
         if (s.Text("origem") == "hibrido") actions.Add(new("fm-hybrid-heal", "Vigor Maldito", "Usos simultâneos"));
@@ -61,6 +68,7 @@ public sealed partial class FmRulesPlugin : IRpgRulesPlugin
     public RuleResult Execute(SystemDefinition system, CharacterSheetState state, RuleCommand command, Func<int,int> draw)
     {
         if(command.Action=="fm-channel"&&command.Option is null)command=command with{Option="movimento"};
+        if(command.Action is "fm-simple-domain" or "fm-basket"&&command.Option is null)command=command with{Option="bonus"};
         EnsureSystem(system); var input = Defaults(system,state); var view = Describe(system, input);
         var action = view.Actions.SingleOrDefault(a => a.Id == command.Action) ?? throw new ArgumentException("Ação indisponível nesta edição.");
         RuleState.Require(command.Amount is >= -1 and <= 9999 && command.Visibility is "campaign" or "private" or "gm", "Valor ou visibilidade inválidos.");
@@ -85,7 +93,7 @@ public sealed partial class FmRulesPlugin : IRpgRulesPlugin
             "fm-temporary-clear"=>ClearTemporary(s,command.Option!),"fm-sustain-end"=>EndSustain(s,command.Option!),
             "fm-spend" => SpendCommand(s,command.Amount), "fm-short-rest" => ShortRest(s), "fm-hit-die" => HitDie(s,command), "fm-long-rest" => LongRest(s,command.Option=="fabricacao"),
             "fm-condition" => Condition(s,command,false), "fm-condition-remove" => Condition(s,command,true),
-            "fm-turn-start" => StartTurn(s), "fm-turn-end" => EndTurn(s), "fm-combat-end" => EndCombat(s), "fm-new-day" => NewDay(s), "fm-action" => Action(s,command.Option!),
+            "fm-turn-start" => StartTurn(s,command.Jujutsu), "fm-turn-end" => EndTurn(s), "fm-combat-end" => EndCombat(s), "fm-new-day" => NewDay(s), "fm-action" => Action(s,command.Option!),
             "fm-sequence" => Sequence(s,command.Amount), "fm-death-save" => DeathSave(s), "fm-stabilize" => Stabilize(s),
             "fm-exhaustion" => Exhaustion(s,command.Amount), "fm-concentration" => Concentration(s,command),
             "fm-attack" => Attack(s,command), "fm-cast" => Cast(s,command),
@@ -93,7 +101,9 @@ public sealed partial class FmRulesPlugin : IRpgRulesPlugin
             "fm-channel" => Channel(s,command.Amount,command.Option), "fm-cover" => Cover(s,command.Amount), "fm-cover-end" => EndCover(s),
             "fm-fighter-defense"=>FighterReaction(s,command.Option!),"fm-maneuver-hit"=>ConfirmManeuverHit(s),"fm-preparation-recover"=>RecoverPreparation(s,command.Option!),
             "fm-style-intercept"=>StyleReaction(s,command.Option!),"fm-style-protect"=>StyleProtect(s,command.Option!),"fm-target-defeated"=>ConfirmDefeatedTarget(s),
-            "fm-barrier" => Barrier(s,command.Amount), "fm-simple-domain" => SimpleDomain(s), "fm-antidomain-loss" => AntiDomainLoss(s),
+            "fm-barrier" => Barrier(s,command.Amount), "fm-barrier-move"=>ManipulateBarrier(s,command.Option!),"fm-barrier-damage"=>BarrierDamage(s,command.Option!,command.Amount),"fm-barrier-dismiss"=>DismissBarrier(s,command.Option!),
+            "fm-curtain"=>Curtain(s,command.Amount,command.Option!),"fm-basket"=>Basket(s,command.Option!),"fm-basket-loss"=>BasketLoss(s),
+            "fm-simple-domain" => SimpleDomain(s,command.Option!), "fm-antidomain-loss" => AntiDomainLoss(s),
             "fm-domain" => Domain(s,command.Option!), "fm-domain-end" => EndDomain(s), "fm-domain-check" => DomainCheck(s),
             "fm-reverse" => Reverse(s,command.Amount), "fm-unnatural" => Unnatural(s), "fm-hybrid-heal" => HybridHeal(s,command.Amount), "fm-support-heal" => SupportHeal(s),
             _ => throw new ArgumentException("Ação não implementada.")

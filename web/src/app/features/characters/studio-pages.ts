@@ -6,6 +6,7 @@ import { ActivatedRoute, Router, RouterLink } from '@angular/router';
 import { finalize, Subscription, timer } from 'rxjs';
 import { ApiService, apiError, Character, CharacterInput, CharacterSecret, OverlayCharacter, OverlayIndicator, OverlayResource, RpgSystem, SheetFieldValue, SystemField } from '../../api';
 import { CharacterHistoryPanelComponent } from './character-history.component';
+import { CharacterDeleteComponent } from './character-delete.component';
 import { CharacterSystemMigrationComponent } from './character-system-migration.component';
 import { CharacterInventoryComponent } from './character-inventory.component';
 import { CharacterAbilitiesComponent } from './character-abilities.component';
@@ -26,21 +27,25 @@ const emptyCharacter = (): CharacterInput => ({ name: '', portraitUrl: null, bac
     <div class="page-heading"><div><span class="overline">ELENCO</span><h1>Personagens</h1><p>Retratos e recursos da sua mesa.</p></div></div>
     <div *ngIf="error()" class="notice error" role="alert">{{ error() }}</div>
     <div *ngIf="loading()" class="loading">Carregando personagens...</div>
-    <div *ngIf="!loading()" class="character-list"><a *ngFor="let item of characters()" [routerLink]="['/characters', item.id]" class="character-list-item">
-      <span class="character-thumb"><img *ngIf="item.portraitUrl" [src]="item.portraitUrl" alt=""></span><span><strong>{{ item.name }}</strong><small>Vida {{ item.health }}/{{ item.maxHealth }} · Sanidade {{ item.sanity }}/{{ item.maxSanity }} · Mana {{ item.mana }}/{{ item.maxMana }}</small></span><span aria-hidden="true">↗</span>
-    </a><p *ngIf="characters().length === 0" class="muted">Ainda não há personagens nesta campanha.</p></div>
+    <p *ngIf="deletedNotice" class="notice" role="status">Ficha excluída.</p>
+    <div *ngIf="!loading() &amp;&amp; characters().length" class="character-list-tools"><label>Buscar personagens<input type="search" [(ngModel)]="query" placeholder="Buscar pelo nome" maxlength="120"></label><label>Ordenar por<select aria-label="Ordenar por" [(ngModel)]="sort"><option value="name">Nome</option><option value="recent">Atualizados recentemente</option><option value="oldest">Atualizados há mais tempo</option></select></label><button *ngIf="query" type="button" class="button secondary" (click)="query=''">Limpar busca</button><small role="status">{{filteredCharacters().length}} de {{characters().length}} personagens</small></div>
+    <div *ngIf="!loading()" class="character-list"><a *ngFor="let item of filteredCharacters()" [routerLink]="['/characters', item.id]" class="character-list-item">
+      <span class="character-thumb"><img *ngIf="item.portraitUrl" [src]="item.portraitUrl" alt=""></span><span><strong>{{ item.name }}</strong><small>Vida {{ item.health }}/{{ item.maxHealth }} · Atualizado em {{item.updatedAt|date:'dd/MM/yyyy HH:mm'}}</small></span><span aria-hidden="true">↗</span>
+    </a><p *ngIf="!error() &amp;&amp; characters().length === 0" class="muted">Ainda não há personagens nesta campanha. Crie a primeira ficha abaixo.</p><p *ngIf="characters().length &amp;&amp; !filteredCharacters().length" class="muted">Nenhum personagem encontrado. Tente outro nome ou limpe a busca.</p><button *ngIf="error()" type="button" class="button secondary" (click)="load()">Tentar carregar novamente</button></div>
     <form *ngIf="role() && role() !== 'spectator'" class="editor-panel character-create" (ngSubmit)="create()" #form="ngForm"><div class="panel-heading"><span>NOVO PERSONAGEM</span><h2>Adicionar ao elenco</h2></div>
       <label>Nome<input name="name" [(ngModel)]="newName" required minlength="2" maxlength="120" placeholder="Nome do personagem"></label>
       <button class="button" type="submit" [disabled]="form.invalid || saving()">{{ saving() ? 'Criando...' : 'Criar personagem' }}</button>
     </form>
   </main>` })
 export class CharactersPage {
-  private api = inject(ApiService); private route = inject(ActivatedRoute);
+  private api = inject(ApiService); private route = inject(ActivatedRoute); private router=inject(Router);
   campaignId = this.route.snapshot.paramMap.get('id')!;
   characters = signal<Character[]>([]); role = signal<string | null>(null); loading = signal(true); saving = signal(false); error = signal(''); newName = '';
+  query='';sort='name';deletedNotice=this.route.snapshot.queryParamMap.get('deleted')==='1';
+  filteredCharacters(){const normalized=(value:string)=>value.normalize('NFD').replace(/[\u0300-\u036f]/g,'').toLocaleLowerCase('pt-BR');const query=normalized(this.query.trim());return this.characters().filter(item=>normalized(item.name).includes(query)).sort((a,b)=>this.sort==='name'?a.name.localeCompare(b.name,'pt-BR'):this.sort==='recent'?Date.parse(b.updatedAt)-Date.parse(a.updatedAt):Date.parse(a.updatedAt)-Date.parse(b.updatedAt));}
   constructor() { this.load(); }
-  load() { this.loading.set(true); this.api.campaign(this.campaignId).subscribe({ next: campaign => this.role.set(campaign.role), error: error => this.error.set(apiError(error)) }); this.api.characters(this.campaignId).pipe(finalize(() => this.loading.set(false))).subscribe({ next: items => this.characters.set(items), error: error => this.error.set(apiError(error)) }); }
-  create() { this.saving.set(true); this.error.set(''); this.api.createCharacter(this.campaignId, { ...emptyCharacter(), name: this.newName }).pipe(finalize(() => this.saving.set(false))).subscribe({ next: item => { this.characters.update(items => [...items, item].sort((a, b) => a.name.localeCompare(b.name))); this.newName = ''; }, error: error => this.error.set(apiError(error)) }); }
+  load() { this.loading.set(true);this.error.set('');this.role.set(null); this.api.campaign(this.campaignId).subscribe({ next: campaign => this.role.set(campaign.role), error: error => this.error.set(apiError(error)) }); this.api.characters(this.campaignId).pipe(finalize(() => this.loading.set(false))).subscribe({ next: items => this.characters.set(items), error: error => this.error.set(apiError(error)) }); }
+  create() { if(this.saving()||this.newName.trim().length<2||!this.role()||this.role()==='spectator')return;this.saving.set(true); this.error.set(''); this.api.createCharacter(this.campaignId, { ...emptyCharacter(), name: this.newName.trim() }).pipe(finalize(() => this.saving.set(false))).subscribe({ next: item => { this.newName = '';void this.router.navigate(['/characters',item.id]); }, error: error => this.error.set(apiError(error)) }); }
 }
 
 @Component({ selector: 'app-sheet-fields-view', standalone: true, imports: [CommonModule], template: `
@@ -61,10 +66,10 @@ export class SheetFieldsViewComponent {
   }
 }
 
-@Component({ standalone: true, imports: [CommonModule, FormsModule, RouterLink, SheetFieldsViewComponent, SheetLayoutComponent, SheetPluginHostComponent, SheetRuleControlsComponent, SheetCollectionFieldComponent, SheetRollComponent, forwardRef(() => OverlayCardComponent), CharacterHistoryPanelComponent, CharacterInventoryComponent, CharacterAbilitiesComponent, CharacterSystemMigrationComponent], template: `
+@Component({ standalone: true, imports: [CommonModule, FormsModule, RouterLink, SheetFieldsViewComponent, SheetLayoutComponent, SheetPluginHostComponent, SheetRuleControlsComponent, SheetCollectionFieldComponent, SheetRollComponent, forwardRef(() => OverlayCardComponent), CharacterDeleteComponent, CharacterHistoryPanelComponent, CharacterInventoryComponent, CharacterAbilitiesComponent, CharacterSystemMigrationComponent], template: `
   <main class="page" [class.narrow]="!renderer()" [class.immersive-sheet-page]="renderer()" *ngIf="!loading() && !systemLoading() && !systemFailed() && character() as item"><a [routerLink]="['/campaigns', item.campaignId, 'characters']" class="back-link">← Personagens</a>
     <div *ngIf="!renderer()" class="page-heading"><div><span class="overline">FICHA / CENA</span><h1>{{ item.name }}</h1><p>Ficha da campanha e composição para OBS.</p></div></div>
-    <button type="button" class="text-link character-favorite" [attr.aria-pressed]="favorite()" [disabled]="favoriteBusy()" (click)="toggleFavorite()">{{ favorite() ? 'Remover dos favoritos' : 'Adicionar aos favoritos' }}</button>
+    <div class="character-management"><button type="button" class="text-link character-favorite" [attr.aria-pressed]="favorite()" [disabled]="favoriteBusy()" (click)="toggleFavorite()">{{ favorite() ? 'Remover dos favoritos' : 'Adicionar aos favoritos' }}</button><app-character-delete [character]="item" [available]="canDuplicate()" (working)="deleting.set($event)" (deleted)="onDeleted($event.campaignId)" /></div>
     <p *ngIf="realtimeOffline()" class="form-hint" role="status">Sincronização em tempo real indisponível. Salvamento e revisão do servidor continuam ativos.</p>
     <div *ngIf="remoteRevision()" class="form-error" role="alert">A ficha foi alterada em outra sessão. Seu rascunho foi preservado e o salvamento foi pausado. Copie ou exporte suas alterações antes de recarregar. <button type="button" class="button button-small secondary" (click)="reloadRemoteSheet()">Recarregar ficha</button></div>
     <details *ngIf="!renderer()" class="obs-actions"><summary>Dados estruturados</summary><p>Exporte ou importe os campos da ficha em JSON.</p><button type="button" class="button button-small secondary" (click)="exportCharacter()">Exportar JSON</button><label *ngIf="item.canEdit" class="button button-small secondary">Importar JSON<input type="file" accept="application/json,.json" (change)="importCharacter($event)" [disabled]="saving()" hidden></label></details>
@@ -121,6 +126,7 @@ export class CharacterEditorPage implements OnDestroy {
   master = signal(false); secret = signal<CharacterSecret | null>(null); secretDraft = ''; secretBusy = signal(false); secretSaved = signal(false);
   favorite = signal(false); favoriteBusy = signal(false);
   ruleBusy = signal(false);
+  deleting=signal(false);
   rulesReady() { return !this.saving() && !this.ruleBusy() && !this.remoteRevision() && (this.editRevision === 0 || this.saved()); }
   editingSheet = signal(false);
   remoteRevision = signal(false); realtimeOffline = signal(false);
@@ -249,17 +255,18 @@ export class CharacterEditorPage implements OnDestroy {
       this.scheduleSave();
     } catch (error) { this.error.set(error instanceof Error ? error.message : 'Não foi possível importar a ficha.'); }
   }
-  canDuplicate() { return !this.saving() && (this.editRevision === 0 || this.saved()); }
+  canDuplicate() { return !!this.character()?.canEdit&&!this.pendingChanges()&&!this.remoteRevision()&&!this.systemBusy()&&!this.deleting(); }
   canPinSystemVersion() { return this.master() && !this.character()?.systemVersionId && !this.systemBusy() && this.canDuplicate() && (!this.secret() || this.secretDraft.trim() === this.secret()?.notes); }
   canMigrateSystemVersion() { return this.master() && !this.systemBusy() && !this.ruleBusy() && !this.secretBusy() && this.canDuplicate() && (!this.secret() || this.secretDraft.trim() === this.secret()?.notes); }
   onSystemMigrated(item: Character) { this.loadCharacter(item.id); }
   pinSystemVersion() { const current = this.character(), model = this.system(); if (!current || !model || !this.canPinSystemVersion()) return; this.error.set(''); this.systemBusy.set(true); this.api.pinCharacterSystem(current.id, current.version, model.id, model.revision).pipe(finalize(() => this.systemBusy.set(false))).subscribe({ next: () => this.loadCharacter(current.id), error: e => this.error.set(apiError(e)) }); }
-  duplicate() { const current = this.character(); if (!current) return; this.error.set(''); this.saving.set(true); this.api.duplicateCharacter(current.id).pipe(finalize(() => this.saving.set(false))).subscribe({ next: item => void this.router.navigate(['/characters', item.id]), error: e => this.error.set(apiError(e)) }); }
+  duplicate() { const current = this.character(); if (!current||!this.canDuplicate()) return; this.error.set(''); this.saving.set(true); this.api.duplicateCharacter(current.id).pipe(finalize(() => this.saving.set(false))).subscribe({ next: item => void this.router.navigate(['/characters', item.id]), error: e => this.error.set(apiError(e)) }); }
+  onDeleted(campaignId:string){clearTimeout(this.saveTimer);this.updates?.stop();this.deleting.set(false);this.editRevision=0;this.saved.set(true);void this.router.navigate(['/campaigns',campaignId,'characters'],{queryParams:{deleted:'1'}});}
   saveSecret() { const current = this.character(), secret = this.secret(); if (!current || !secret) return; this.error.set(''); this.secretSaved.set(false); this.secretBusy.set(true); this.api.updateCharacterSecret(current.id, this.secretDraft, secret.revision, secret.updatedAt !== null).pipe(finalize(() => this.secretBusy.set(false))).subscribe({ next: result => { this.secret.set(result); this.secretSaved.set(true); }, error: e => this.error.set(apiError(e)) }); }
   toggleFavorite() { const current = this.character(); if (!current) return; this.error.set(''); this.favoriteBusy.set(true); const request = this.favorite() ? this.api.removeCharacterFavorite(current.id) : this.api.addCharacterFavorite(current.id); request.pipe(finalize(() => this.favoriteBusy.set(false))).subscribe({ next: () => this.favorite.update(value => !value), error: e => this.error.set(apiError(e)) }); }
   ngOnDestroy() { clearTimeout(this.saveTimer); this.updates?.stop(); this.routeSubscription.unsubscribe(); }
   private pendingChanges() { return this.saving() || this.ruleBusy() || this.secretBusy() || !!this.secret() && this.secretDraft.trim() !== this.secret()?.notes || this.editRevision > 0 && !this.saved(); }
-  canLeave() { return !this.pendingChanges() || !!this.document.defaultView?.confirm('Há alterações não salvas na ficha. Sair e descartar o rascunho?'); }
+  canLeave() { return !this.deleting()&&(!this.pendingChanges() || !!this.document.defaultView?.confirm('Há alterações não salvas na ficha. Sair e descartar o rascunho?')); }
   @HostListener('window:beforeunload', ['$event']) preventUnsavedUnload(event: BeforeUnloadEvent) {
     if (this.pendingChanges()) { event.preventDefault(); event.returnValue = ''; }
   }

@@ -61,7 +61,7 @@ public sealed partial class FmRulesPlugin
     private static string Domain(RuleState s,string kind)
     {
         RuleState.Require(s.Text("origem")!="restringido" && s.Get("dominio")==0 && s.Get("exaustao_tecnica")==0,"Domínio indisponível ou técnica exausta.");
-        RuleState.Require(s.Get("maos_livres")==2 && s.Get("pode_falar")==1 && !FmConditions.Active(s).Contains("engasgando"),"Expandir exige duas mãos livres e capacidade de fala.");
+        RuleState.Require(s.Get("maos_livres")==2 && s.Get("cesta_selo")==0 && s.Get("pode_falar")==1 && !FmConditions.Active(s).Contains("engasgando"),"Expandir exige duas mãos livres e capacidade de fala; o selo da Cesta ocupa as duas mãos.");
         var dom=s.N("apt_dominio"); var barrier=s.N("apt_barreira"); var level=FmCatalog.Level(s);
         RuleState.Require(level>=8 && dom>=1 && FmCatalog.Has(s,"expansao_incompleta"),"Exige Expansão Incompleta, DOM 1 e nível 8.");
         var mode=kind switch {"incompleta"=>1,"completa"=>2,"garantido"=>3,"sem_barreiras"=>4,_=>0};

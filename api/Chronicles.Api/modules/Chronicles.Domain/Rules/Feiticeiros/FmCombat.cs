@@ -59,14 +59,14 @@ public sealed partial class FmRulesPlugin
         else UseAction(s,action);
         return "Ação registrada.";
     }
-    private static string StartTurn(RuleState s)
+    private static string StartTurn(RuleState s,FmActionContext? context=null)
     {
         RuleState.Require(s.Get("turno_aberto")==0,"Conclua o turno atual antes de iniciar outro.");
         StartMartialTurn(s,s.Get("combate")==0);
         s.Set("combate",1); s.Set("turno_aberto",1); s.Set("sequencia",0); s.Set("ritual_usado",0);s.Set("cobertura_temp",0);
         foreach(var action in new[]{"comum","bonus","movimento","reacao"}) s.Set("acao_"+action,1);
         s.Set("descanso_curto",0);
-        var notes=new List<string>();
+        var notes=new List<string>{AntiDomainTurn(s,context??new())};
         if(s.Get("cond_sangramento")!=0)
         {
             var expression=new[]{"2d6","3d8","4d10","6d10"}[Math.Clamp(s.Get("sangramento_nivel",1),1,4)-1]; var loss=s.Roll(expression);
@@ -112,13 +112,14 @@ public sealed partial class FmRulesPlugin
         if(c.Option=="encerrar") { s.Set("concentrando",0); s.Set("simples_durabilidade",0);s.Set("simples_raio_meios",0);StopSustainedConcentration(s); return "Concentração encerrada."; }
         RuleState.Require(s.Get("concentrando")>0,"Nenhuma concentração ativa.");
         if(FmConditions.Save(s,"fortitude",c.Amount,true)>0) return "Concentração mantida.";
-        LoseConcentration(s);return s.Get("concentrando")>0?"Falha de concentração: Domínio Simples perdeu durabilidade.":"Concentração perdida.";
+        LoseConcentration(s);return s.Get("concentrando")>0?"Falha de concentração: anti-domínio perdeu durabilidade.":"Concentração perdida; resolva o acerto garantido imediatamente se o anti-domínio quebrou.";
     }
-    private static void StopSustainedConcentration(RuleState s) { foreach(var key in s.State.Keys.Where(k=>k.StartsWith("concentrado_",StringComparison.Ordinal)).ToArray()) s.Set(key,0);s.Set("simples_durabilidade",0);s.Set("simples_raio_meios",0);if(s.Get("ritual_mode")==2)CancelRitual(s); }
+    private static void StopSustainedConcentration(RuleState s) { foreach(var key in s.State.Keys.Where(k=>k.StartsWith("concentrado_",StringComparison.Ordinal)).ToArray()) s.Set(key,0);s.Set("simples_durabilidade",0);s.Set("simples_raio_meios",0);s.Set("cesta_durabilidade",0);s.Set("cesta_selo",0);if(s.Get("ritual_mode")==2)CancelRitual(s); }
     private static string Attack(RuleState s,RuleCommand c)
     {
         var rows=FmCatalog.Rows(s,"armas"); var index=int.Parse(c.Option!,CultureInfo.InvariantCulture); var row=rows[index];
         var context=c.Jujutsu??new();var kind=context.AttackKind;var melee=kind is "melee" or "martial" or "unarmed" or "offhand";
+        RuleState.Require(s.Get("cesta_selo")==0||kind=="unarmed","O selo da Cesta ocupa as duas mãos; encerre a concentração ou libere o selo no início do turno antes de usar armas.");
         RuleState.Require(kind is "unspecified" or "melee" or "ranged" or "thrown" or "martial" or "unarmed" or "offhand" && context.Concealment is 0 or 20 or 50,"Contexto de ataque inválido.");
         RuleState.Require(kind!="offhand"||context.OffhandLight,"O ataque com a segunda arma exige confirmar que ambas as armas são leves.");
         RuleState.Require(FmCatalog.Number(row,"municao",-1)!=0,"Arma sem munição carregada; recarregue antes do ataque.");
