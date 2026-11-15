@@ -67,5 +67,8 @@ jobs:
           SMOKE_BASE_URL=http://localhost:8081 node scripts/campaigns-smoke.mjs
           SMOKE_BASE_URL=http://localhost:8081 node scripts/campaign-associations-smoke.mjs
           SMOKE_BASE_URL=http://localhost:8081 node scripts/room-smoke.mjs
+      - name: API diagnostics on failure
+        if: failure()
+        run: docker compose --env-file .env.example logs --tail 100 api
       - if: always()
         run: docker compose --env-file .env.example down

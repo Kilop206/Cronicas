@@ -135,6 +135,7 @@ try
     await CampaignPersistenceTests.Run(Context);
     await CampaignAssociationPersistenceTests.Run(Context);
     await CharacterLifecyclePersistenceTests.Run(Context);
+    await CharacterDeletionPersistenceTests.Run(Context);
     await CharacterAssetPersistenceTests.Run(Context);
     await CharacterCompanionPersistenceTests.Run(Context);
     await CharacterSystemMigrationPersistenceTests.Run(Context);

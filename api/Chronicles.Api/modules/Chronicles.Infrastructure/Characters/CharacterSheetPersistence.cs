@@ -47,11 +47,16 @@ internal static class CharacterSheetPersistence
 
     internal static bool IsConflict(Exception error)
     {
-        if (error is DbUpdateConcurrencyException) return true;
-        var postgres = error as Npgsql.PostgresException ?? (error as DbUpdateException)?.InnerException as Npgsql.PostgresException;
-        // EF may insert the history row before updating the character's concurrency token.
-        // Only this known revision collision is a concurrency failure; unrelated unique violations remain errors.
-        return postgres?.SqlState is "40001" or "40P01" || postgres is
-            { SqlState: "23505", ConstraintName: "IX_character_revisions_CharacterId_Version" };
+        // Npgsql's non-retrying execution strategy can wrap a serialization failure in
+        // InvalidOperationException, including failures while acquiring a row lock.
+        for(Exception? current=error;current is not null;current=current.InnerException)
+        {
+            if(current is DbUpdateConcurrencyException)return true;
+            // EF may insert history before updating the concurrency token. Only this known
+            // revision collision qualifies; unrelated unique/foreign-key errors remain errors.
+            if(current is Npgsql.PostgresException postgres&&(postgres.SqlState is "40001" or "40P01"||
+                postgres is { SqlState:"23505",ConstraintName:"IX_character_revisions_CharacterId_Version" }))return true;
+        }
+        return false;
     }
 }
