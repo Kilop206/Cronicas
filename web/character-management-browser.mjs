@@ -45,11 +45,13 @@ try{
   await page.goto(base+'/campaigns/campaign-test/characters');
   await page.getByLabel('Buscar personagens',{exact:true}).waitFor();
   await page.getByLabel('Buscar personagens',{exact:true}).fill('agata');
+  await page.locator('.character-list-item').filter({hasText:'Bruno'}).waitFor({state:'hidden'});
   assert.equal(await page.locator('.character-list-item').count(),1);assert.match(await page.locator('.character-list-item').textContent(),/Ágata/);
   await page.getByRole('button',{name:'Limpar busca',exact:true}).click();
   await page.getByLabel('Ordenar por',{exact:true}).selectOption('recent');
+  await page.locator('.character-list-item').first().getByText('Bruno',{exact:true}).waitFor();
   assert.match(await page.locator('.character-list-item').first().textContent(),/Bruno/);
-  await page.getByLabel('Buscar personagens',{exact:true}).fill('inexistente');assert.equal(await page.locator('.character-list-item').count(),0);
+  await page.getByLabel('Buscar personagens',{exact:true}).fill('inexistente');await page.getByText('Nenhum personagem encontrado. Tente outro nome ou limpe a busca.',{exact:true}).waitFor();assert.equal(await page.locator('.character-list-item').count(),0);
   await page.getByRole('button',{name:'Limpar busca',exact:true}).click();
   await page.locator('.character-list-item').filter({hasText:'Ágata'}).click();
   const trigger=page.getByRole('button',{name:'Excluir ficha',exact:true});await trigger.waitFor();await trigger.click();
@@ -73,6 +75,7 @@ try{
   await dialog.getByRole('button',{name:'Cancelar',exact:true}).click();await page.reload();await trigger.waitFor();await trigger.click();
   await dialog.getByLabel('Digite o nome da ficha para confirmar',{exact:true}).fill('Ágata');await confirm.click();
   await page.waitForURL('**/campaigns/campaign-test/characters?deleted=1');await page.getByText('Ficha excluída.',{exact:true}).waitFor();
+  await page.locator('.character-list-item').filter({hasText:'Bruno'}).waitFor();
   assert.equal(deletions.at(-1).version,2);assert.equal(await page.locator('.character-list-item').filter({hasText:'Ágata'}).count(),0);
   await page.locator('.character-list-item').filter({hasText:'Bruno'}).click();await page.getByRole('heading',{name:'Bruno',exact:true,level:1}).waitFor();
   assert.equal(await page.getByRole('button',{name:'Excluir ficha',exact:true}).count(),0,'readonly users have no delete action');
