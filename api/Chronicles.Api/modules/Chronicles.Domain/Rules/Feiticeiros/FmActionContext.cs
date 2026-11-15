@@ -6,4 +6,8 @@ public sealed record FmActionContext(string AttackKind = "unspecified", bool Adv
     bool OffhandLight = false, int Concealment = 0, string Ritual = "none", string[]? Improvements = null,
     string RitualFailure = "cancel", string FighterManeuver = "none", string CombatArt = "none",
     bool TargetOffguard = false, bool TargetFlanked = false, bool SneakAttack = false,
-    string UnarmedAction = "normal");
+    string UnarmedAction = "normal", bool SingleWeaponFreeHand = false, bool DualWielding = false,
+    bool WeaponTwoHanded = false, bool WeaponHeavy = false, string[]? SpecialStrike = null, bool SacrificeDamageConfirmed = false,
+    bool BoostSelfSufficient = false, string[]? Fundamentals = null, string SpellPowerAttribute = "inteligencia",
+    bool SpellSingleTarget = false, bool SpellMelee = false, bool SpellForcesSave = false,
+    int IgnoreReduction = 0, bool IgnoreResistance = false, bool TargetEnemy = false, bool UseAdeptDiscount = false);

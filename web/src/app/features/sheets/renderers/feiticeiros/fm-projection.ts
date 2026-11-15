@@ -20,12 +20,14 @@ export function fmConditions(c:CharacterInput):Set<string>{
   if(c.fields['origem']==='corpo_mutante')active.delete('envenenado');return active;
 }
 function fmClassLevel(c:CharacterInput,id:string){const multi=fmRows(c,'multiclasse');return multi.length?Number(multi.find(r=>r['classe']===id)?.['nivel']||0):c.fields['especializacao']===id?fmNumber(c,'nivel',1):0;}
+export function fmHas(c:CharacterInput,key:string){const list=c.fields['aptidoes'];return Array.isArray(list)&&list.some(v=>v===key);}
 export function fmDefense(c:CharacterInput,ranged=false){
   const s=fmState(c),conditions=fmConditions(c),restricted=fmClassLevel(c,'restringido'),overloaded=fmNumber(c,'carga_meios')>Math.max(0,8+2*fmMod(c,'forca'))*2;
   let penalty=conditions.has('paralisado')?10:conditions.has('desprevenido')||conditions.has('caido')&&!ranged?3:conditions.has('enredado')?2:0;
   if(overloaded)penalty=Math.max(5,penalty);
   const extra=restricted>0?Math.min(fmNumber(c,'nivel',1),Math.max(0,fmMod(c,c.fields['defesa_restrita']==='constituicao'?'constituicao':'forca')))+(restricted>=3?1:0)+(restricted>=9?1:0)+(restricted>=16?1:0):0;
-  return fmNumber(c,'defesa',10)+extra+(s['defesa_empolgacao']||0)+(s['defesa_descendente']||0)-penalty-(s['exaustao']||0)-Math.min(5,Math.floor((s['sequencia']||0)/2))+(conditions.has('caido')&&ranged?3:0);
+  const combat=fmClassLevel(c,'combate'),level=fmNumber(c,'nivel',1),adept=fmHas(c,'adepto_combate')&&fmHas(c,'adepto_estilo_defensivo'),effect=adept?level:combat+Math.floor((level-combat)/2),style=(combat&&fmHas(c,'estilo_defensivo')||adept)?2+Math.min(4,Math.floor(effect/4)):0;
+  return fmNumber(c,'defesa',10)+extra+style+(s['defesa_empolgacao']||0)+(s['defesa_descendente']||0)-penalty-(s['exaustao']||0)-Math.min(5,Math.floor((s['sequencia']||0)/2))+(conditions.has('caido')&&ranged?3:0);
 }
 export function fmSpeed(c:CharacterInput){
   const s=fmState(c),conditions=fmConditions(c);if(['imovel','inconsciente','atordoado','paralisado'].some(v=>conditions.has(v)))return 0;

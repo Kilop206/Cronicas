@@ -21,6 +21,7 @@ const campaign=expect(await request('/api/campaigns','POST',{name:'F&M integrati
 expect(await request(`/api/campaigns/${campaign.id}/system`,'PATCH',{systemId:system.id},cookie),204);
 const fields=Object.fromEntries(template.fields.filter(f=>f.defaultValue!==null&&f.defaultValue!==undefined).map(f=>[f.key,structuredClone(f.defaultValue)]));
 Object.assign(fields,{nivel:8,especializacao:'combate',origem:'inato',atributo_especializacao:'forca',atributo_tecnica:'sabedoria',forca:16,constituicao:14,sabedoria:14,
+  aptidoes:['estilo_defensivo','estilo_duelista'],
   armas:[{nome:'Ensaio',atributo:'forca',dados:'1d6',apos:'',treinado:true,margem:20,acao:'comum',municao:-1}]});
 let character=expect(await request(`/api/campaigns/${campaign.id}/characters`,'POST',{name:'F&M fixture',health:1,maxHealth:1,mana:0,maxMana:0,sanity:0,maxSanity:0,fields},cookie),201);
 const path=`/api/characters/${character.id}`;
@@ -31,9 +32,12 @@ async function command(action,extra={}){
   character=result.character;return result;
 }
 await command('fm-initialize');assert.equal(character.maxHealth,70);assert.equal(character.maxMana,32);
+const initialized=expect(await request(path+'/rules','GET',null,cookie),200);
+assert.equal(initialized.rules.stats.find(s=>s.label.startsWith('Defesa (')).value,'18 / 18');
 expect(await request(path+'/rules','POST',{expectedVersion:character.version-1,command:{action:'fm-turn-start'}},cookie),409);
 await command('fm-turn-start');
-await command('fm-attack',{option:'0',jujutsu:{attackKind:'melee',combatArt:'golpe_descendente'}});
+await command('fm-attack',{option:'0',jujutsu:{attackKind:'melee',combatArt:'golpe_descendente',singleWeaponFreeHand:true,specialStrike:['atroz','preciso']}});
+assert.equal(character.mana,30,'special strike costs survive the real HTTP transaction');
 const state=()=>Object.fromEntries(character.fields.estado_regras.map(r=>[r.chave,r.valor]));
 assert.equal(state().preparo_gasto,1);assert.equal(state().acao_comum??0,0);
 const persisted=expect(await request(path,'GET',null,cookie),200);assert.equal(persisted.version,character.version);assert.deepEqual(persisted.fields.estado_regras,character.fields.estado_regras);

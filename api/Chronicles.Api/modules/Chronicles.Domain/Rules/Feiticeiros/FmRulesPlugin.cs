@@ -45,6 +45,9 @@ public sealed partial class FmRulesPlugin : IRpgRulesPlugin
             actions.Add(new("fm-maneuver-hit","Confirmar acerto de manobra externa (mesa)"));
         }
         if(FmCatalog.ClassLevel(s,"combate")>0)actions.Add(new("fm-preparation-recover","Recuperar Preparo",Options:Choices(["analisar","eliminacao"])));
+        if(FmClassChoices.Style(s,"interceptador"))actions.Add(new("fm-style-intercept","Interceptar ataque contra aliado",Options:Choices(["forca","destreza","sabedoria"])));
+        if(FmClassChoices.Style(s,"protetor"))actions.Add(new("fm-style-protect","Proteger aliado a até 1,5 m",Options:Choices(["ataque","resistencia"])));
+        if(FmCatalog.ClassLevel(s,"combate")>0&&s.Get("alvo_derrotado_pendente")==1)actions.Add(new("fm-target-defeated","Confirmar alvo do último ataque reduzido a 0"));
         if(FmCatalog.Has(s,"canalizar_golpe")) actions.Add(new("fm-channel","Canalizar em Golpe","PE a canalizar",Choices(FmCatalog.Has(s,"canalizacao_avancada")?["movimento","reacao"]:["movimento"])));
         if(FmCatalog.Has(s,"cobrir_se")) { actions.Add(new("fm-cover","Cobrir-se","PE a gastar")); actions.Add(new("fm-cover-end","Encerrar Cobrir-se (fim do turno da fonte)")); }
         if(FmCatalog.Has(s,"tecnicas_barreira")) actions.Add(new("fm-barrier","Erguer barreiras","Quantidade de paredes (1–6)"));
@@ -77,7 +80,7 @@ public sealed partial class FmRulesPlugin : IRpgRulesPlugin
         {
             "fm-initialize" => Initialize(s), "fm-recalculate" => Recalculate(s),
             "fm-attribute-start"=>StartAttributes(s,command.Option!),"fm-attribute-finish"=>FinishAttributes(s),
-            "fm-check" => Check(s,command), "fm-damage" => Damage(s,command.Amount,command.Option!),
+            "fm-check" => Check(s,command), "fm-damage" => Damage(s,command.Amount,command.Option!,command.Jujutsu),
             "fm-heal" => Heal(s,command.Amount,command.Option!), "fm-temporary" => Temporary(s,command.Amount,command.Option!),
             "fm-temporary-clear"=>ClearTemporary(s,command.Option!),"fm-sustain-end"=>EndSustain(s,command.Option!),
             "fm-spend" => SpendCommand(s,command.Amount), "fm-short-rest" => ShortRest(s), "fm-hit-die" => HitDie(s,command), "fm-long-rest" => LongRest(s,command.Option=="fabricacao"),
@@ -89,6 +92,7 @@ public sealed partial class FmRulesPlugin : IRpgRulesPlugin
             "fm-ritual-finish" => FinishRitual(s,command), "fm-ritual-cancel" => CancelRitual(s),
             "fm-channel" => Channel(s,command.Amount,command.Option), "fm-cover" => Cover(s,command.Amount), "fm-cover-end" => EndCover(s),
             "fm-fighter-defense"=>FighterReaction(s,command.Option!),"fm-maneuver-hit"=>ConfirmManeuverHit(s),"fm-preparation-recover"=>RecoverPreparation(s,command.Option!),
+            "fm-style-intercept"=>StyleReaction(s,command.Option!),"fm-style-protect"=>StyleProtect(s,command.Option!),"fm-target-defeated"=>ConfirmDefeatedTarget(s),
             "fm-barrier" => Barrier(s,command.Amount), "fm-simple-domain" => SimpleDomain(s), "fm-antidomain-loss" => AntiDomainLoss(s),
             "fm-domain" => Domain(s,command.Option!), "fm-domain-end" => EndDomain(s), "fm-domain-check" => DomainCheck(s),
             "fm-reverse" => Reverse(s,command.Amount), "fm-unnatural" => Unnatural(s), "fm-hybrid-heal" => HybridHeal(s,command.Amount), "fm-support-heal" => SupportHeal(s),
@@ -126,6 +130,7 @@ public sealed partial class FmRulesPlugin : IRpgRulesPlugin
     private static string Signed(int n) => n>=0?"+"+n:n.ToString(CultureInfo.InvariantCulture);
     private static void Validate(RuleState s)
     {
+        FmClassChoices.Validate(s);
         RuleState.Require(FmCatalog.Level(s) is >=1 and <=20, "O nível deve estar entre 1 e 20.");
         RuleState.Require(FmCatalog.Origins.Contains(s.Text("origem")), "Escolha uma origem válida.");
         foreach(var a in FmCatalog.Attributes) RuleState.Require(s.N(a,10) is >=0 and <=30,"Atributo fora dos limites (0–30).");

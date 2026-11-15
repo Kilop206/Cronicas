@@ -9,6 +9,7 @@ public sealed partial class FmRulesPlugin
     private static string EndCombat(RuleState s)
     {
         s.Set("combate",0); s.Set("turno_aberto",0); s.Set("sequencia",0);
+        foreach(var key in new[]{"autossuficiente_reforco","alvo_derrotado_pendente","renovacao_critico","especial_preciso","fund_duplicado","fund_rapido","adepto_feiticaria_usos"})s.Set(key,0);
         foreach(var key in new[]{"kokusen_bonus","kokusen_reducao","kokusen_duracao","cobertura_temp","empolgacao","empolgacao_acerto","defesa_empolgacao","defesa_descendente","corpo_treinado_pronto","ultimo_corpo_a_corpo"})s.Set(key,0);
         foreach(var key in s.State.Keys.Where(k=>k.StartsWith("acao_",StringComparison.Ordinal)).ToArray()) s.Set(key,0);
         return "Cena de combate encerrada. Recursos temporários e canalização são preservados; encerre os temporários quando a fonte terminar.";
@@ -123,8 +124,9 @@ public sealed partial class FmRulesPlugin
         RuleState.Require(FmCatalog.Number(row,"municao",-1)!=0,"Arma sem munição carregada; recarregue antes do ataque.");
         RuleState.Require(context.FighterManeuver is "none" or "ajuste" or "desarme" or "comando","Manobra de ataque inválida.");
         var artDice=BeginCombatArt(s,context,melee);
-        if(context.CombatArt!="arremesso_agil")MartialAttackAction(s,context,FmCatalog.Text(row,"acao"));
-        else RuleState.Require(!FmConditions.Incapacitated(s),"Incapaz de atacar.");
+        var style=StyleAttack(s,context);var special=BeginSpecialStrike(s,context);
+        if(context.CombatArt!="arremesso_agil")MartialAttackAction(s,context,FmCatalog.Text(row,"acao"),special.Contains("lento"));
+        else { RuleState.Require(!FmConditions.Incapacitated(s),"Incapaz de atacar.");if(special.Contains("lento"))UseAction(s,"completa"); }
         if(context.FighterManeuver!="none")UseManeuver(s,context.FighterManeuver);
         if(context.FighterManeuver=="comando")Spend(s,1);
         var active=FmConditions.Active(s); var bonus=FmCatalog.Mod(s,FmCatalog.Text(row,"atributo"))+FmCatalog.Level(s)/2+(FmCatalog.Flag(row,"treinado")?FmCatalog.Training(s):0)-s.Get("exaustao")-FmConditions.SoulPenalty(s);
@@ -135,14 +137,19 @@ public sealed partial class FmRulesPlugin
         if(s.Get("kokusen_bonus")>0)bonus+=control/2;
         if(context.TargetExposed)bonus+=4;
         if(context.FighterManeuver=="ajuste")bonus+=RollExcitement(s);
-        var natural=FmConditions.Roll(s,bonus,context.Advantage,context.Disadvantage); var total=s.Rolls[^1].Total; var hit=context.TargetUnconscious || natural!=1 && (natural==20 || c.Amount==0 || total>=c.Amount);
+        bonus+=style.Attack-4*special.Count(v=>v=="desfocado");
+        var natural=FmConditions.Roll(s,bonus,context.Advantage||special.Contains("preciso"),context.Disadvantage); var total=s.Rolls[^1].Total; var hit=context.TargetUnconscious || natural!=1 && (natural==20 || c.Amount==0 || total>=c.Amount);
         var concealment=active.Contains("cego")?50:context.Concealment;
         if(hit&&concealment>0&&s.Die(100)<=concealment)hit=false;
-        var critical=hit && (context.TargetUnconscious||context.TargetParalyzed&&melee||natural>=FmCatalog.Number(row,"margem",20)); var damage=0;var black=false;
+        var critical=hit && (context.TargetUnconscious||context.TargetParalyzed&&melee||natural>=FmCatalog.Number(row,"margem",20)-(special.Contains("letal")?1:0)); var damage=0;var black=false;
         if(hit)
         {
             var formula=kind=="unarmed"?UnarmedDamage(s):FmCatalog.Text(row,"dados");
-            damage=RollDamage(s,formula,critical)+(kind=="offhand"?0:FmCatalog.Mod(s,FmCatalog.Text(row,"atributo")));
+            var damageStart=s.Rolls.Count;damage=RollDamage(s,formula,critical);
+            var extraWeaponDice=(special.Contains("atroz")?1:0)+(FmCatalog.ClassLevel(s,"combate")==20?1:0);
+            if(extraWeaponDice>0){RuleState.Require(DiceExpression.TryParse(formula,out var weaponDice)&&weaponDice is not null,"Um dado da arma é necessário para Atroz/Autossuficiente.");damage+=s.Pool(extraWeaponDice*(critical?2:1),weaponDice!.Sides);}
+            if(style.Massive)damage+=RerollDamageDice(s,damageStart,s.Rolls.Count,80,false,true);
+            damage+=style.Damage+(kind=="offhand"&&!FmClassChoices.Style(s,"duplo")?0:FmCatalog.Mod(s,FmCatalog.Text(row,"atributo")));
             if(fighter>=5)damage+=1+(fighterEffect>=9?1:0)+(fighterEffect>=13?1:0)+(fighterEffect>=17?1:0);
             if(FmCatalog.ClassLevel(s,"restringido")==20)damage+=FmCatalog.Level(s)/2;
             if(s.Get("kokusen_bonus")>0)damage+=control;
@@ -163,6 +170,7 @@ public sealed partial class FmRulesPlugin
             var after=FmCatalog.Text(row,"apos"); if(after.Length>0) damage+=s.Roll(after);
             damage=Math.Max(0,damage);
         }
+        CompleteCombatStrike(s,hit,critical,context.TargetEnemy);
         s.Set("ultimo_corpo_a_corpo",melee?1:0);
         if(s.Get("turno_aberto")==1)
         {
@@ -179,7 +187,7 @@ public sealed partial class FmRulesPlugin
         if(hit&&context.CombatArt=="distracao_letal")note+=$" Alvo: −{Math.Max(0,FmCatalog.Mod(s,"sabedoria")/2)} Defesa por uma rodada; aplique na ficha do alvo.";
         if(hit&&context.FighterManeuver=="desarme")note+=$" Alvo deve superar {total} com ataque corpo a corpo ou largar o item escolhido.";
         if(context.FighterManeuver=="comando")note+=" Aliado a até 1,5 m pode atacar corpo a corpo o mesmo alvo usando a própria reação; você pagou 1 PE. Não use Ataque Extra com Comando.";
-        return $"{FmCatalog.Text(row,"nome")}: {total} · "+(hit?$"{(critical?"crítico · ":"")}{(black?"Raio Negro · ignora RD e resistência · ":"")}{Math.Max(0,damage)} de dano para aplicar no alvo.":natural==1?"desastre; o adversário pode reagir.":"errou.")+note;
+        return $"{FmCatalog.Text(row,"nome")}: {total} · "+(hit?$"{(critical?"crítico · ":"")}{(black?"Raio Negro · ignora RD e resistência · ":"")}{Math.Max(0,damage)} de dano para aplicar no alvo.":natural==1?"desastre; o adversário pode reagir.":"errou.")+note+SpecialStrikeDescription(s,special,hit,style.Massive);
     }
     private static string UnarmedDamage(RuleState s)
     {

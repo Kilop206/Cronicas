@@ -21,7 +21,7 @@ public sealed partial class FmRulesPlugin
         if(context.Ritual=="extended")
         {
             UseAction(s,"completa");UseAction(s,"movimento");StopSustainedConcentration(s);s.Set("concentrando",1);
-            StoreRitual(s,index,2,improvements);
+            StoreRitual(s,index,2,improvements,context);
             return "Ritual estendido iniciado: ação completa e movimento gastos. Mantenha concentração até o próximo turno; ficará Desprevenido. Depois use Concluir ritual preparado (ação completa).";
         }
         RuleState.Require(FmConditions.Training(s,"prestidigitacao")>0,"O teste de Prestidigitação do ritual exige treinamento.");
@@ -31,19 +31,23 @@ public sealed partial class FmRulesPlugin
         if(s.Rolls[^1].Total>=dc)return null;
         if(context.RitualFailure=="delay")
         {
-            StoreRitual(s,index,1,improvements);return $"Ritual falhou contra CD {dc}: ação gasta; a conjuração será concluída no começo do próximo turno, com o custo pago na conclusão.";
+            StoreRitual(s,index,1,improvements,context);return $"Ritual falhou contra CD {dc}: ação gasta; a conjuração será concluída no começo do próximo turno, com o custo pago na conclusão.";
         }
         return $"Ritual falhou contra CD {dc}: conjuração cancelada, ação gasta; nenhum PE foi consumido.";
     }
-    private static void StoreRitual(RuleState s,int index,int mode,string[] improvements)
+    private static void StoreRitual(RuleState s,int index,int mode,string[] improvements,FmActionContext context)
     {
         s.Set("ritual_spell",index+1);s.Set("ritual_mode",mode);s.Set("ritual_pronto",0);
         foreach(var key in RitualImprovements)s.Set("ritual_"+key,improvements.Count(v=>v==key));
+        foreach(var key in FmClassChoices.Fundamentals)s.Set("ritual_fund_"+key,(context.Fundamentals??[]).Count(v=>v==key));
+        s.Set("ritual_potente_sab",context.SpellPowerAttribute=="sabedoria"?1:0);s.Set("ritual_singular",context.SpellSingleTarget?1:0);
+        s.Set("ritual_corpo_a_corpo",context.SpellMelee?1:0);s.Set("ritual_tr",context.SpellForcesSave?1:0);s.Set("ritual_inimigo",context.TargetEnemy?1:0);
+        s.Set("ritual_adepto",context.UseAdeptDiscount?1:0);
     }
     private static string CancelRitual(RuleState s)
     {
         if(s.Get("ritual_mode")==2)s.Set("concentrando",0);
-        foreach(var key in new[]{"ritual_spell","ritual_mode","ritual_pronto"}.Concat(RitualImprovements.Select(v=>"ritual_"+v)))s.Set(key,0);
+        foreach(var key in new[]{"ritual_spell","ritual_mode","ritual_pronto","ritual_potente_sab","ritual_singular","ritual_corpo_a_corpo","ritual_tr","ritual_inimigo","ritual_adepto"}.Concat(RitualImprovements.Select(v=>"ritual_"+v)).Concat(FmClassChoices.Fundamentals.Select(v=>"ritual_fund_"+v)))s.Set(key,0);
         return "Preparação de ritual encerrada; ações já gastas não são recuperadas.";
     }
     private static string FinishRitual(RuleState s,RuleCommand c)
@@ -53,8 +57,12 @@ public sealed partial class FmRulesPlugin
         {RuleState.Require(s.Get("concentrando")==1,"A concentração do ritual foi perdida.");UseAction(s,"completa");}
         var index=s.Get("ritual_spell")-1;
         var improvements=RitualImprovements.SelectMany(key=>Enumerable.Repeat(key,s.Get("ritual_"+key))).ToArray();
+        var context=new FmActionContext(Ritual:"resolved",Improvements:improvements,
+            Fundamentals:FmClassChoices.Fundamentals.SelectMany(key=>Enumerable.Repeat(key,s.Get("ritual_fund_"+key))).ToArray(),
+            SpellPowerAttribute:s.Get("ritual_potente_sab")>0?"sabedoria":"inteligencia",SpellSingleTarget:s.Get("ritual_singular")>0,
+            SpellMelee:s.Get("ritual_corpo_a_corpo")>0,SpellForcesSave:s.Get("ritual_tr")>0,TargetEnemy:s.Get("ritual_inimigo")>0,UseAdeptDiscount:s.Get("ritual_adepto")>0);
         CancelRitual(s);
-        return Cast(s,new("fm-cast",c.Amount,index.ToString(CultureInfo.InvariantCulture),Jujutsu:new(Ritual:"resolved",Improvements:improvements)),true);
+        return Cast(s,new("fm-cast",c.Amount,index.ToString(CultureInfo.InvariantCulture),Jujutsu:context),true);
     }
     private static string RitualDescription(string[] improvements,int level)
     {

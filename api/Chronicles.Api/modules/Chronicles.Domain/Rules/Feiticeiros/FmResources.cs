@@ -44,9 +44,11 @@ public sealed partial class FmRulesPlugin
         s.Set("desmaiado",reduced<=0?1:0);
         return Math.Max(0,Math.Max(1,reduced)-s.Get("dano_alma"));
     }
-    private static string Damage(RuleState s,int raw,string type)
+    private static string Damage(RuleState s,int raw,string type,FmActionContext? context=null)
     {
         RuleState.Require(raw>0,"Informe dano maior que zero."); s.Set("descanso_curto",0);
+        context??=new();RuleState.Require(context.IgnoreReduction is >=0 and <=9999,"RD ignorada fora dos limites.");
+        RuleState.Require(type is not ("alma" or "perda_vida")||context.IgnoreReduction==0&&!context.IgnoreResistance,"Dano na alma/perda de vida já ignora defesas; não declare efeitos adicionais de Penetrante/Raio Negro.");
         var amount=raw;
         if(type=="alma")
         {
@@ -59,7 +61,7 @@ public sealed partial class FmRulesPlugin
         }
         else
         {
-            if(type!="perda_vida") amount=DefendedDamage(s,raw,type);
+            if(type!="perda_vida") amount=DefendedDamage(s,raw,type,context);
             ApplyHealthLoss(s,amount,type!="perda_vida");
         }
         if(amount>0 && s.Get("concentrando")!=0)
@@ -69,18 +71,18 @@ public sealed partial class FmRulesPlugin
         if(amount>=50 && amount*2>=s.MaxHealth) s.Set("ferimento_pendente",1);
         return $"{raw} de {type}: {amount} aplicado(s)."+(s.Get("ferimento_pendente")>0?" Ferimento Complexo: defina o membro/efeito com o narrador (p.314).":"")+(s.Get("morto")>0?" Personagem morto.":"");
     }
-    private static int DefendedDamage(RuleState s,int amount,string type)
+    private static int DefendedDamage(RuleState s,int amount,string type,FmActionContext context)
     {
         var rows=FmCatalog.Rows(s,"defesas").Where(r=>FmCatalog.Text(r,"tipo")==type || FmCatalog.Text(r,"tipo")=="todos" || FmCatalog.Text(r,"tipo")=="fisico" && type is "cortante" or "perfurante" or "impacto").ToArray();
         if(rows.Any(r=>FmCatalog.Text(r,"efeito")=="imunidade") || type=="reversa" && s.Text("natureza")!="maldicao" || type=="venenoso"&&s.Text("origem")=="corpo_mutante") return 0;
         var fragile=FmConditions.Active(s).Contains("fragilizado");
-        var resistance=!fragile && (rows.Any(r=>FmCatalog.Text(r,"efeito")=="resistencia") || FmCatalog.ClassLevel(s,"restringido")==20 && type is "cortante" or "perfurante" or "impacto");
+        var resistance=!context.IgnoreResistance && !fragile && (rows.Any(r=>FmCatalog.Text(r,"efeito")=="resistencia") || FmCatalog.ClassLevel(s,"restringido")==20 && type is "cortante" or "perfurante" or "impacto");
         var vulnerable=rows.Any(r=>FmCatalog.Text(r,"efeito")=="vulnerabilidade") || type=="reversa" && s.Text("natureza")=="maldicao";
         // Multiplication/division precede flat RD (appendix p.365).
         var adjusted=(int)Math.Floor(amount*(resistance?0.5m:1m)*(vulnerable?1.5m:1m));
         var reduction=fragile?0:rows.Where(r=>FmCatalog.Text(r,"efeito")=="rd").GroupBy(r=>FmCatalog.Text(r,"fonte")).Sum(g=>g.Max(r=>FmCatalog.Number(r,"valor")));
         if(!fragile && FmCatalog.ClassLevel(s,"lutador")>=2) reduction+=FmCatalog.EffectLevel(s,"lutador")/2;
-        return Math.Max(0,adjusted-reduction);
+        return Math.Max(0,adjusted-Math.Max(0,reduction-context.IgnoreReduction));
     }
     private static void ApplyHealthLoss(RuleState s,int amount,bool absorbTemporary)
     {

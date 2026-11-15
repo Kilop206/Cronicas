@@ -43,7 +43,7 @@ public static class FmConditions
         var penalty = active.Contains("paralisado") ? 10 : active.Overlaps(["desprevenido"]) || active.Contains("caido") && !ranged ? 3 : active.Contains("enredado") ? 2 : 0;
         if (Overloaded(s)) penalty = Math.Max(penalty, 5);
         var restricted=FmCatalog.ClassLevel(s,"restringido");var restrictedBonus=restricted>0?Math.Min(FmCatalog.Level(s),Math.Max(0,FmCatalog.Mod(s,s.Text("defesa_restrita")=="constituicao"?"constituicao":"forca")))+(restricted>=3?1:0)+(restricted>=9?1:0)+(restricted>=16?1:0):0;
-        return s.N("defesa", 10) + restrictedBonus + s.Get("defesa_empolgacao") + s.Get("defesa_descendente") - penalty - s.Get("exaustao") - Math.Min(5, s.Get("sequencia") / 2) + (active.Contains("caido") && ranged ? 3 : 0);
+        return s.N("defesa", 10) + restrictedBonus + FmClassChoices.Defense(s) + s.Get("defesa_empolgacao") + s.Get("defesa_descendente") - penalty - s.Get("exaustao") - Math.Min(5, s.Get("sequencia") / 2) + (active.Contains("caido") && ranged ? 3 : 0);
     }
     public static bool Overloaded(RuleState s) => s.N("carga_meios") > Math.Max(0, 8 + 2 * FmCatalog.Mod(s, "forca")) * 2;
     public static decimal Speed(RuleState s)

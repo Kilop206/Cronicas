@@ -54,7 +54,7 @@ public sealed partial class FmRulesPlugin
     }
     private static void StartMartialTurn(RuleState s,bool beginningCombat)
     {
-        foreach(var key in FighterManeuvers.Select(v=>"manobra_"+v).Concat(new[]{"defesa_empolgacao","defesa_descendente","corpo_treinado_pronto","lutador_superior_usado","ataque_furtivo_usado","ultimo_corpo_a_corpo"}))s.Set(key,0);
+        foreach(var key in FighterManeuvers.Select(v=>"manobra_"+v).Concat(new[]{"defesa_empolgacao","defesa_descendente","corpo_treinado_pronto","lutador_superior_usado","ataque_furtivo_usado","ultimo_corpo_a_corpo","especial_preciso","fund_duplicado","fund_rapido"}))s.Set(key,0);
         if(FmCatalog.ClassLevel(s,"lutador")>0)
         {
             var initial=FmCatalog.ClassLevel(s,"lutador")==20?2:1;
@@ -62,20 +62,21 @@ public sealed partial class FmRulesPlugin
         }
         s.Set("empolgacao_acerto",0);
     }
-    private static void MartialAttackAction(RuleState s,FmActionContext context,string rowAction)
+    private static void MartialAttackAction(RuleState s,FmActionContext context,string rowAction,bool fullAction=false)
     {
         RuleState.Require(context.UnarmedAction is "normal" or "bonus" or "superior","Ação desarmada inválida.");
-        if(context.UnarmedAction=="normal") { UseAction(s,rowAction);return; }
+        if(context.UnarmedAction=="normal") { UseAction(s,fullAction?"completa":rowAction);return; }
         RuleState.Require(context.AttackKind=="unarmed"&&s.Get("turno_aberto")==1&&FmCatalog.ClassLevel(s,"lutador")>0,"Este ataque exige Lutador desarmado no próprio turno.");
         if(context.UnarmedAction=="bonus")
         {
             RuleState.Require(s.Get("corpo_treinado_pronto")>0,"Corpo Treinado exige ataque desarmado ou marcial anterior neste turno.");
-            UseAction(s,"bonus");s.Set("corpo_treinado_pronto",0);
+            UseAction(s,fullAction?"completa":"bonus");s.Set("corpo_treinado_pronto",0);
         }
         else
         {
             RuleState.Require(FmCatalog.ClassLevel(s,"lutador")==20&&s.Get("lutador_superior_usado")==0&&!FmConditions.Incapacitated(s),"Lutador Superior exige nível 20 e apenas um uso por rodada.");
             Spend(s,2);s.Set("lutador_superior_usado",1);
+            if(fullAction)UseAction(s,"completa");
         }
     }
     private static int BeginCombatArt(RuleState s,FmActionContext context,bool melee)

@@ -146,10 +146,12 @@ assert.equal(resolveSheetRenderer(fmSystem)?.id, fm.id);
 assert.equal(resolveSheetRenderer({...fmSystem,rulesetVersion:'2.6'}),null);
 assert.equal(resolveSheetRenderer({...fmSystem,templateVersion:2}),null);
 assert.equal(sheetResources(fmSystem).map(v=>v.key).join(','),'health,mana');
-const { fmSkillBonus, fmSoulStage } = load('features/sheets/renderers/feiticeiros/fm-projection.ts');
+const { fmSkillBonus, fmSoulStage, fmDefense } = load('features/sheets/renderers/feiticeiros/fm-projection.ts');
 const fmValues={nivel:5,forca:16,destreza:14,origem:'inato',especializacao:'combate',pericias:[{chave:'atletismo',treino:2,outros:1}]};
 const fmCharacter={name:'Ensaio',health:30,maxHealth:40,mana:20,maxMana:20,sanity:0,maxSanity:0,fields:fmValues};
 assert.equal(fmSkillBonus(fmCharacter,'atletismo','forca'),10);
+assert.equal(fmDefense({...fmCharacter,fields:{...fmValues,nivel:8,defesa:16,aptidoes:['estilo_defensivo']}}),20);
+assert.equal(fmDefense({...fmCharacter,fields:{...fmValues,nivel:16,especializacao:'lutador',defesa:16,aptidoes:['adepto_combate','adepto_estilo_defensivo']}}),22);
 assert.equal(fmSoulStage({...fmCharacter,fields:{...fmValues,estado_regras:[{chave:'alma_max',valor:40},{chave:'alma_dano',valor:11}]}}),1);
 if(process.argv.includes('--export-fm')) {
   const directory=path.resolve(import.meta.dirname,'../.quality-local/fm');fs.mkdirSync(directory,{recursive:true});

@@ -12,6 +12,7 @@ import { FM_ABILITIES, FM_APTITUDES, FM_ATTRIBUTES, FM_CLASSES, FM_DAMAGE, FM_OR
 import { fmConditions, fmDefense, fmMod, fmNumber, fmRows, fmSkillBonus, fmSoulStage, fmSpeed, fmState } from './fm-projection';
 import { FM_REFERENCE } from './fm-reference';
 import bookIndex from './fm-book-index.json';
+import { FM_STYLES, FM_FUNDAMENTALS, FM_SPECIAL_STRIKES } from './fm-class-choices';
 
 @Component({selector:'app-fm-sheet',standalone:true,imports:[CommonModule,FormsModule,SystemFieldComponent,SheetCollectionFieldComponent,CharacterInventoryComponent,CharacterHistoryPanelComponent,DndActionPanelComponent],templateUrl:'./fm-sheet.component.html',styleUrl:'./fm-sheet.component.css'})
 export class FmSheetComponent {
@@ -35,6 +36,25 @@ export class FmSheetComponent {
   attackKind:FmActionContext['attackKind']='unspecified';targetExposed=false;targetUnconscious=false;targetParalyzed=false;attackAdvantage=false;attackDisadvantage=false;offhandLight=false;concealment=0;
   ritualMode:FmActionContext['ritual']='none';ritualFailure:FmActionContext['ritualFailure']='cancel';ritualCounts:Record<string,number>={dano:0,precisao:0,cd:0,alcance:0,area:0,alvos:0,sustento:0,efeito:0};
   fighterManeuver='none';combatArt='none';targetOffguard=false;targetFlanked=false;sneakAttack=false;unarmedAction='normal';
+  styles=FM_STYLES;fundamentals=FM_FUNDAMENTALS;specialOptions=FM_SPECIAL_STRIKES;
+  grants=[['acervo_amplo','Acervo Amplo','Combate 6: mais um estilo. Trocas após meditar são confirmadas pela mesa.'],['expansao_fundamentos','Expansão dos Fundamentos','Técnica 8: mais uma mudança; outra em Técnica 12.'],['adepto_combate','Adepto de Combate','Mestre em Intuição: um estilo que escala pelo nível de personagem.'],['adepto_feiticaria','Adepto de Feitiçaria','Mestre em Feitiçaria e possuir feitiços: uma mudança, exceto Rápido.']] as const;
+  singleWeaponFreeHand=false;dualWielding=false;weaponTwoHanded=false;weaponHeavy=false;targetEnemy=true;
+  specialCounts:Record<string,number>=Object.fromEntries(FM_SPECIAL_STRIKES.map(v=>[v[0],0]));sacrificeDamageConfirmed=false;boostSelfSufficient=false;
+  fundamentalCounts:Record<string,number>=Object.fromEntries(FM_FUNDAMENTALS.map(v=>[v[0],0]));spellPowerAttribute='inteligencia';spellSingleTarget=true;spellMelee=false;spellForcesSave=false;spellTargetEnemy=true;useAdeptDiscount=false;
+  damageAmount=0;damageType='impacto';ignoredReduction=0;ignoreResistance=false;damageTypes=[...FM_DAMAGE,'perda_vida'];
+  selectedOptions(choices:readonly (readonly [string,...unknown[]])[],counts:Record<string,number>){return choices.flatMap(([key])=>Array.from({length:Number(counts[key]||0)},()=>key));}
+  styleCount(){return this.styles.filter(v=>this.hasAbility('estilo_'+v[0])).length;}
+  styleLimit(){const real=this.classLevel('combate');return real?1+(real>=6?1:0)+(real>=12?1:0)+(this.hasAbility('acervo_amplo')?1:0):0;}
+  fundamentalCount(){return this.fundamentals.filter(v=>this.hasAbility('fundamento_'+v[0])).length;}
+  fundamentalLimit(){const real=this.classLevel('tecnica');return real?2+(real>=12?1:0)+(this.hasAbility('expansao_fundamentos')?1+(real>=12?1:0):0):0;}
+  grantedChoice(prefix:string,choices:readonly (readonly [string,...unknown[]])[]){return choices.find(v=>this.hasAbility(prefix+v[0]))?.[0]||'';}
+  adeptStyle(){return this.grantedChoice('adepto_estilo_',this.styles);}
+  adeptFundamental(){return this.grantedChoice('adepto_fundamento_',this.fundamentals);}
+  knowsFundamental(key:string){return this.hasAbility('fundamento_'+key)||this.hasAbility('adepto_feiticaria')&&this.adeptFundamental()===key;}
+  setGrantedChoice(prefix:string,value:string){if(!this.editable())return;const list=this.draft.fields['aptidoes'];const entries=Array.isArray(list)?list.filter((v):v is string=>typeof v==='string'&&!v.startsWith(prefix)):[];this.draft.fields['aptidoes']=value?[...entries,prefix+value]:entries;this.changed.emit();}
+  canGrant(key:string){return key==='acervo_amplo'?this.classLevel('combate')>=6:key==='expansao_fundamentos'?this.classLevel('tecnica')>=8:key==='adepto_combate'?this.training('intuicao')===2:this.training('feiticaria')===2&&!['sem_tecnica','restringido'].includes(String(this.draft.fields['origem']));}
+  combatKey(){return ['forca','destreza','sabedoria'].find(v=>this.hasAbility('chave_combate_'+v))||'';}
+  setCombatKey(value:string){if(!this.editable())return;const list=this.draft.fields['aptidoes'];const entries=Array.isArray(list)?list.filter((v):v is string=>typeof v==='string'&&!v.startsWith('chave_combate_')):[];this.draft.fields['aptidoes']=value?[...entries,'chave_combate_'+value]:entries;this.changed.emit();}
   maneuvers=[['ajuste','Ajuste'],['comando','Comando (você paga 1 PE)'],['desarme','Desarme'],['esquiva','Esquiva'],['trabalho_pes','Trabalho de Pés']];
   learnedManeuver(id:string){const list=this.draft.fields['manobras_lutador'];return Array.isArray(list)&&list.some(v=>v===id);}
   toggleManeuver(id:string){if(!this.editable())return;const list=this.draft.fields['manobras_lutador'];const current=Array.isArray(list)?list.filter((v):v is string=>typeof v==='string'):[];this.draft.fields['manobras_lutador']=current.includes(id)?current.filter(v=>v!==id):[...current,id];this.changed.emit();}
@@ -72,11 +92,18 @@ export class FmSheetComponent {
   gifted(id:string){return id==='energia_reversa'&&this.classLevel('suporte')>=6||id==='dominio_simples'&&this.draft.fields['origem']==='sem_tecnica'&&this.number('nivel')>=4;}
   hasAbility(id:string){return this.gifted(id)||Array.isArray(this.draft.fields['aptidoes'])&&(this.draft.fields['aptidoes'] as unknown[]).includes(id);}
   techniqueDc(){const level=this.number('nivel',1),bt=2+Math.floor((level-1)/4);const martial=Math.max(...['lutador','combate'].map(id=>{const real=this.classLevel(id),effect=real+Math.floor((level-real)/2);return real>=4?2+(effect>=8?1:0)+(effect>=16?1:0):0;}));return 10+Math.floor(level/2)+bt+this.mod(String(this.draft.fields['atributo_tecnica']||'sabedoria'))+this.number('bonus_cd')+martial+(this.classLevel('tecnica')>=10&&this.draft.fields['foco_tecnica']==='refino'?Math.floor(bt/2):0)+(this.classLevel('tecnica')===20?5:0)-(this.state()['exaustao']||0);}
-  toggleAbility(id:string){if(!this.editable())return;const value=this.draft.fields['aptidoes'];const current=Array.isArray(value)?value.filter((v):v is string=>typeof v==='string'):[];this.draft.fields['aptidoes']=current.includes(id)?current.filter(v=>v!==id):[...current,id];this.changed.emit();}
+  toggleAbility(id:string){if(!this.editable())return;const value=this.draft.fields['aptidoes'];const current=Array.isArray(value)?value.filter((v):v is string=>typeof v==='string'):[];this.draft.fields['aptidoes']=current.includes(id)?current.filter(v=>v!==id&&!(id==='adepto_combate'&&v.startsWith('adepto_estilo_'))&&!(id==='adepto_feiticaria'&&v.startsWith('adepto_fundamento_'))):[...current,id];this.changed.emit();}
+  actionContext(action:string):FmActionContext|undefined{
+    if(action==='fm-attack')return {attackKind:this.attackKind,targetExposed:this.targetExposed,targetUnconscious:this.targetUnconscious,targetParalyzed:this.targetParalyzed,advantage:this.attackAdvantage,disadvantage:this.attackDisadvantage,offhandLight:this.offhandLight,concealment:Number(this.concealment),fighterManeuver:this.fighterManeuver,combatArt:this.combatArt,targetOffguard:this.targetOffguard,targetFlanked:this.targetFlanked,sneakAttack:this.sneakAttack,unarmedAction:this.unarmedAction,
+      singleWeaponFreeHand:this.singleWeaponFreeHand,dualWielding:this.dualWielding,weaponTwoHanded:this.weaponTwoHanded,weaponHeavy:this.weaponHeavy,targetEnemy:this.targetEnemy,specialStrike:this.classLevel('combate')>=4?this.selectedOptions(this.specialOptions,this.specialCounts):[],sacrificeDamageConfirmed:this.sacrificeDamageConfirmed,boostSelfSufficient:this.classLevel('combate')===20&&this.boostSelfSufficient};
+    if(action==='fm-cast')return {ritual:this.ritualMode,ritualFailure:this.ritualFailure,improvements:this.ritualMode==='none'?[]:this.ritualOptions.flatMap(v=>Array.from({length:Number(this.ritualCounts[v.key]||0)},()=>v.key)),fundamentals:this.selectedOptions(this.fundamentals.filter(v=>this.knowsFundamental(v[0])),this.fundamentalCounts),spellPowerAttribute:this.spellPowerAttribute,spellSingleTarget:this.spellSingleTarget,spellMelee:this.spellMelee,spellForcesSave:this.spellForcesSave,targetEnemy:this.spellTargetEnemy,useAdeptDiscount:this.hasAbility('adepto_feiticaria')&&!!this.fundamentalCounts[this.adeptFundamental()]&&this.useAdeptDiscount};
+    if(action==='fm-damage')return ['alma','perda_vida'].includes(this.damageType)?{}:{ignoreReduction:Number(this.ignoredReduction),ignoreResistance:this.ignoreResistance};
+    return undefined;
+  }
   perform(action:string,option:string|null=null,amount=0){
     if(!this.character.canEdit||!this.rulesReady||this.busy()||this.mode==='print')return;
     this.busy.set(true);this.working.emit(true);this.error.set('');this.message.set('');
-    const jujutsu:FmActionContext|undefined=action==='fm-attack'?{attackKind:this.attackKind,targetExposed:this.targetExposed,targetUnconscious:this.targetUnconscious,targetParalyzed:this.targetParalyzed,advantage:this.attackAdvantage,disadvantage:this.attackDisadvantage,offhandLight:this.offhandLight,concealment:Number(this.concealment),fighterManeuver:this.fighterManeuver,combatArt:this.combatArt,targetOffguard:this.targetOffguard,targetFlanked:this.targetFlanked,sneakAttack:this.sneakAttack,unarmedAction:this.unarmedAction}:action==='fm-cast'?{ritual:this.ritualMode,ritualFailure:this.ritualFailure,improvements:this.ritualMode==='none'?[]:this.ritualOptions.flatMap(v=>Array.from({length:Number(this.ritualCounts[v.key]||0)},()=>v.key))}:undefined;
+    const jujutsu=this.actionContext(action);
     this.api.applyCharacterRule(this.character.id,this.character.version,{action,option,amount,visibility:this.visibility,...(jujutsu?{jujutsu}:{})}).pipe(finalize(()=>{this.busy.set(false);this.working.emit(false);})).subscribe({next:result=>{this.message.set(result.message+(result.rolls.length?' · '+result.rolls.map(r=>`${r.expression} [${r.rolls.join(', ')}] = ${r.total}`).join(' | '):''));this.restored.emit(result.character);},error:e=>this.error.set(apiError(e))});
   }
   filteredReferences(){const query=this.normalize(this.query);return FM_REFERENCE.filter(v=>!query||this.normalize(v.title+' '+v.section+' '+v.text).includes(query));}

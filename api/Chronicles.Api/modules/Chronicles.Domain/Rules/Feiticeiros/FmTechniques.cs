@@ -8,45 +8,55 @@ public sealed partial class FmRulesPlugin
     {
         RuleState.Require(s.Text("origem") is not ("restringido" or "sem_tecnica"),"Essa origem não possui feitiços; use suas técnicas marciais ou Novo Estilo da Sombra.");
         RuleState.Require(s.Get("exaustao_tecnica")==0,"Técnica exausta após expansão de domínio.");
-        var index=int.Parse(c.Option!,CultureInfo.InvariantCulture); var row=FmCatalog.Rows(s,"feiticos")[index]; var level=FmCatalog.Number(row,"nivel");
-        if(level==6)RuleState.Require(FmCatalog.Has(s,"tecnica_maxima") && FmCatalog.SpellLevel(s)>=4 && FmConditions.Training(s,"feiticaria")==2 && s.Get("maxima_recarga")==0,"Técnica Máxima exige sua aptidão, maestria em Feitiçaria, acesso ao nível 4 e recarga concluída.");
+        var context=c.Jujutsu??new();var index=int.Parse(c.Option!,CultureInfo.InvariantCulture);var row=FmCatalog.Rows(s,"feiticos")[index];var level=FmCatalog.Number(row,"nivel");
+        if(level==6)RuleState.Require(FmCatalog.Has(s,"tecnica_maxima")&&FmCatalog.SpellLevel(s)>=4&&FmConditions.Training(s,"feiticaria")==2&&s.Get("maxima_recarga")==0,"Técnica Máxima exige sua aptidão, maestria em Feitiçaria, acesso ao nível 4 e recarga concluída.");
         else RuleState.Require(level<=FmCatalog.SpellLevel(s),"Nível de feitiço ainda indisponível.");
-        var type=FmCatalog.Text(row,"tipo"); RuleState.Require(type!="passivo","Feitiços passivos são registrados no máximo de energia; não podem ser conjurados.");
-        var improvements=c.Jujutsu?.Improvements??[];
-        if(!release && c.Jujutsu is { Ritual:not "none" } && PrepareRitual(s,c,row,index) is { } ritualMessage)return ritualMessage;
-        if(!release && (c.Jujutsu is null || c.Jujutsu.Ritual=="none"))
-        {RuleState.Require(improvements.Length==0,"Melhorias exigem ritual.");UseAction(s,FmCatalog.Text(row,"acao"));}
-        var reduction=FmCatalog.Number(row,"reducao")+(s.Get("dominio")>0 && s.Get("confronto")==0?s.N("apt_dominio"):0);
+        var type=FmCatalog.Text(row,"tipo");var dice=FmCatalog.Text(row,"dados");var action=FmCatalog.Text(row,"acao");
+        RuleState.Require(type!="passivo","Feitiços passivos são registrados no máximo de energia; não podem ser conjurados.");
+        var fundamentals=ValidateFundamentals(s,context,level,type,action,dice);var improvements=context.Improvements??[];
+        if(!release&&context.Ritual!="none"&&PrepareRitual(s,c with{Jujutsu=context},row,index) is { } ritualMessage)return ritualMessage;
+        var extraCost=FundamentalCost(s,fundamentals,level,context);
+        if(!release&&context.Ritual=="none")
+        {
+            RuleState.Require(improvements.Length==0,"Melhorias exigem ritual.");
+            UseAction(s,fundamentals.Contains("rapido")?action=="completa"?"comum":"bonus":action);
+        }
+        var reduction=FmCatalog.Number(row,"reducao")+(s.Get("dominio")>0&&s.Get("confronto")==0?s.N("apt_dominio"):0);
         var technician=FmCatalog.ClassLevel(s,"tecnica");var focus=s.Text("foco_tecnica");
-        if(technician>=10 && focus=="economia") reduction+=2;
-        var baseCost=FmCatalog.SpellCosts[level];
-        if(technician==20 && level is >=1 and <=3) baseCost/=2;
-        var cost=level==0 || level==1 && technician>=10 && focus=="economia"?0:Math.Max(1,baseCost-reduction); Spend(s,cost);
+        if(technician>=10&&focus=="economia")reduction+=2;
+        var baseCost=FmCatalog.SpellCosts[level];if(technician==20&&level is >=1 and <=3)baseCost/=2;
+        var cost=level==0||level==1&&technician>=10&&focus=="economia"?0:Math.Max(1,baseCost-reduction);
+        Spend(s,cost+extraCost);MarkFundamentals(s,fundamentals,context);
         if(level==6){s.Set("maxima_recarga",6-FmCatalog.Training(s)/2);s.Set("maxima_usada_turno",1);}
         var duration=improvements.Contains("sustento")?"concentrada":FmCatalog.Text(row,"duracao");
-        if(duration=="sustentada") s.Set("sustento_"+index,1);
-        if(duration=="concentrada") { StopSustainedConcentration(s); s.Set("concentrando",1); s.Set("concentrado_"+index,1); }
-        var dice=FmCatalog.Text(row,"dados"); var critical=false; var hit=true; var attack="";
+        if(duration=="sustentada")s.Set("sustento_"+index,1);
+        if(duration=="concentrada"){StopSustainedConcentration(s);s.Set("concentrando",1);s.Set("concentrado_"+index,1);}
+        var critical=false;var hit=true;var attack="";
         if(type=="ataque")
         {
-            var active=FmConditions.Active(s); var bonus=FmCatalog.Mod(s,s.Text("atributo_tecnica"))+FmCatalog.Level(s)/2+FmCatalog.Training(s)-s.Get("exaustao")-FmConditions.SoulPenalty(s)+(technician>=10&&focus=="refino"?FmCatalog.Training(s)/2:0)+(technician==20?5:0)+2*improvements.Count(v=>v=="precisao");
+            var active=FmConditions.Active(s);var bonus=FmCatalog.Mod(s,s.Text("atributo_tecnica"))+FmCatalog.Level(s)/2+FmCatalog.Training(s)-s.Get("exaustao")-FmConditions.SoulPenalty(s)+(technician>=10&&focus=="refino"?FmCatalog.Training(s)/2:0)+(technician==20?5:0)+2*improvements.Count(v=>v=="precisao")+2*fundamentals.Count(v=>v=="preciso");
             bonus-=Math.Max(active.Contains("envenenado")?2:0,active.Contains("amedrontado")?3:active.Contains("abalado")?1:0);
-            var natural=FmConditions.Roll(s,bonus); var total=s.Rolls[^1].Total; critical=natural==20; hit=natural!=1 && (critical || c.Amount==0 || total>=c.Amount); attack=$"Ataque {total}: "+(hit?"acertou. ":"errou. ");
+            var natural=FmConditions.Roll(s,bonus);var total=s.Rolls[^1].Total;critical=natural==20;hit=natural!=1&&(critical||c.Amount==0||total>=c.Amount);attack=$"Ataque {total}: "+(hit?"acertou. ":"errou. ");
         }
-        var amount=hit && dice.Length>0?RollDamage(s,dice,critical):0;
-        if(hit && type is "ataque" or "resistencia" or "area")amount+=4*level*improvements.Count(v=>v=="dano");
-        if(hit && type is "ataque" or "resistencia" or "area" && technician>0)
+        var damageStart=s.Rolls.Count;var amount=hit&&dice.Length>0?RollDamage(s,dice,critical):0;
+        if(hit&&fundamentals.Contains("potente"))amount+=RerollDamageDice(s,damageStart,s.Rolls.Count,Math.Max(0,FmCatalog.Mod(s,context.SpellPowerAttribute)),true,false);
+        var damaging=type is "ataque" or "resistencia" or "area";
+        if(hit&&damaging)amount+=4*level*improvements.Count(v=>v=="dano");
+        if(hit&&damaging&&technician>0)
         {
-            var modifier=FmCatalog.Mod(s,s.Text("atributo_tecnica")); amount+=level==6?3*modifier+3*FmCatalog.Level(s):level==5?2*modifier+2*FmCatalog.Level(s):level==4?2*modifier+FmCatalog.Level(s):level==3?2*modifier:level>=1?modifier:0;
-            if(technician>=10 && focus=="destruicao" && DiceExpression.TryParse(dice,out var damageDice)) amount+=damageDice!.Count+FmCatalog.Training(s);
+            var modifier=FmCatalog.Mod(s,s.Text("atributo_tecnica"));amount+=level==6?3*modifier+3*FmCatalog.Level(s):level==5?2*modifier+2*FmCatalog.Level(s):level==4?2*modifier+FmCatalog.Level(s):level==3?2*modifier:level>=1?modifier:0;
+            if(technician>=10&&focus=="destruicao"&&DiceExpression.TryParse(dice,out var damageDice))amount+=damageDice!.Count*(critical?2:1)+FmCatalog.Training(s);
         }
         if(hit&&dice.Length>0)amount=Math.Max(0,amount-FmConditions.OutputPenalty(s));
+        if(damaging&&dice.Length>0)CompleteCombatStrike(s,hit,critical,context.TargetEnemy);
+        var paid=cost+extraCost+FmConditions.CostPenalty(s);var dc=FmCatalog.TechniqueDc(s)+2*improvements.Count(v=>v=="cd")+2*fundamentals.Count(v=>v=="cruel");
+        var description=RitualDescription(improvements,level)+FundamentalDescription(context,fundamentals);
         if(type=="cura")
         {
             RuleState.Require(level>0,"Feitiços de nível 0 não curam.");
-            return $"{FmCatalog.Text(row,"nome")}: {amount} {(FmCatalog.Has(s,"energia_reversa")?"de cura":"PV temporários (sem Energia Reversa)")} para distribuir ao alvo. {cost+FmConditions.CostPenalty(s)} PE pagos.";
+            return $"{FmCatalog.Text(row,"nome")}: {amount} {(FmCatalog.Has(s,"energia_reversa")?"de cura":"PV temporários (sem Energia Reversa)")} para distribuir ao alvo. {paid} PE pagos."+description;
         }
-        return $"{FmCatalog.Text(row,"nome")}: {attack}{(dice.Length>0?$"{amount} de efeito rolado. ":"")}{cost+FmConditions.CostPenalty(s)} PE pagos."+(type is "resistencia" or "area"?$" O alvo resolve TR contra CD {FmCatalog.TechniqueDc(s)+2*improvements.Count(v=>v=="cd")}; sucesso reduz dano à metade (nível 0 anula).":"")+RitualDescription(improvements,level);
+        return $"{FmCatalog.Text(row,"nome")}: {attack}{(dice.Length>0?$"{amount} de efeito rolado. ":"")}{paid} PE pagos."+(type is "resistencia" or "area"?$" O alvo resolve TR contra CD {dc}; sucesso reduz dano à metade (nível 0 anula).":context.SpellForcesSave?$" O alvo resolve TR contra CD {dc}.":"")+description;
     }
     private static string Domain(RuleState s,string kind)
     {

@@ -8,6 +8,7 @@ public static class SheetRuleActionTests
         FeiticeirosRulesTests.Run();
         FeiticeirosAdvancedTests.Run();
         FeiticeirosMartialTests.Run();
+        FeiticeirosClassOptionsTests.Run();
         D20ConditionTestCases.Run();
         CthulhuCreationTests.Run();
         CthulhuOccupationTests.Run();
