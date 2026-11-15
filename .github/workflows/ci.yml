@@ -17,7 +17,7 @@ jobs:
         working-directory: web
       - run: npm run lint
         working-directory: web
-      - run: node scripts/check-sheet-templates.mjs
+      - run: node scripts/check-sheet-templates.mjs --export-fm
       - run: npm run test:plugins
       - run: npm run test:architecture
       - run: npx tsc --noEmit -p tsconfig.app.json
@@ -28,7 +28,7 @@ jobs:
       - run: npm run test:spa-routes
       - run: npm run test:quality
       - run: dotnet build api/Chronicles.Api/Chronicles.Api.csproj -c Release
-      - run: dotnet run --project tests/Chronicles.Rules.Tests/Chronicles.Rules.Tests.csproj -c Release
+      - run: dotnet run --project tests/Chronicles.Rules.Tests/Chronicles.Rules.Tests.csproj -c Release -- --fm-template .quality-local/fm/template.json
       - run: dotnet run --project tests/Chronicles.Architecture.Tests -c Release
       - name: PostgreSQL migration and outbox tests
         env:
@@ -46,6 +46,7 @@ jobs:
           for i in $(seq 1 30); do curl -fsS http://localhost:8081/health && break || sleep 3; done
           SMOKE_MAILPIT_URL=http://localhost:8025 node scripts/smoke.mjs
           SMOKE_BASE_URL=http://localhost:8081 node scripts/character-writes-smoke.mjs
+          SMOKE_BASE_URL=http://localhost:8081 node scripts/fm-smoke.mjs
           SMOKE_BASE_URL=http://localhost:8081 node scripts/character-assets-smoke.mjs
           SMOKE_BASE_URL=http://localhost:8081 node scripts/character-companions-smoke.mjs
           SMOKE_BASE_URL=http://localhost:8081 node scripts/character-systems-smoke.mjs

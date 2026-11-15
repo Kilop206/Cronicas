@@ -18,6 +18,8 @@ public static class HttpQualityTests
         await using var app = builder.Build(); app.UseHttpResponseProtection(["https://trusted.example.test"]);
         app.MapMethods("/api/probe", ["GET", "POST"], () => Results.Ok(new { ok = true }));
         app.MapGet("/api/denied", () => Results.Unauthorized());
+        app.MapGet("/api/private", (HttpContext http) => { http.Response.Headers.CacheControl = "private, max-age=60"; return Results.Ok(new { secret = "local fixture" }); });
+        app.MapGet("/api/public-cache", (HttpContext http) => { http.Response.Headers.CacheControl = "public, max-age=3600"; return Results.Ok(); });
         await app.StartAsync();
         var address = app.Services.GetRequiredService<IServer>().Features.Get<IServerAddressesFeature>()!.Addresses.Single();
         using var client = new HttpClient { BaseAddress = new Uri(address), Timeout = TimeSpan.FromSeconds(10) };
@@ -34,6 +36,10 @@ public static class HttpQualityTests
         using var trusted = new HttpRequestMessage(HttpMethod.Post, "/api/probe"); trusted.Headers.Add("Sec-Fetch-Site", "cross-site"); trusted.Headers.Add("Origin", "https://trusted.example.test");
         using var trustedResponse = await client.SendAsync(trusted); Check(trustedResponse.IsSuccessStatusCode, "explicitly allowed CORS origins preserve existing access");
         using var accepted = await client.PostAsync("/api/probe", new StringContent("{}")); Check(accepted.IsSuccessStatusCode, "non-browser API clients keep working");
+        using var privateResponse = await client.GetAsync("/api/private");
+        Check(privateResponse.Headers.CacheControl?.Private == true && privateResponse.Headers.CacheControl.NoStore && privateResponse.Headers.CacheControl.MaxAge is null, "private endpoint contract survives global protection without a cache lifetime");
+        using var publicResponse = await client.GetAsync("/api/public-cache");
+        Check(publicResponse.Headers.CacheControl?.NoStore == true && !publicResponse.Headers.CacheControl.Public, "API cannot opt into public caching");
         await app.StopAsync();
 
         using var email = RecoveryEmail.Create("sender@example.test", "recipient@example.test", "<unsafe>");

@@ -11,7 +11,12 @@ public static class HttpResponseProtection
             context.Response.Headers["X-Frame-Options"] = "DENY";
             context.Response.Headers["Content-Security-Policy"] = "default-src 'none'; frame-ancestors 'none'; base-uri 'none'";
             context.Response.Headers["X-Robots-Tag"] = "noindex, nofollow, noarchive";
-            if (context.Request.Path.StartsWithSegments("/api")) context.Response.Headers.CacheControl = "no-store";
+            if (context.Request.Path.StartsWithSegments("/api"))
+            {
+                // Preserve the endpoint's private contract while enforcing no-store on every API response.
+                var privateResponse = context.Response.GetTypedHeaders().CacheControl?.Private == true;
+                context.Response.Headers.CacheControl = privateResponse ? "private, no-store" : "no-store";
+            }
             return Task.CompletedTask;
         });
         // Complements Origin validation and SameSite: also reject cross-site writes with no Origin.
