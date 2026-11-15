@@ -92,3 +92,5 @@ Não há migration SQL nova: os campos de sistema e personagem já usam o esquem
 O navegador foi validado com fixtures, incluindo contexto de artes, sugestão da Máxima e preservação do inventário na impressão. Separadamente, a integração HTTP/PostgreSQL passou no CI com contas sintéticas e banco descartável; não foram usadas contas pessoais ou dados de campanha em produção. As fixtures de navegador não são evidência de persistência ou autorização no banco. O resultado da publicação é registrado em [2026-11-14-feiticeiros-deployment.md](architecture/releases/2026-11-14-feiticeiros-deployment.md).
 
 O índice pode ser regenerado com `python scripts/index-fm-rulebook.py`, tendo `pypdf` e o PDF local correspondente. Ele extrai nomes, categorias e páginas; não infere efeitos de habilidades. Créditos: Setsugiri, Parker e colaboradores de Feiticeiros & Maldições; Gege Akutami por Jujutsu Kaisen.
+
+A continuação com estilos, Golpe Especial, Fundamentos e Adeptos foi publicada e verificada em 15/11/2026; veja o [registro da entrega e do CI](architecture/releases/2026-11-15-feiticeiros-class-options.md).
