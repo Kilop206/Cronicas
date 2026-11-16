@@ -8,7 +8,7 @@ import { ApiService, Character, apiError } from '../../api';
   <button *ngIf="character.canEdit" #trigger type="button" class="text-link danger" [disabled]="!available||busy()" (click)="open()">Excluir ficha</button>
   <dialog #confirmation class="character-delete-dialog" aria-labelledby="character-delete-title" (cancel)="cancel($event)">
     <form (ngSubmit)="remove()">
-      <div class="character-delete-body" role="region" aria-label="Detalhes da exclusão" tabindex="0">
+      <div #content class="character-delete-body" role="region" aria-label="Detalhes da exclusão" tabindex="0">
       <h2 id="character-delete-title">Excluir {{reviewed?.name}}?</h2>
       <p>A exclusão é permanente e remove esta ficha, histórico, inventário, habilidades, notas e links de OBS. Fichas vinculadas a encontros precisam ser removidas deles antes.</p>
       <label>Digite o nome da ficha para confirmar<input name="deleteName" [(ngModel)]="typedName" [disabled]="busy()" autocomplete="off" maxlength="120" [placeholder]="reviewed?.name||''"></label>
@@ -23,10 +23,11 @@ export class CharacterDeleteComponent {
   @Output() working=new EventEmitter<boolean>();
   @Output() deleted=new EventEmitter<{campaignId:string}>();
   @ViewChild('confirmation') confirmation?:ElementRef<HTMLDialogElement>;
+  @ViewChild('content') content?:ElementRef<HTMLElement>;
   @ViewChild('trigger') trigger?:ElementRef<HTMLButtonElement>;
   private api=inject(ApiService);
   busy=signal(false);error=signal('');typedName='';reviewed:Pick<Character,'id'|'name'|'version'|'campaignId'>|null=null;
-  open(){if(!this.available||this.busy()||!this.character.canEdit)return;const {id,name,version,campaignId}=this.character;this.reviewed={id,name,version,campaignId};this.typedName='';this.error.set('');this.confirmation?.nativeElement.showModal();}
+  open(){if(!this.available||this.busy()||!this.character.canEdit)return;const {id,name,version,campaignId}=this.character;this.reviewed={id,name,version,campaignId};this.typedName='';this.error.set('');this.confirmation?.nativeElement.showModal();if(this.content)this.content.nativeElement.scrollTop=0;}
   cancel(event?:Event){event?.preventDefault();if(this.busy())return;this.confirmation?.nativeElement.close();this.reviewed=null;this.typedName='';this.trigger?.nativeElement.focus();}
   remove(){
     const reviewed=this.reviewed;if(!reviewed||!this.available||this.busy()||!this.character.canEdit||this.character.id!==reviewed.id||this.typedName!==reviewed.name)return;
