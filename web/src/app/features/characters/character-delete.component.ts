@@ -8,10 +8,12 @@ import { ApiService, Character, apiError } from '../../api';
   <button *ngIf="character.canEdit" #trigger type="button" class="text-link danger" [disabled]="!available||busy()" (click)="open()">Excluir ficha</button>
   <dialog #confirmation class="character-delete-dialog" aria-labelledby="character-delete-title" (cancel)="cancel($event)">
     <form (ngSubmit)="remove()">
+      <div class="character-delete-body" role="region" aria-label="Detalhes da exclusão" tabindex="0">
       <h2 id="character-delete-title">Excluir {{reviewed?.name}}?</h2>
       <p>A exclusão é permanente e remove esta ficha, histórico, inventário, habilidades, notas e links de OBS. Fichas vinculadas a encontros precisam ser removidas deles antes.</p>
       <label>Digite o nome da ficha para confirmar<input name="deleteName" [(ngModel)]="typedName" [disabled]="busy()" autocomplete="off" maxlength="120" [placeholder]="reviewed?.name||''"></label>
       <p *ngIf="error()" class="form-error" role="alert">{{error()}}</p>
+      </div>
       <div class="form-actions"><button type="button" class="button secondary" autofocus [disabled]="busy()" (click)="cancel()">Cancelar</button><button type="submit" class="button danger-button" [disabled]="busy()||!available||typedName!==reviewed?.name">{{busy()?'Excluindo...':'Excluir permanentemente'}}</button></div>
     </form>
   </dialog>`})

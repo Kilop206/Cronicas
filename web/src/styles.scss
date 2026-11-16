@@ -466,12 +466,14 @@ html:has(.obs-page), body:has(.obs-page), html:has(.obs-camera-page), body:has(.
 .character-list-tools { display:flex;flex-wrap:wrap;align-items:end;gap:16px;margin:20px 0; }
 .character-list-tools label { flex:1 1 220px;min-width:0; }
 .character-list-tools small { flex-basis:100%;color:var(--muted); }
-.character-delete-dialog { width:min(560px,calc(100% - 32px));max-height:calc(100dvh - 32px);overflow:auto;padding:28px;border:1px solid var(--border);border-radius:12px;background:var(--surface);color:var(--text); }
+.character-delete-dialog { width:min(560px,calc(100% - 32px));max-height:calc(100dvh - 32px);overflow:hidden;padding:0;border:1px solid var(--border);border-radius:12px;background:var(--surface);color:var(--text); }
+.character-delete-dialog form { display:flex;flex-direction:column;max-height:calc(100dvh - 34px); }
+.character-delete-body { min-height:0;overflow:auto;padding:28px; }
 .character-delete-dialog::backdrop { background:rgb(0 0 0 / 72%); }
 .character-delete-dialog h2 { font-size:28px;overflow-wrap:anywhere; }
 .character-delete-dialog p { font-size:14px;line-height:1.7;color:var(--muted); }
 .character-delete-dialog .form-error { color:#f0a8a8; }
-.character-delete-dialog .form-actions { flex-wrap:wrap;gap:12px; }
+.character-delete-dialog .form-actions { flex:none;flex-wrap:wrap;gap:12px;margin:0;padding:20px 28px; }
 .button.danger-button { background:#8b303a;border-color:#c26770;color:#fff; }
 .button.danger-button:hover:not(:disabled) { background:#a03a45;border-color:#e0939b; }
 .obs-actions > :is(button,.button) { margin:6px 12px 6px 0; }
@@ -481,7 +483,8 @@ html:has(.obs-page), body:has(.obs-page), html:has(.obs-camera-page), body:has(.
   .page .sheet-tabs { gap:8px; }
   .page .sheet-tabs button { padding:10px 16px; }
   .character-management { gap:12px; }
-  .character-delete-dialog { padding:20px; }
+  .character-delete-body { padding:20px; }
+  .character-delete-dialog .form-actions { padding:16px 20px; }
   .character-delete-dialog .form-actions > button { flex:1 1 180px; }
 }
 @media print { .character-management,.character-list-tools,app-character-delete { display:none!important; } }
