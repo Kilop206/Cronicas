@@ -21,4 +21,6 @@ A matriz local completa passou nas 356 combinações, sem overflow horizontal da
 
 Capturas selecionadas em `docs/visual-validation/quality/`: `long-login-error-mobile.png`, `long-login-error-desktop.png`, `unbroken-campaign-mobile.png`, `world-links-mobile.png` e `short-delete-error-mobile.png`.
 
-Resultado do CI e publicação serão registrados após a validação remota.
+As correções visuais foram implementadas em `7f14a2f`, `1a1b73e` e `fa4c8e6`. O [CI da versão conjunta com convites compartilhados](https://github.com/Kilop206/Cronicas/actions/runs/43976474134) passou também nas 356 combinações de interface e nos demais checks. A reabertura da confirmação volta ao título; a rolagem por teclado e a visibilidade das ações antes/depois do erro foram verificadas em 360/560 px de altura.
+
+Publicação conjunta concluída em `985b534`, com os [convites compartilhados](2026-11-16-campaign-invitations.md): Pages `d0c74012.cronicas-bsy.pages.dev`, Worker `bbc50433-0fe5-4455-b017-6be3ddf785c9` e API Render `dep-dbtotltckfvc7392nte0`. A conferência pública validou versão/hash, início/login e estados simulados de erro/convite nas quatro larguras dos dois hosts, sem overflow ou erros JavaScript.
