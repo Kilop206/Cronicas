@@ -46,6 +46,7 @@ const blank = (): InventoryInput => ({ name: '', category: 'item', quantity: 1, 
     .inventory-summary { color: var(--muted); font-size: 13px; }
     .inventory-list { border-top: 1px solid var(--border); margin: 18px 0; }
     .inventory-row { display: flex; align-items: start; justify-content: space-between; gap: 18px; border-bottom: 1px solid var(--border); padding: 14px 0; }
+    .inventory-row > div:first-child { min-width: 0; flex: 1; }
     .inventory-row strong { display: block; font: 20px var(--font-editorial); }
     .inventory-row small { display: block; color: var(--muted); margin-top: 3px; }
     .inventory-row p { margin: 8px 0 0; white-space: pre-wrap; }

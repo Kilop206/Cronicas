@@ -40,9 +40,10 @@ const blank = (): AbilityInput => ({ name: '', description: '', cost: '', effect
     .ability-list { border-top: 1px solid var(--border); margin: 18px 0; }
     .ability-row { border-bottom: 1px solid var(--border); padding: 18px 0; }
     .ability-head { display: flex; align-items: start; justify-content: space-between; gap: 18px; }
+    .ability-head > div:first-child { min-width: 0; flex: 1; }
     .ability-head h3 { margin: 0; font: 22px var(--font-editorial); }
     .ability-head small, .ability-meta { color: var(--muted); }
-    .ability-actions { display: flex; gap: 12px; }
+    .ability-actions { display: flex; flex-shrink: 0; gap: 12px; }
     .ability-row p { white-space: pre-wrap; line-height: 1.5; margin: 9px 0; }
     .ability-meta span + span { margin-left: 18px; }
     .ability-roll { display: flex; align-items: center; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
