@@ -53,9 +53,10 @@ public sealed class EfCampaignInviteStore(AppDbContext db) : ICampaignInviteStor
             if (campaigns.Count == 0 || owner is null || !CampaignPolicy.IsOwner(owner.OwnerId, invite.CreatedById, owner.Document.Role) ||
                 !CampaignPolicy.AvailableInvite(invite.Role, invite.ExpiresAt, invite.UsedAt, DateTime.UtcNow)) return new(Failure: CampaignFailure.NotFound);
             if (await db.CampaignMemberships.AnyAsync(m => m.CampaignId == invite.CampaignId && m.UserId == actor, ct))
-                return new(Failure: CampaignFailure.Conflict, Message: "Você já participa desta campanha.");
+                return new(new(invite.CampaignId));
             db.CampaignMemberships.Add(new() { CampaignId = invite.CampaignId, UserId = actor, Role = invite.Role });
-            invite.UsedAt = DateTime.UtcNow; invite.UsedById = actor;
+            // Available links belong to the campaign and remain usable until expiry.
+            // The UsedAt guard keeps previously consumed legacy links closed.
             await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
             return new(new(invite.CampaignId));
         }

@@ -2,6 +2,8 @@
 
 Estado: implementado e validado localmente em 10/11/2026.
 
+Atualização de 16/11/2026: o comportamento de uso único descrito no registro original abaixo foi substituído por links reutilizáveis da campanha. Contas diferentes podem aceitar o mesmo link válido; tentativas repetidas de quem já participa retornam a campanha, sem mudar papéis nem criar participações/eventos duplicados. Os locks, a expiração de sete dias e a autoridade do emissor continuam verificados. Links legados que já estavam consumidos não são reativados. Não há alteração de schema.
+
 ## Contexto
 
 Onze handlers de campanhas/convites/participantes continham EF e políticas HTTP misturados. Convites distintos para a mesma pessoa podiam disputar a PK da participação. A criação do convite e as mudanças de papel verificavam autoridade fora de uma transação. A revogação da sala ocorria somente depois de SaveChanges, sem entrega durável.

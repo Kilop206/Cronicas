@@ -19,12 +19,12 @@ public static class CampaignPersistenceTests
         static User User(string name) => new() { Email = $"campaign-{name}@example.test", DisplayName = name, PasswordHash = "fixture" };
         static async Task<GameEvent[]> Events(AppDbContext db) => (await db.OutboxMessages.AsNoTracking().Select(e => e.Payload).ToArrayAsync())
             .Select(json => JsonSerializer.Deserialize<GameEvent>(json)!).ToArray();
-        var owner = User("owner"); var a = User("first"); var b = User("second"); var c = User("third");
+        var owner = User("owner"); var a = User("first"); var b = User("second"); var c = User("third"); var d = User("fourth");
         var tokens = new CryptographicCampaignInviteTokenGenerator();
         CampaignDocument campaign;
         await using (var db = context())
         {
-            db.Users.AddRange(owner, a, b, c); await db.SaveChangesAsync();
+            db.Users.AddRange(owner, a, b, c, d); await db.SaveChangesAsync();
             campaign = (await new ManageCampaigns(new EfCampaignStore(db)).Create(owner.Id, "  Campaign module  ", " description ", "#aBc123")).Value!;
             Check(campaign.Name == "Campaign module" && campaign.Description == "description" && campaign.Status == "planning", "create returns normalized legacy contract");
             Check(await db.CampaignMemberships.AnyAsync(m => m.CampaignId == campaign.Id && m.UserId == owner.Id && m.Role == "owner"), "owner membership created atomically");
@@ -44,14 +44,33 @@ public static class CampaignPersistenceTests
             Check(persisted.TokenHash.Length == 64 && persisted.TokenHash != same.Token && same.Token.Length == 48, "capability generated with RNG and only hash persisted");
         }
         var competing = await Task.WhenAll(Accept(same, a.Id), Accept(same, b.Id));
-        Check(competing.Count(r => r.Failure is null) == 1 && competing.Count(r => r.Failure == CampaignFailure.NotFound) == 1, "same token admits exactly one user");
-        var member = competing[0].Failure is null ? a : b;
-        var other = member.Id == a.Id ? b : a;
+        Check(competing.All(r => r.Failure is null && r.Value?.CampaignId == campaign.Id), "same campaign link admits different users concurrently");
+        var member = a; var other = b;
+        var repeated = await Task.WhenAll(Accept(same, c.Id), Accept(same, c.Id));
+        Check(repeated.All(r => r.Failure is null), "concurrent retries of one campaign link are idempotent");
         var distinctA = await Invite(); var distinctB = await Invite();
-        var sameUser = await Task.WhenAll(Accept(distinctA, c.Id), Accept(distinctB, c.Id));
-        Check(sameUser.Count(r => r.Failure is null) == 1 && sameUser.Count(r => r.Failure == CampaignFailure.Conflict) == 1, "distinct tokens for same user do not cause unique violation or double membership");
-        var unused = sameUser[0].Failure is null ? distinctB : distinctA;
-        Check((await Accept(unused, other.Id)).Failure is null, "conflict does not consume the unused invitation");
+        var sameUser = await Task.WhenAll(Accept(distinctA, d.Id), Accept(distinctB, d.Id));
+        Check(sameUser.All(r => r.Failure is null), "distinct links for the same user remain idempotent without a unique violation");
+        await using (var db = context())
+        {
+            foreach (var joined in new[] { a, b, c, d })
+            {
+                Check(await db.CampaignMemberships.CountAsync(m => m.CampaignId == campaign.Id && m.UserId == joined.Id) == 1, "one membership per account");
+                Check((await Events(db)).Count(e => e.CampaignId == campaign.Id && e.AggregateId == joined.Id && e.Type == GameEventTypes.PlayerJoinedCampaign) == 1, "one joined event per account despite retries");
+            }
+            var store = new EfCampaignInviteStore(db);
+            Check(await store.Preview(CampaignInviteToken.Hash(same.Token), DateTime.UtcNow, default) is not null &&
+                await store.Preview(CampaignInviteToken.Hash(distinctA.Token), DateTime.UtcNow, default) is not null &&
+                await store.Preview(CampaignInviteToken.Hash(distinctB.Token), DateTime.UtcNow, default) is not null, "links remain available after joins and retries");
+            var count = await db.OutboxMessages.CountAsync();
+            Check((await new ManageCampaignInvites(store, tokens).Accept(same.Token, owner.Id)).Failure is null &&
+                (await db.CampaignMemberships.SingleAsync(m => m.CampaignId == campaign.Id && m.UserId == owner.Id)).Role == "owner" &&
+                await db.OutboxMessages.CountAsync() == count, "existing owner opens campaign without role changes or duplicate events");
+        }
+        var elevatedLink = await Invite("co-gm");
+        Check((await Accept(elevatedLink, member.Id)).Failure is null, "existing participant can open a different-role link");
+        await using (var db = context())
+            Check((await db.CampaignMemberships.SingleAsync(m => m.CampaignId == campaign.Id && m.UserId == member.Id)).Role == "player", "reopening an invitation cannot change an existing role");
         await using (var db = context())
         {
             var store = new EfCampaignStore(db); var before = (await store.Read(campaign.Id, owner.Id, default))!;
@@ -117,6 +136,9 @@ public static class CampaignPersistenceTests
             db.CampaignInvites.Add(expired); await db.SaveChangesAsync();
             var invites = new EfCampaignInviteStore(db);
             Check(await invites.Preview(expired.TokenHash, DateTime.UtcNow, default) is null && (await invites.Accept(expired.TokenHash, other.Id, default)).Failure == CampaignFailure.NotFound, "expired invitations stay inaccessible");
+            var legacy = new CampaignInvite { CampaignId = campaign.Id, CreatedById = owner.Id, TokenHash = CampaignInviteToken.Hash(tokens.Generate()), ExpiresAt = DateTime.UtcNow.AddDays(1), UsedAt = DateTime.UtcNow, UsedById = member.Id };
+            db.CampaignInvites.Add(legacy); await db.SaveChangesAsync();
+            Check(await invites.Preview(legacy.TokenHash, DateTime.UtcNow, default) is null && (await invites.Accept(legacy.TokenHash, c.Id, default)).Failure == CampaignFailure.NotFound, "previously consumed legacy links are not reactivated");
             var character = new Character { Name = "Preserved after leave", CampaignId = campaign.Id, OwnerId = other.Id }; db.Characters.Add(character); await db.SaveChangesAsync();
             var writer = new EfCharacterWriteStore(db); var before = (await writer.Load(character.Id, other.Id, default))!;
             var realtime = new Realtime();
@@ -139,7 +161,7 @@ public static class CampaignPersistenceTests
             Check((await new EfCampaignStore(db).Save(before, owner.Id, new("Forbidden change", "", "#abcdef"), null, default)).Failure == CampaignFailure.Forbidden,
                 "campaign edits recheck owner role under commit locks");
         }
-        Console.WriteLine("Campaign PostgreSQL: scoped CRUD, atomic owner/events, single-use and distinct-token races, stale edits/roles, rollback, revocation, self-leave and preserved characters passed.");
+        Console.WriteLine("Campaign PostgreSQL: scoped CRUD, shared-link joins, idempotent retries, one membership/event, unchanged roles, legacy/expiry protection, rollback, revocation and preserved characters passed.");
     }
     private sealed class Realtime : ICampaignRealtimeAccess
     { public int Calls; public Task Invalidate(Guid campaign, Guid member) { Calls++; return Task.CompletedTask; } }

@@ -29,9 +29,10 @@ public static class CampaignApplicationTests
         Check(store.LastHash == CampaignInviteToken.Hash(invite.Token) && !store.LastHash.Contains(invite.Token, StringComparison.Ordinal), "preview uses canonical hash, not raw capability");
         Check((await invites.Accept("bad", player)).Failure == CampaignFailure.NotFound && store.Accepts == 0, "invalid token never reaches atomic accept");
         Check((await invites.Accept(invite.Token, player)).Value?.CampaignId == document.Id && store.Accepts == 1, "accept delegated to atomic port");
+        Check((await invites.Accept(invite.Token, other)).Value?.CampaignId == document.Id && store.Accepts == 2, "same campaign capability accepts another account");
         Check(!CampaignPolicy.AvailableInvite("owner", DateTime.UtcNow.AddDays(1), null, DateTime.UtcNow) &&
             !CampaignPolicy.AvailableInvite("player", DateTime.UtcNow, null, DateTime.UtcNow) &&
-            !CampaignPolicy.AvailableInvite("player", DateTime.UtcNow.AddDays(1), DateTime.UtcNow, DateTime.UtcNow), "role/expiry/replay invariants");
+            !CampaignPolicy.AvailableInvite("player", DateTime.UtcNow.AddDays(1), DateTime.UtcNow, DateTime.UtcNow), "role/expiry/legacy-consumption invariants");
         Check((await members.Role(document.Id, owner, owner, "player")).Failure == CampaignFailure.Invalid, "owner cannot demote themselves");
         Check((await members.Role(document.Id, player, player, "gm")).Failure == CampaignFailure.NotFound, "player cannot promote themselves");
         Check((await members.Remove(document.Id, owner, player)).Failure == CampaignFailure.Forbidden, "owner cannot be removed");

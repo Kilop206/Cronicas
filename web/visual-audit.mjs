@@ -56,7 +56,7 @@ const cases=[
   ...['sessions','documents','wiki'].map(kind=>({name:kind,url:`/campaigns/${campaign.id}/${kind}?entry=entry-${kind}`})),
   {name:'encounters',url:`/campaigns/${campaign.id}/encounters`,after:async p=>{await p.locator('.narrative-row').first().click();await p.locator('.initiative-row').first().waitFor();}},
   {name:'worlds',url:'/worlds'},{name:'world',url:`/worlds/${world.id}?article=${article.id}`},{name:'systems',url:'/systems'},{name:'system-editor',url:'/systems/new?preset=ordem_paranormal'},
-  {name:'search',url:'/search?q=caminhos'},{name:'profile',url:'/profile'},{name:'settings',url:'/settings'},{name:'invite',url:'/invites/visual-token'},{name:'room',url:`/campaigns/${campaign.id}/room`},
+  {name:'search',url:'/search?q=caminhos'},{name:'profile',url:'/profile'},{name:'settings',url:'/settings'},{name:'invite',url:'/invites/'+'a'.repeat(48),after:async p=>{await p.locator('.invite-accept').getByText(/vários participantes/).waitFor();for(let attempt=0;attempt<2;attempt++){await p.getByRole('button',{name:'Entrar na campanha',exact:true}).click();await p.waitForURL('**/campaigns/'+campaign.id);await p.locator('.campaign-title').waitFor();await p.goBack();await p.locator('.invite-accept').waitFor();}}},{name:'room',url:`/campaigns/${campaign.id}/room`},
   {name:'navigation-open',url:'/dashboard',after:async p=>{const menu=p.locator('.mobile-site-menu');if(await menu.isVisible())await menu.locator('summary').click();else await p.locator('.collapse').click();}},
   {name:'sheet-tools',url:'/characters/char-dnd_5e',after:async p=>{await p.locator('.sheet-utilities > summary').click();await p.locator('.sheet-utilities .obs-actions > summary').first().click();assert.equal(await p.locator('input[type=file][hidden]').isVisible(),false,'native import field stays hidden');}},
   ...['Inventário','Habilidades','Mestre'].map((label,index)=>({name:'free-tab-'+index,url:'/characters/char-free',after:async p=>{await p.locator('.sheet-tabs').getByRole('button',{name:label,exact:true}).click();}})),
@@ -97,7 +97,7 @@ try{
       else if(p.endsWith('/npcs'))body=pageOf([npc]);else if(p==='/api/npcs/'+npc.id)body=npc;else if(p.endsWith('/encounters'))body=[encounter];else if(p==='/api/encounters/'+encounter.id)body=encounter;
       else if(p==='/api/search')body={campaigns:[campaign],characters:[{...characters[0],campaignName:title}],npcs:[{...npc,campaignName:title}],worlds:[world],articles:[{...article,worldName:title}],entries:[{...entry('sessions'),campaignName:title}]};
       else if(p==='/api/auth/sessions')body=[{id:'session',createdAt:now,lastSeenAt:now,expiresAt:now,userAgent:'Mozilla/5.0 · Navegador de teste com identificação prolongada',ipAddress:'127.0.0.1',current:true}];
-      else if(p.startsWith('/api/invites/'))body={campaignName:title,role:'player',expiresAt:now};else if(p.endsWith('/invites'))body={token:'token-'.repeat(18)};
+      else if(p.startsWith('/api/invites/'))body=p.endsWith('/accept')?{campaignId:campaign.id}:{campaignName:title,role:'player',expiresAt:new Date(Date.parse(now)+7*86400000).toISOString()};else if(p.endsWith('/invites'))body={token:'a'.repeat(48)};
       else if(p.includes('negotiate')){status=503;body={};}
       const replacement=test.reply?.(p,route.request().method(),body,status);if(replacement){body=replacement.body;status=replacement.status||200;}if(test.unbroken)body=unbroken(body);
       await route.fulfill({status,contentType:'application/json',body:JSON.stringify(body)});

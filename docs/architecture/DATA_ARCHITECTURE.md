@@ -76,7 +76,7 @@ O novo fluxo usa as mesmas tabelas. `CharacterSnapshot.Migration` é opcional no
 
 As mesmas tabelas/PKs/FKs são usadas, sem migration SQL. Campanha + participação owner + eventos confirmam juntos. Edição/status bloqueiam participação/campanha e conferem o snapshot carregado pelo caso de uso; o contrato legado ainda não exige ETag do cliente. Papel/saída bloqueiam as participações em ordem estável e conferem papel/JoinedAt, evitando aplicar uma decisão sobre uma adesão substituída.
 
-Aceite bloqueia convite/emissor/campanha e revalida expiração, uso e autoridade. O lock da campanha cobre a ausência de uma futura linha de participação: convites diferentes para a mesma pessoa não podem inserir duas linhas nem consumir o segundo token indevidamente. Token de 24 bytes continua representado por 48 caracteres hexadecimais, sete dias e hash SHA-256 persistido. Saída não apaga personagens ou seus filhos. Rollback após SaveChanges foi testado para criação, remoção e aceite, incluindo outbox e uso do token. Ver ADR 0006.
+Aceite bloqueia convite/emissor/campanha e revalida expiração e autoridade. Desde 16/11/2026, um link disponível é reutilizável por várias contas; o lock da campanha cobre a ausência de uma futura participação e garante uma linha/evento por conta. Repetir um aceite retorna a campanha sem alterar o papel atual. `UsedAt`/`UsedById` ficam reservados aos links legados já consumidos, que continuam inválidos. Token de 24 bytes mantém 48 caracteres hexadecimais, sete dias e hash SHA-256 persistido. Saída não apaga personagens ou seus filhos. Rollback após SaveChanges continua protegendo participação e outbox. Não há migration SQL. Ver ADR 0006.
 
 ## Operação das versões imutáveis
 

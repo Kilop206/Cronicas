@@ -8,10 +8,10 @@ import { ApiService, apiError, InvitePreview } from '../../api';
 
 @Component({ selector: 'app-invite-panel', standalone: true, imports: [CommonModule, FormsModule], template: `
   <section class="invite-panel editor-panel"><div class="panel-heading"><span>PARTICIPANTES</span><h2>Convidar para a campanha</h2></div>
-    <p>Crie um link de uso único, válido por sete dias. Envie cada link diretamente à pessoa convidada.</p>
+    <p>Crie um link da campanha, válido por sete dias. Compartilhe o mesmo link com todos os participantes que terão o papel escolhido.</p>
     <div class="invite-controls"><label>Papel na campanha<select name="role" [(ngModel)]="role"><option value="player">Jogador</option><option value="gm">Mestre</option><option value="co-gm">Co-mestre</option><option value="spectator">Espectador</option></select></label><button class="button" type="button" (click)="create()" [disabled]="busy()">{{ busy() ? 'Criando...' : 'Gerar convite' }}</button></div>
     <p *ngIf="error()" class="form-error" role="alert">{{ error() }}</p>
-    <div *ngIf="url()" class="invite-result" role="status"><span>Compartilhe este link. Depois que alguém o usar, ele deixará de funcionar.</span><code>{{ url() }}</code><button type="button" (click)="copy()">Copiar link</button><span role="status">{{ copyMessage() }}</span></div>
+    <div *ngIf="url()" class="invite-result" role="status"><span>Vários participantes podem usar este link até ele expirar. Cada pessoa entra com sua própria conta.</span><code>{{ url() }}</code><button type="button" (click)="copy()">Copiar link</button><span role="status">{{ copyMessage() }}</span></div>
   </section>` })
 export class InvitePanelComponent {
   @Input({ required: true }) campaignId = '';
@@ -26,7 +26,7 @@ export class InvitePanelComponent {
     <div class="page-heading"><div><span class="overline">UM NOVO CAPÍTULO</span><h1>Convite de campanha</h1><p>Junte-se à história com sua conta.</p></div></div>
     <div *ngIf="loading()" class="loading" role="status">Verificando convite...</div>
     <div *ngIf="error()" class="notice error" role="alert">{{ error() }}</div>
-    <div *ngIf="invite() as item" class="editor-panel invite-accept"><span class="overline">{{ roleLabel(item.role) }}</span><h2>{{ item.campaignName }}</h2><p>Este convite expira em {{ item.expiresAt | date:'dd/MM/yyyy HH:mm' }} e pode ser usado uma vez.</p><button class="button" type="button" (click)="accept()" [disabled]="busy()">{{ busy() ? 'Entrando...' : 'Entrar na campanha' }}</button></div>
+    <div *ngIf="invite() as item" class="editor-panel invite-accept"><span class="overline">{{ roleLabel(item.role) }}</span><h2>{{ item.campaignName }}</h2><p>Este link da campanha pode ser usado por vários participantes até {{ item.expiresAt | date:'dd/MM/yyyy HH:mm' }}.</p><p class="room-note">Se você já participa, o link abre a campanha e mantém seu papel atual.</p><button class="button" type="button" (click)="accept()" [disabled]="busy()">{{ busy() ? 'Entrando...' : 'Entrar na campanha' }}</button></div>
   </main>` })
 export class InvitePage {
   private api = inject(ApiService); private route = inject(ActivatedRoute); private router = inject(Router);
