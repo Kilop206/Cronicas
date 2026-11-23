@@ -8,7 +8,7 @@ Workspace de campanhas de RPG de mesa com contas e controle de sessões, convite
 
 Campanhas novas começam sem sistema pronto. O proprietário pode criar uma ficha livre, cujos campos cada jogador preenche, ou um sistema estruturado. Neste último, o editor permite montar até oito páginas com blocos de identidade, retrato, recursos, campos tipados, texto, inventário, habilidades e histórico. Cada página pode usar grade de 12 colunas ou posicionamento livre em porcentagens, com imagem de fundo HTTPS e proporção própria. A ficha pode usar visual de investigação, fantasia ou arquivo clássico, com cor de destaque configurável. Cada bloco possui estilo e dimensões. Recursos podem usar os valores básicos ou campos numéricos definidos pelo sistema. Também é possível editar as definições de campos e do layout em JSON, validadas pelo servidor sem execução de código. Sistemas antigos com apenas campos continuam legíveis e podem receber um layout ao serem editados. A composição é autoral e não incorpora regras ou artes do [C.R.I.S.](https://crisordemparanormal.com/) ou do [Fichas de Nimb](https://fichasdenimb.com.br/FichasdeNimb).
 
-O produto não inclui tabletop/VTT. A produção usa Cloudflare Pages, API .NET no Render Free e PostgreSQL no Neon. A transmissão ainda precisa de validação com navegadores e OBS reais.
+O produto não inclui tabletop/VTT. O [site publicado](https://cronicas-fallback.guilhermextra118.workers.dev) usa o Worker Cloudflare existente, API .NET no Render Free e PostgreSQL no Neon. O projeto Pages anterior estava indisponível na conferência de 23/11/2026; consulte o [registro da publicação](docs/architecture/releases/2026-11-23-invitation-management.md). A transmissão ainda precisa de validação com navegadores e OBS reais.
 
 ## Desenvolvimento local
 
@@ -26,7 +26,7 @@ Entre na sala da campanha para ligar câmera, microfone ou compartilhar a tela. 
 
 Escolha a qualidade da câmera na sala (360p, 480p ou 720p). A tela compartilhada usa até 15 quadros por segundo. Cada fonte OBS se conecta apenas ao dono do personagem selecionado e recebe somente a câmera, poupando conexões e o envio de áudio e tela para cada Browser Source.
 
-O proprietário gera convites individuais na campanha. Na ficha, edite portrait, fundo e recursos. Gere uma URL de portrait para **Browser Source** no OBS Studio (sugestão: 980 × 360); gerar outra revoga a anterior. Trate a URL como segredo de leitura visual.
+O proprietário gera links da campanha, válidos por sete dias e compartilháveis com vários participantes do papel escolhido. A lista de convites ativos permite desativar cada link, mantendo quem já participa. Na ficha, edite portrait, fundo e recursos. Gere uma URL de portrait para **Browser Source** no OBS Studio (sugestão: 980 × 360); gerar outra revoga a anterior. Trate a URL como segredo de leitura visual.
 
 A ficha também oferece uma URL de câmera + portrait para Browser Source de 1920 × 1080. Faça login na fonte pelo botão **Interagir**. Ela entra na sala sem publicar mídia e seleciona a câmera do dono da ficha. Cada fonte OBS conta como conexão WebRTC adicional. Redes que bloqueiam conexão direta podem exigir TURN, que não está configurado nesta versão gratuita. A reconexão e a apresentação em OBS ainda precisam de teste com mídia real.
 
