@@ -1,4 +1,4 @@
-import type { Accent, User, AccountSession, Campaign, Dashboard, Page, Character, CharacterInput, OverlayCharacter, CharacterRevision, CharacterSecret, Npc, NpcInput, InventoryItem, InventoryInput, CharacterAbility, AbilityInput, RpgSystem, CampaignMember, World, WorldDetail, WorldArticle, WorldArticleLink, ChatMessage, EncounterParticipant, Encounter, EncounterSummary, WorldArticleInput, InvitePreview, NarrativeKind, NarrativeEntry, NarrativeInput, DiceRoll, DamageEvent, WeaponContext, DamageResolution, SearchResults } from '../contracts/api-models';
+import type { Accent, User, AccountSession, Campaign, Dashboard, Page, Character, CharacterInput, OverlayCharacter, CampaignInvite, CharacterRevision, CharacterSecret, Npc, NpcInput, InventoryItem, InventoryInput, CharacterAbility, AbilityInput, RpgSystem, CampaignMember, World, WorldDetail, WorldArticle, WorldArticleLink, ChatMessage, EncounterParticipant, Encounter, EncounterSummary, WorldArticleInput, InvitePreview, NarrativeKind, NarrativeEntry, NarrativeInput, DiceRoll, DamageEvent, WeaponContext, DamageResolution, SearchResults } from '../contracts/api-models';
 import type { SystemMigrationInput, SystemMigrationOptions, SystemMigrationPreview } from '../contracts/api-models';
 import { DOCUMENT } from '@angular/common';
 import { HttpClient, HttpErrorResponse } from '@angular/common/http';
@@ -125,7 +125,9 @@ export class ApiService {
   removeCharacterFavorite(id: string) { return this.http.delete<void>(`/api/characters/${id}/favorite`, { withCredentials: true }); }
   rotateOverlayKey(id: string) { return this.http.post<{ key: string }>(`/api/characters/${id}/overlay-key`, {}, { withCredentials: true }); }
   overlay(key: string) { return this.http.get<OverlayCharacter>(`/api/overlay/${key}`); }
-  createInvite(campaignId: string, role: string) { return this.http.post<{ token: string; role: string; expiresAt: string }>(`/api/campaigns/${campaignId}/invites`, { role }, { withCredentials: true }); }
+  createInvite(campaignId: string, role: string) { return this.http.post<{ id: string; token: string; role: string; expiresAt: string }>(`/api/campaigns/${campaignId}/invites`, { role }, { withCredentials: true }); }
+  campaignInvites(campaignId: string, page = 1) { return this.http.get<Page<CampaignInvite>>(`/api/campaigns/${campaignId}/invites`, { params: { page }, withCredentials: true }); }
+  revokeInvite(campaignId: string, inviteId: string) { return this.http.delete<void>(`/api/campaigns/${campaignId}/invites/${inviteId}`, { withCredentials: true }); }
   invite(token: string) { return this.http.get<InvitePreview>(`/api/invites/${token}`, { withCredentials: true }); }
   acceptInvite(token: string) { return this.http.post<{ campaignId: string }>(`/api/invites/${token}/accept`, {}, { withCredentials: true }); }
   entries(campaignId: string, kind: NarrativeKind, page = 1, search = '') { return this.http.get<Page<NarrativeEntry>>(`/api/campaigns/${campaignId}/entries/${kind}`, { params: { page, search }, withCredentials: true }); }

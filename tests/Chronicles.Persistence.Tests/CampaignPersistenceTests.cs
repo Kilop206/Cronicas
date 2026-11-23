@@ -146,6 +146,55 @@ public static class CampaignPersistenceTests
             Check((await writer.Save(before, before.State with { Health = 1 }, other.Id, default)).Failure == CharacterWriteFailure.NotFound &&
                 await db.Characters.AsNoTracking().AnyAsync(ch => ch.Id == character.Id && ch.Health == 10), "leaving preserves characters and blocks stale writes");
         }
+        async Task<CampaignResult<bool>> Revoke(CampaignInviteDocument invite)
+        { await using var db = context(); return await new ManageCampaignInvites(new EfCampaignInviteStore(db), tokens).Revoke(campaign.Id, invite.Id, owner.Id); }
+        var revokedLink = await Invite();
+        await using (var db = context())
+        {
+            var manage = new ManageCampaignInvites(new EfCampaignInviteStore(db), tokens);
+            var list = (await manage.List(campaign.Id, owner.Id, 1)).Value!;
+            Check(list.Items.Any(i => i.Id == revokedLink.Id), "created invite exposes stable management id");
+            var json = JsonSerializer.Serialize(list);
+            Check(!json.Contains("Token", StringComparison.OrdinalIgnoreCase) && !json.Contains(revokedLink.Token), "invitation metadata never exposes hashes or capabilities");
+            Check((await manage.List(campaign.Id, member.Id, 1)).Failure == CampaignFailure.Forbidden &&
+                (await manage.Revoke(campaign.Id, revokedLink.Id, member.Id)).Failure == CampaignFailure.Forbidden, "members cannot list or revoke shared links");
+            var otherCampaign = (await new ManageCampaigns(new EfCampaignStore(db)).Create(owner.Id, "Other invite scope", "", "#abcdef")).Value!;
+            Check((await manage.Revoke(otherCampaign.Id, revokedLink.Id, owner.Id)).Failure == CampaignFailure.NotFound, "invitation ids cannot cross campaign boundaries");
+            var membershipCount = await db.CampaignMemberships.CountAsync(); var eventCount = await db.OutboxMessages.CountAsync();
+            Check((await Revoke(revokedLink)).Value && !(await Revoke(revokedLink)).Value, "revocation is idempotent");
+            Check(await manage.Preview(revokedLink.Token) is null && (await Accept(revokedLink, other.Id)).Failure == CampaignFailure.NotFound,
+                "revoked links cannot preview or admit another participant");
+            Check(!(await manage.List(campaign.Id, owner.Id, 1)).Value!.Items.Any(i => i.Id == revokedLink.Id), "revoked invitations disappear from active list");
+            Check(await db.CampaignMemberships.CountAsync() == membershipCount && await db.OutboxMessages.CountAsync() == eventCount,
+                "revocation preserves all existing memberships and emits no join/leave event");
+        }
+        var racingLink = await Invite(); var racer = User("revoke-race");
+        await using (var db = context()) { db.Users.Add(racer); await db.SaveChangesAsync(); }
+        var acceptance = Accept(racingLink, racer.Id); var revocation = Revoke(racingLink);
+        await Task.WhenAll(acceptance, revocation);
+        Check((await revocation).Value && (await acceptance).Failure is null or CampaignFailure.NotFound, "acceptance and revocation serialize without deadlock or unhandled conflict");
+        await using (var db = context())
+        {
+            Check(await db.CampaignMemberships.AnyAsync(m => m.CampaignId == campaign.Id && m.UserId == racer.Id) == ((await acceptance).Failure is null),
+                "concurrent join either commits before revocation or is rejected without membership");
+            Check((await Accept(racingLink, other.Id)).Failure == CampaignFailure.NotFound, "all acceptances after completed revocation fail");
+            var rollbackLink = await Invite();
+            var options = new DbContextOptionsBuilder<AppDbContext>().UseNpgsql(db.Database.GetConnectionString()).AddInterceptors(new FailAfterSave()).Options;
+            try
+            {
+                await using var fail = new AppDbContext(options);
+                await new ManageCampaignInvites(new EfCampaignInviteStore(fail), tokens).Revoke(campaign.Id, rollbackLink.Id, owner.Id);
+                throw new Exception("Expected forced campaign failure.");
+            }
+            catch (InvalidOperationException error) when (error.Message == "Forced campaign failure") { }
+            Check(await new ManageCampaignInvites(new EfCampaignInviteStore(db), tokens).Preview(rollbackLink.Token) is not null, "failed revocation rolls back link expiry");
+            for (var i = 0; i < 21; i++) db.CampaignInvites.Add(new() { CampaignId = campaign.Id, CreatedById = owner.Id, TokenHash = CampaignInviteToken.Hash(tokens.Generate()) });
+            await db.SaveChangesAsync();
+            var manage = new ManageCampaignInvites(new EfCampaignInviteStore(db), tokens);
+            var first = (await manage.List(campaign.Id, owner.Id, 1)).Value!; var second = (await manage.List(campaign.Id, owner.Id, 2)).Value!;
+            Check(first.Items.Length == 20 && second.Items.Length > 0 && first.Total == second.Total &&
+                !first.Items.Select(i => i.Id).Intersect(second.Items.Select(i => i.Id)).Any(), "active invitation list uses bounded stable pagination");
+        }
         // A role read before revocation cannot authorize a later invite commit.
         await using (var db = context())
         {
@@ -155,6 +204,7 @@ public static class CampaignPersistenceTests
             await using (var revoke = context())
             { (await revoke.CampaignMemberships.SingleAsync(m => m.CampaignId == campaign.Id && m.UserId == owner.Id)).Role = "player"; await revoke.SaveChangesAsync(); }
             Check((await store.Create(before, owner.Id, "gm", tokens.Generate(), DateTime.UtcNow.AddDays(1), default)).Failure == CampaignFailure.Forbidden, "invite creation rechecks owner authority under locks");
+            Check((await store.Revoke(before, owner.Id, outstanding.Id, default)).Failure == CampaignFailure.Forbidden, "link revocation rechecks owner authority under locks");
             Check(await store.Preview(outstandingHash, DateTime.UtcNow, default) is null &&
                 (await store.Accept(outstandingHash, other.Id, default)).Failure == CampaignFailure.NotFound,
                 "revoked issuer invalidates an otherwise valid unused capability");

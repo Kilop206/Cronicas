@@ -8,6 +8,22 @@ public static class InviteEndpoints
 {
     public static void MapInviteEndpoints(this RouteGroupBuilder api)
     {
+        api.MapGet("/campaigns/{id:guid}/invites", async Task<IResult> (Guid id, int? page, HttpContext http, ManageCampaignInvites query) =>
+        {
+            if (UserId(http) is not { } userId) return Results.Unauthorized();
+            http.Response.Headers.CacheControl = "private, no-store";
+            var result = await query.List(id, userId, page, http.RequestAborted);
+            return CampaignHttpResult.Error(result) ?? Results.Ok(result.Value);
+        }).Produces<CampaignInvitePage>().Produces(401).Produces(403).Produces(404);
+
+        api.MapDelete("/campaigns/{id:guid}/invites/{invite:guid}", async Task<IResult> (Guid id, Guid invite, HttpContext http, ManageCampaignInvites command) =>
+        {
+            if (UserId(http) is not { } userId) return Results.Unauthorized();
+            http.Response.Headers.CacheControl = "private, no-store";
+            var result = await command.Revoke(id, invite, userId, http.RequestAborted);
+            return CampaignHttpResult.Error(result) ?? Results.NoContent();
+        }).RequireRateLimiting("account").Produces(204).Produces(401).Produces(403).Produces(404).Produces(409);
+
         api.MapPost("/campaigns/{id:guid}/invites", async Task<IResult> (Guid id, InviteRequest input, HttpContext http, ManageCampaignInvites command) =>
         {
             if (UserId(http) is not { } userId) return Results.Unauthorized();

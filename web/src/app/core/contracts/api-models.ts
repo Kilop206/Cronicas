@@ -48,6 +48,7 @@ export interface Encounter { id: string; campaignId: string; title: string; stat
 export type EncounterSummary = Omit<Encounter, 'participants' | 'createdAt'>;
 export type WorldArticleInput = Pick<WorldArticle, 'title' | 'body' | 'category' | 'visibility' | 'revision'>;
 export interface InvitePreview { campaignId: string; campaignName: string; role: string; expiresAt: string; }
+export interface CampaignInvite { id: string; role: string; createdAt: string; expiresAt: string; }
 export type NarrativeKind = 'sessions' | 'documents' | 'wiki';
 export interface NarrativeEntry { id: string; campaignId: string; authorId: string; kind: NarrativeKind; title: string; body: string; category: string; visibility: 'campaign' | 'private' | 'gm'; eventAt: string | null; revealedAt: string | null; createdAt: string; updatedAt: string; revision: number; }
 export type NarrativeInput = Pick<NarrativeEntry, 'title' | 'body' | 'category' | 'visibility' | 'eventAt' | 'revision'>;

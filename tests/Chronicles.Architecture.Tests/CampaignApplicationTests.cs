@@ -21,6 +21,12 @@ public static class CampaignApplicationTests
         var query = new ReadCampaigns(store); await query.List(owner, -9, " Campaign ");
         Check(store.LastPage == 1 && store.LastSearch == "Campaign", "pagination/search normalized before query port");
         Check((await invites.Create(document.Id, player, "player")).Failure == CampaignFailure.Forbidden && store.Invites == 0, "non-owner cannot create invitations");
+        Check((await invites.List(document.Id, player, 1)).Failure == CampaignFailure.Forbidden && store.InviteLists == 0, "only owner can inspect invitations");
+        Check((await invites.List(document.Id, other, 1)).Failure == CampaignFailure.NotFound, "invitation management hides unknown campaigns");
+        await invites.List(document.Id, owner, -2);
+        Check(store.InviteLists == 1 && store.LastPage == 1, "invitation page normalized");
+        Check((await invites.Revoke(document.Id, Guid.NewGuid(), player)).Failure == CampaignFailure.Forbidden && store.Revokes == 0, "non-owner cannot revoke links");
+        Check((await invites.Revoke(document.Id, Guid.NewGuid(), owner)).Value && store.Revokes == 1, "owner revocation delegated to atomic port");
         Check((await invites.Create(document.Id, owner, "owner")).Failure == CampaignFailure.Invalid && store.Invites == 0, "invitation cannot grant ownership");
         var invite = (await invites.Create(document.Id, owner, "co-gm")).Value!;
         Check(invite.Token.Length == 48 && invite.ExpiresAt > DateTime.UtcNow.AddDays(6) && store.Invites == 1, "legacy token/expiry and authorized creation preserved");
@@ -54,7 +60,7 @@ public static class CampaignApplicationTests
     }
     private sealed class MemoryStore(CampaignContext context) : ICampaignStore, ICampaignMembershipStore, ICampaignInviteStore
     {
-        public Dictionary<Guid, string> Roles = []; public int Creates, Saves, Invites, Accepts, Previews, LastPage;
+        public Dictionary<Guid, string> Roles = []; public int Creates, Saves, Invites, Accepts, Previews, LastPage, InviteLists, Revokes;
         public string? LastSearch, LastHash; public bool RejectChange;
         public Task<CampaignContext?> Read(Guid campaign, Guid actor, CancellationToken ct) => Task.FromResult(
             Roles.TryGetValue(actor, out var role) ? context with { Document = context.Document with { Role = role } } : null);
@@ -76,7 +82,11 @@ public static class CampaignApplicationTests
             return Task.FromResult(new CampaignResult<bool>(changed));
         }
         public Task<CampaignResult<CampaignInviteDocument>> Create(CampaignContext before, Guid actor, string role, string token, DateTime expiresAt, CancellationToken ct)
-        { Invites++; return Task.FromResult(new CampaignResult<CampaignInviteDocument>(new(token, role, expiresAt))); }
+        { Invites++; return Task.FromResult(new CampaignResult<CampaignInviteDocument>(new(token, role, expiresAt, Guid.NewGuid()))); }
+        public Task<CampaignInvitePage> List(Guid campaign, Guid actor, int page, CancellationToken ct)
+        { InviteLists++; LastPage = page; return Task.FromResult(new CampaignInvitePage([], 0, page)); }
+        public Task<CampaignResult<bool>> Revoke(CampaignContext before, Guid actor, Guid invite, CancellationToken ct)
+        { Revokes++; return Task.FromResult(new CampaignResult<bool>(true)); }
         public Task<CampaignInvitePreview?> Preview(string hash, DateTime now, CancellationToken ct)
         { Previews++; LastHash = hash; return Task.FromResult<CampaignInvitePreview?>(null); }
         public Task<CampaignResult<CampaignJoined>> Accept(string hash, Guid actor, CancellationToken ct)

@@ -9,7 +9,9 @@ public sealed record CampaignDocument(Guid Id, string Name, string Description, 
 public sealed record CampaignPage(CampaignDocument[] Items, int Total, int Page);
 public sealed record CampaignContext(CampaignDocument Document, Guid OwnerId);
 public sealed record CampaignMemberDocument(Guid UserId, string DisplayName, string Role, DateTime JoinedAt);
-public sealed record CampaignInviteDocument(string Token, string Role, DateTime ExpiresAt);
+public sealed record CampaignInviteDocument(string Token, string Role, DateTime ExpiresAt, Guid Id);
+public sealed record CampaignInviteSummary(Guid Id, string Role, DateTime CreatedAt, DateTime ExpiresAt);
+public sealed record CampaignInvitePage(CampaignInviteSummary[] Items, int Total, int Page);
 public sealed record CampaignInvitePreview(Guid CampaignId, string CampaignName, string Role, DateTime ExpiresAt);
 public sealed record CampaignJoined(Guid CampaignId);
 
@@ -31,6 +33,8 @@ public interface ICampaignMembershipStore : ICampaignReader
 }
 public interface ICampaignInviteStore : ICampaignReader
 {
+    Task<CampaignInvitePage> List(Guid campaign, Guid actor, int page, CancellationToken ct);
+    Task<CampaignResult<bool>> Revoke(CampaignContext before, Guid actor, Guid invite, CancellationToken ct);
     Task<CampaignResult<CampaignInviteDocument>> Create(CampaignContext before, Guid actor, string role, string token, DateTime expiresAt, CancellationToken ct);
     Task<CampaignInvitePreview?> Preview(string hash, DateTime now, CancellationToken ct);
     Task<CampaignResult<CampaignJoined>> Accept(string hash, Guid actor, CancellationToken ct);
@@ -94,6 +98,20 @@ public sealed class ManageCampaignMembers(ICampaignMembershipStore store, ICampa
 
 public sealed class ManageCampaignInvites(ICampaignInviteStore store, ICampaignInviteTokenGenerator tokens)
 {
+    public async Task<CampaignResult<CampaignInvitePage>> List(Guid campaign, Guid actor, int? page, CancellationToken ct = default)
+    {
+        var before = await store.Read(campaign, actor, ct);
+        if (before is null) return new(Failure: CampaignFailure.NotFound);
+        if (!CampaignPolicy.IsOwner(before.OwnerId, actor, before.Document.Role)) return new(Failure: CampaignFailure.Forbidden);
+        return new(await store.List(campaign, actor, Math.Clamp(page ?? 1, 1, 100000), ct));
+    }
+    public async Task<CampaignResult<bool>> Revoke(Guid campaign, Guid invite, Guid actor, CancellationToken ct = default)
+    {
+        var before = await store.Read(campaign, actor, ct);
+        if (before is null) return new(Failure: CampaignFailure.NotFound);
+        if (!CampaignPolicy.IsOwner(before.OwnerId, actor, before.Document.Role)) return new(Failure: CampaignFailure.Forbidden);
+        return await store.Revoke(before, actor, invite, ct);
+    }
     public async Task<CampaignResult<CampaignInviteDocument>> Create(Guid campaign, Guid actor, string? role, CancellationToken ct = default)
     {
         var before = await store.Read(campaign, actor, ct);

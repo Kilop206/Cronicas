@@ -6,6 +6,8 @@ Atualização de 16/11/2026: o comportamento de uso único descrito no registro 
 
 ## Contexto
 
+Atualização de 23/11/2026: o proprietário pode listar os convites ativos em páginas de vinte e desativar um link por ID. A listagem contém apenas ID, papel e datas, nunca token ou hash. A desativação antecipa `ExpiresAt`, dispensa migração e é idempotente. A operação bloqueia convite, participação do proprietário e campanha, na ordem do aceite, e verifica novamente a autoridade dentro da transação. Aceites anteriores ao commit permanecem válidos; tentativas posteriores são negadas. Participações e papéis existentes não mudam. A interface limpa o link recém-gerado quando ele é desativado e orienta quem abriu um convite indisponível a solicitar outro.
+
 Onze handlers de campanhas/convites/participantes continham EF e políticas HTTP misturados. Convites distintos para a mesma pessoa podiam disputar a PK da participação. A criação do convite e as mudanças de papel verificavam autoridade fora de uma transação. A revogação da sala ocorria somente depois de SaveChanges, sem entrega durável.
 
 ## Fronteiras implementadas

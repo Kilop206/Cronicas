@@ -15,6 +15,39 @@ public sealed class CryptographicCampaignInviteTokenGenerator : ICampaignInviteT
 public sealed class EfCampaignInviteStore(AppDbContext db) : ICampaignInviteStore
 {
     public Task<CampaignContext?> Read(Guid campaign, Guid actor, CancellationToken ct) => CampaignPersistence.Read(db, campaign, actor, ct);
+    public async Task<CampaignInvitePage> List(Guid campaign, Guid actor, int page, CancellationToken ct)
+    {
+        var now = DateTime.UtcNow;
+        var query = db.CampaignInvites.AsNoTracking().Where(i => i.CampaignId == campaign && i.CreatedById == actor &&
+            i.Campaign.OwnerId == actor && i.Campaign.Memberships.Any(m => m.UserId == actor && m.Role == "owner") &&
+            i.UsedAt == null && i.ExpiresAt > now && (i.Role == "player" || i.Role == "gm" || i.Role == "co-gm" || i.Role == "spectator"));
+        var total = await query.CountAsync(ct);
+        var items = await query.OrderByDescending(i => i.CreatedAt).ThenByDescending(i => i.Id).Skip((page - 1) * 20).Take(20)
+            .Select(i => new CampaignInviteSummary(i.Id, i.Role, i.CreatedAt, i.ExpiresAt)).ToArrayAsync(ct);
+        return new(items, total, page);
+    }
+    public async Task<CampaignResult<bool>> Revoke(CampaignContext before, Guid actor, Guid invite, CancellationToken ct)
+    {
+        await using var transaction = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, ct);
+        try
+        {
+            var campaign = before.Document.Id;
+            // Match acceptance lock order: invitation, owner membership, campaign.
+            var matches = await db.CampaignInvites.FromSqlInterpolated($"SELECT * FROM campaign_invites WHERE \"Id\" = {invite} AND \"CampaignId\" = {campaign} FOR UPDATE").ToListAsync(ct);
+            if (matches.SingleOrDefault() is not { } target) return new(Failure: CampaignFailure.NotFound);
+            await CampaignPersistence.LockMember(db, campaign, actor, ct);
+            await CampaignPersistence.LockCampaign(db, campaign, ct);
+            var fresh = await Read(campaign, actor, ct);
+            if (fresh is null) return new(Failure: CampaignFailure.NotFound);
+            if (!CampaignPolicy.IsOwner(fresh.OwnerId, actor, fresh.Document.Role)) return new(Failure: CampaignFailure.Forbidden);
+            if (fresh.OwnerId != before.OwnerId || fresh.Document.Role != before.Document.Role) return CampaignPersistence.Changed<bool>();
+            if (target.ExpiresAt <= DateTime.UtcNow || target.UsedAt is not null) return new(false);
+            target.ExpiresAt = DateTime.UtcNow;
+            await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
+            return new(true);
+        }
+        catch (Exception error) when (CampaignPersistence.Conflict(error)) { db.ChangeTracker.Clear(); return CampaignPersistence.Changed<bool>(); }
+    }
     public async Task<CampaignResult<CampaignInviteDocument>> Create(CampaignContext before, Guid actor, string role, string token, DateTime expiresAt, CancellationToken ct)
     {
         await using var transaction = await db.Database.BeginTransactionAsync(System.Data.IsolationLevel.ReadCommitted, ct);
@@ -28,7 +61,7 @@ public sealed class EfCampaignInviteStore(AppDbContext db) : ICampaignInviteStor
             if (fresh.OwnerId != before.OwnerId || fresh.Document.Role != before.Document.Role) return CampaignPersistence.Changed<CampaignInviteDocument>();
             var invite = new CampaignInvite { CampaignId = campaign, CreatedById = actor, Role = role, TokenHash = CampaignInviteToken.Hash(token), ExpiresAt = expiresAt };
             db.CampaignInvites.Add(invite); await db.SaveChangesAsync(ct); await transaction.CommitAsync(ct);
-            return new(new(token, role, invite.ExpiresAt));
+            return new(new(token, role, invite.ExpiresAt, invite.Id));
         }
         catch (Exception error) when (CampaignPersistence.Conflict(error)) { db.ChangeTracker.Clear(); return CampaignPersistence.Changed<CampaignInviteDocument>(); }
     }
